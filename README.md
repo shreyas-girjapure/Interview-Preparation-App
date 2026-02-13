@@ -27,6 +27,33 @@ Open `http://localhost:3000`.
 
 The app validates these variables at runtime and fails fast when values are missing or invalid.
 
+## Supabase Auth setup (Google)
+
+1. In Supabase dashboard, open `Authentication -> Providers -> Google` and enable the provider.
+2. In Supabase dashboard, open `Authentication -> URL Configuration`.
+3. Set Site URL:
+   - Local: `http://localhost:3000`
+   - Production: your deployed app URL
+4. Add redirect URLs:
+   - Local callback: `http://localhost:3000/auth/callback`
+   - Production callback: `https://<your-domain>/auth/callback`
+5. In Google Cloud Console, add the same callback URL in the OAuth client.
+
+Local auth flow in this app:
+
+- Start sign-in: `/login`
+- OAuth callback: `/auth/callback`
+- Signed-in page: `/account`
+- Sign-out endpoint: `/auth/sign-out`
+
+## Supabase DB schema setup
+
+Apply the initial schema + RLS migration from:
+
+- `supabase/migrations/20260214014000_phase1_schema.sql`
+
+You can run it in Supabase SQL Editor, or with Supabase CLI if you use local/dev databases.
+
 ## Quality checks
 
 ```bash

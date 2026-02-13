@@ -21,6 +21,15 @@ This document is the single source of truth for architecture, execution phases, 
 - UI system: `shadcn/ui` + Tailwind v4.
 - Content rendering: Markdown + Shiki (`rehype-pretty-code`) with sanitization.
 
+## Design Choices (UI/UX)
+
+- Product style: editorial, readability-first layout (serif headings, comfortable line-height, clean spacing).
+- Auth entry pattern: provider-neutral actions in header (`Sign in`, `Get started`) instead of showing Google-specific CTA in the main hero.
+- Sign-in flow pattern: dedicated `/login` card with one primary action (`Continue with Google`) and clear post-login redirect context.
+- CTA hierarchy: primary browsing action (`Browse all questions`) and secondary account/progress action (`Track your progress`).
+- Navigation behavior: show account/sign-out controls only when authenticated; keep guest navigation lightweight.
+- Responsive/accessibility baseline: all auth and catalog actions remain usable on mobile and keyboard-focusable with visible focus states.
+
 ## High-Level Architecture
 
 - Public app: question browsing, filters, details, and practice flows.
@@ -60,17 +69,18 @@ This document is the single source of truth for architecture, execution phases, 
 
 ### Phase 1 - Data + Identity
 
+- [x] Implement app-side auth flow (`/login`, `/auth/sign-in`, `/auth/callback`, `/account`).
 - [ ] Create Supabase project(s): dev/staging/prod strategy.
-- [ ] Define schema + migrations for v1 entities.
+- [x] Define schema + migrations for v1 entities.
 - [ ] Configure Google OAuth in Supabase Auth.
-- [ ] Implement RBAC roles: admin, editor, user.
-- [ ] Add RLS policies for user data isolation.
+- [x] Implement RBAC roles: admin, editor, user.
+- [x] Add RLS policies for user data isolation.
 
 ### Phase 2 - Learner Product
 
 - [x] Build question list/detail pages.
 - [x] Add category + difficulty filters.
-- [ ] Build preference onboarding + persistence.
+- [x] Build preference onboarding + persistence.
 - [ ] Add attempt/progress tracking.
 
 ### Phase 3 - Admin CMS
@@ -116,6 +126,10 @@ This document is the single source of truth for architecture, execution phases, 
 - 2026-02-13: Use `shadcn/ui` for maintainable UI primitives.
 - 2026-02-13: Use Markdown + Shiki pipeline for answer/code readability.
 - 2026-02-13: Build initial learner product with local seeded interview questions before Supabase integration.
+- 2026-02-13: Implement first-pass Google sign-in UX and auth routes; provider credential setup still pending in Supabase dashboard.
+- 2026-02-13: Standardize auth UX on a common publication-style pattern: header sign-in entry + dedicated sign-in page primary OAuth action.
+- 2026-02-13: Add initial Supabase schema migration with RLS/RBAC and sync authenticated users into `public.users` during OAuth callback.
+- 2026-02-13: Add authenticated `user_preferences` API and account onboarding form to persist learner preferences in Supabase.
 
 ## Change Control
 

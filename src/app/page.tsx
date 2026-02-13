@@ -31,6 +31,9 @@ export default function Home() {
             <Button asChild>
               <Link href="/questions">Browse all questions</Link>
             </Button>
+            <Button asChild variant="secondary">
+              <Link href="/account">Track your progress</Link>
+            </Button>
             {firstFeaturedQuestion ? (
               <Button asChild variant="outline">
                 <Link href={`/questions/${firstFeaturedQuestion.slug}`}>
