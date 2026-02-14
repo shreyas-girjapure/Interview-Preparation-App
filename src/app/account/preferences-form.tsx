@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button";
 import {
   QUESTION_DIFFICULTIES,
   type QuestionDifficulty,
-} from "@/lib/interview/questions";
+} from "@/lib/interview/difficulty";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type AccountPreferences = {
   preferredDifficulty: QuestionDifficulty | null;
@@ -40,7 +41,9 @@ export function PreferencesForm({
   const [focusAreasText, setFocusAreasText] = useState(
     initialPreferences.focusAreas.join(", "),
   );
-  const [targetRole, setTargetRole] = useState(initialPreferences.targetRole ?? "");
+  const [targetRole, setTargetRole] = useState(
+    initialPreferences.targetRole ?? "",
+  );
   const [experienceLevel, setExperienceLevel] = useState(
     initialPreferences.experienceLevel ?? "",
   );
@@ -78,21 +81,31 @@ export function PreferencesForm({
     setSaveState("saving");
     setErrorMessage("");
 
-    const response = await fetch("/api/user/preferences", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        preferredDifficulty: preferredDifficulty || null,
-        focusAreas: parseFocusAreas(focusAreasText),
-        targetRole: targetRole.trim() || null,
-        experienceLevel: experienceLevel.trim() || null,
-        dailyGoalMinutes: parsedDailyGoal,
-      }),
-    });
+    const supabase = createSupabaseBrowserClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
 
-    if (!response.ok) {
+    if (userError || !user) {
+      setSaveState("error");
+      setErrorMessage("You must be signed in to save preferences.");
+      return;
+    }
+
+    const { error } = await supabase.from("user_preferences").upsert(
+      {
+        user_id: user.id,
+        preferred_difficulty: preferredDifficulty || null,
+        focus_areas: parseFocusAreas(focusAreasText),
+        target_role: targetRole.trim() || null,
+        experience_level: experienceLevel.trim() || null,
+        daily_goal_minutes: parsedDailyGoal,
+      },
+      { onConflict: "user_id" },
+    );
+
+    if (error) {
       setSaveState("error");
       setErrorMessage("Unable to save preferences right now.");
       return;
@@ -109,7 +122,9 @@ export function PreferencesForm({
           <select
             value={preferredDifficulty}
             onChange={(event) =>
-              setPreferredDifficulty(event.target.value as QuestionDifficulty | "")
+              setPreferredDifficulty(
+                event.target.value as QuestionDifficulty | "",
+              )
             }
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
           >

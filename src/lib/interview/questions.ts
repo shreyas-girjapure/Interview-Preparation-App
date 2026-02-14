@@ -1,6 +1,11 @@
-export const QUESTION_DIFFICULTIES = ["easy", "medium", "hard"] as const;
+import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
+import {
+  QUESTION_DIFFICULTIES,
+  type QuestionDifficulty,
+} from "@/lib/interview/difficulty";
 
-export type QuestionDifficulty = (typeof QUESTION_DIFFICULTIES)[number];
+export { QUESTION_DIFFICULTIES };
+export type { QuestionDifficulty };
 
 export type InterviewQuestion = {
   id: string;
@@ -12,6 +17,7 @@ export type InterviewQuestion = {
   answerMarkdown: string;
   tags: string[];
   estimatedMinutes: number;
+  topicSlugs: string[];
 };
 
 export type InterviewQuestionSummary = Omit<
@@ -25,215 +31,342 @@ export type QuestionFilters = {
   search?: string;
 };
 
+export type InterviewTopicSummary = {
+  id: string;
+  slug: string;
+  name: string;
+  shortDescription: string;
+  questionCount: number;
+};
+
+export type InterviewTopicDetails = InterviewTopicSummary & {
+  overviewMarkdown: string;
+  relatedQuestions: InterviewQuestionSummary[];
+  relatedTopics: InterviewTopicSummary[];
+};
+
+export type TopicFilters = {
+  search?: string;
+};
+
 type FilterOption = {
   label: string;
   value: string;
   count: number;
 };
 
-const INTERVIEW_QUESTIONS: InterviewQuestion[] = [
-  {
-    id: "q_node_event_loop",
-    slug: "nodejs-event-loop",
-    title: "Explain the Node.js event loop to an interviewer",
-    category: "Node.js",
-    difficulty: "medium",
-    summary:
-      "Describe macrotasks, microtasks, and why Node handles I/O-heavy workloads efficiently.",
-    estimatedMinutes: 6,
-    tags: ["node", "async", "runtime"],
-    answerMarkdown: `# Node.js event loop: interview-ready answer
+type CategoryRelation =
+  | { name: string | null }
+  | Array<{ name: string | null }>;
 
-Node.js uses a **single-threaded JavaScript execution model** with a runtime loop that coordinates I/O callbacks.
+type TopicRelation = {
+  id: string | null;
+  slug: string | null;
+  name: string | null;
+  short_description: string | null;
+  status: string | null;
+};
 
-## Clear mental model
+type QuestionRow = {
+  id: string;
+  slug: string;
+  title: string;
+  difficulty: string | null;
+  summary: string | null;
+  tags: string[] | null;
+  estimated_minutes: number | null;
+  created_at: string | null;
+  published_at: string | null;
+  categories: CategoryRelation | null;
+  question_topics: Array<{
+    sort_order: number | null;
+    topics: TopicRelation | TopicRelation[] | null;
+  }> | null;
+};
 
-1. JavaScript runs synchronous code first.
-2. Async operations (filesystem, network, timers) are delegated to runtime/OS facilities.
-3. Completed callbacks are queued.
-4. Promise microtasks are drained before moving to the next timer/I/O callback phase.
+type TopicRow = {
+  id: string;
+  slug: string;
+  name: string;
+  short_description: string | null;
+  overview_markdown: string | null;
+  sort_order: number | null;
+};
 
-## Why this matters in production
+type TopicEdgeRow = {
+  to_topic_id: string;
+  sort_order: number | null;
+};
 
-- You can serve many concurrent I/O requests without one thread per request.
-- CPU-heavy work still blocks the thread and should be moved to workers/queues.
+type QuestionTopicCountRow = {
+  topic_id: string;
+  questions:
+    | { status: string | null }
+    | Array<{ status: string | null }>
+    | null;
+};
 
-\`\`\`ts title="event-loop-order.ts"
-console.log("sync");
-setTimeout(() => console.log("timer"), 0);
-Promise.resolve().then(() => console.log("microtask"));
-\`\`\`
+type AnswerRow = {
+  content_markdown: string | null;
+};
 
-Expected order: \`sync\`, then \`microtask\`, then \`timer\`.`,
-  },
-  {
-    id: "q_react_keys",
-    slug: "react-keys-and-reconciliation",
-    title: "Why are stable keys important in React lists?",
-    category: "React",
-    difficulty: "easy",
-    summary:
-      "Explain reconciliation behavior and how unstable keys can cause state bugs.",
-    estimatedMinutes: 5,
-    tags: ["react", "rendering", "reconciliation"],
-    answerMarkdown: `# React keys and reconciliation
-
-Keys help React identify which list item is which between renders.
-
-## Correct rule
-
-Use a **stable, unique identifier from data**.
-
-## What breaks with index keys
-
-- Reordering can move component state to the wrong item.
-- Inputs may appear to "swap values."
-- Extra re-renders happen because React can't match elements correctly.
-
-\`\`\`tsx title="good-keys.tsx"
-{todos.map((todo) => (
-  <TodoRow key={todo.id} todo={todo} />
-))}
-\`\`\`
-
-For static lists that never change order, index keys can be acceptable, but that is a narrow exception.`,
-  },
-  {
-    id: "q_js_closure",
-    slug: "javascript-closures-practical",
-    title: "What is a closure, and where is it useful?",
-    category: "JavaScript",
-    difficulty: "medium",
-    summary:
-      "Define closure in practical terms and connect it to encapsulation and callbacks.",
-    estimatedMinutes: 7,
-    tags: ["javascript", "scope", "functions"],
-    answerMarkdown: `# Closure in practical terms
-
-A closure is when a function keeps access to variables from its lexical scope **even after the outer function returns**.
-
-## Practical use cases
-
-- Data privacy (module-like encapsulation)
-- Function factories
-- Event/callback handlers that need contextual data
-
-\`\`\`ts title="closure-counter.ts"
-function createCounter() {
-  let count = 0;
-  return () => ++count;
-}
-
-const next = createCounter();
-next(); // 1
-next(); // 2
-\`\`\`
-
-The inner function remembers \`count\`, which demonstrates closure.`,
-  },
-  {
-    id: "q_sql_index",
-    slug: "sql-indexing-basics",
-    title: "How do indexes improve SQL query performance?",
-    category: "Databases",
-    difficulty: "medium",
-    summary:
-      "Cover B-tree intuition, read/write tradeoffs, and indexing strategy for common predicates.",
-    estimatedMinutes: 8,
-    tags: ["sql", "postgres", "performance"],
-    answerMarkdown: `# SQL indexing basics
-
-An index is a data structure (commonly a B-tree) that helps the database find rows faster.
-
-## Benefits
-
-- Faster reads on filtered/sorted columns
-- Better performance on joins with indexed keys
-
-## Tradeoffs
-
-- Extra disk usage
-- Slower writes because index entries must be updated
-
-## Interview framing
-
-Start with "index columns used in \`WHERE\`, \`JOIN\`, and \`ORDER BY\` often."  
-Then mention measuring with query plans before/after.`,
-  },
-  {
-    id: "q_system_design_cache",
-    slug: "system-design-caching-strategy",
-    title: "When would you introduce caching in a system design interview?",
-    category: "System Design",
-    difficulty: "hard",
-    summary:
-      "Show where caches fit, invalidation strategy, and consistency tradeoffs.",
-    estimatedMinutes: 9,
-    tags: ["system-design", "scalability", "cache"],
-    answerMarkdown: `# Caching strategy in system design
-
-Introduce caching when reads are high, data is reused, and latency matters.
-
-## Typical placements
-
-- CDN/edge cache for static or semi-static content
-- API response cache for expensive reads
-- Database query/result cache for hot keys
-
-## What interviewers expect
-
-- TTL and invalidation approach
-- Cache-miss fallback behavior
-- Consistency tradeoff (stale vs fresh data)
-
-Always call out that **cache invalidation is the hard part** and describe one concrete invalidation path.`,
-  },
-  {
-    id: "q_behavioral_tradeoff",
-    slug: "behavioral-tradeoff-example",
-    title: "Describe a technical tradeoff decision you made",
-    category: "Behavioral",
-    difficulty: "easy",
-    summary:
-      "Structure a STAR-style response with constraints, decision criteria, and measured outcome.",
-    estimatedMinutes: 4,
-    tags: ["behavioral", "communication", "ownership"],
-    answerMarkdown: `# Tradeoff answer structure (STAR)
-
-## Situation
-State the project, timeline, and constraint.
-
-## Task
-Define your responsibility and what success looked like.
-
-## Action
-Explain options considered and why you chose one.
-
-## Result
-Quantify outcome with metrics if possible.
-
-Close with what you learned and what you would do differently next time.`,
-  },
-];
+type SupabaseServerClient = ReturnType<typeof createSupabasePublicServerClient>;
 
 function normalize(text: string) {
   return text.trim().toLowerCase();
 }
 
-function matchesSearch(question: InterviewQuestion, search: string) {
+function pickSingle<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) {
+    return null;
+  }
+
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function assertNoError(error: { message?: string } | null, context: string) {
+  if (error) {
+    throw new Error(`${context}: ${error.message ?? "Unknown error"}`);
+  }
+}
+
+async function withContentClient<T>(
+  fallback: T,
+  action: (supabase: SupabaseServerClient) => Promise<T>,
+) {
+  try {
+    const supabase = createSupabasePublicServerClient();
+    return await action(supabase);
+  } catch (error) {
+    console.error("Interview content query failed", error);
+    return fallback;
+  }
+}
+
+function mapTopicSlugs(questionTopics: QuestionRow["question_topics"]) {
+  if (!questionTopics?.length) {
+    return [];
+  }
+
+  const mapped = questionTopics
+    .map((relation) => ({
+      sortOrder: relation.sort_order ?? Number.MAX_SAFE_INTEGER,
+      topic: pickSingle(relation.topics),
+    }))
+    .filter((entry) => Boolean(entry.topic?.slug))
+    .filter((entry) => entry.topic?.status !== "draft");
+
+  mapped.sort((a, b) => a.sortOrder - b.sortOrder);
+
+  const topicSlugs: string[] = [];
+  const seen = new Set<string>();
+
+  for (const entry of mapped) {
+    const topicSlug = entry.topic?.slug;
+
+    if (!topicSlug || seen.has(topicSlug)) {
+      continue;
+    }
+
+    seen.add(topicSlug);
+    topicSlugs.push(topicSlug);
+  }
+
+  return topicSlugs;
+}
+
+function mapCategoryName(categories: QuestionRow["categories"]) {
+  const category = pickSingle(categories);
+  return category?.name?.trim() || "General";
+}
+
+function mapDifficulty(difficulty: string | null): QuestionDifficulty {
+  if (
+    difficulty === "easy" ||
+    difficulty === "medium" ||
+    difficulty === "hard"
+  ) {
+    return difficulty;
+  }
+
+  return "medium";
+}
+
+function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
+  return {
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    category: mapCategoryName(row.categories),
+    difficulty: mapDifficulty(row.difficulty),
+    summary: row.summary?.trim() || "No summary available yet.",
+    tags: row.tags ?? [],
+    estimatedMinutes: row.estimated_minutes ?? 5,
+    topicSlugs: mapTopicSlugs(row.question_topics),
+  };
+}
+
+function mapQuestionDetail(
+  row: QuestionRow,
+  answerMarkdown: string,
+): InterviewQuestion {
+  return {
+    ...mapQuestionSummary(row),
+    answerMarkdown,
+  };
+}
+
+function matchesQuestionSearch(
+  question: InterviewQuestionSummary,
+  search: string,
+) {
   const term = normalize(search);
 
   if (!term) {
     return true;
   }
 
-  return [question.title, question.summary, question.category, ...question.tags]
+  return [
+    question.title,
+    question.summary,
+    question.category,
+    ...question.tags,
+    ...question.topicSlugs,
+  ]
     .join(" ")
     .toLowerCase()
     .includes(term);
 }
 
-function toSummary(question: InterviewQuestion): InterviewQuestionSummary {
+function matchesTopicSearch(topic: InterviewTopicSummary, search: string) {
+  const term = normalize(search);
+
+  if (!term) {
+    return true;
+  }
+
+  return [topic.name, topic.shortDescription, topic.slug]
+    .join(" ")
+    .toLowerCase()
+    .includes(term);
+}
+
+async function fetchPublishedQuestionRows() {
+  return withContentClient<QuestionRow[]>([], async (supabase) => {
+    const { data, error } = await supabase
+      .from("questions")
+      .select(
+        `
+          id,
+          slug,
+          title,
+          difficulty,
+          summary,
+          tags,
+          estimated_minutes,
+          created_at,
+          published_at,
+          categories(name),
+          question_topics(
+            sort_order,
+            topics(
+              id,
+              slug,
+              name,
+              short_description,
+              status
+            )
+          )
+        `,
+      )
+      .eq("status", "published")
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false, nullsFirst: false });
+
+    assertNoError(error, "Failed to fetch published questions");
+    return (data as QuestionRow[] | null) ?? [];
+  });
+}
+
+async function fetchPublishedTopicRows() {
+  return withContentClient<TopicRow[]>([], async (supabase) => {
+    const { data, error } = await supabase
+      .from("topics")
+      .select(
+        "id, slug, name, short_description, overview_markdown, sort_order",
+      )
+      .eq("status", "published")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
+
+    assertNoError(error, "Failed to fetch published topics");
+    return (data as TopicRow[] | null) ?? [];
+  });
+}
+
+async function fetchTopicEdges(fromTopicId: string) {
+  return withContentClient<TopicEdgeRow[]>([], async (supabase) => {
+    const { data, error } = await supabase
+      .from("topic_edges")
+      .select("to_topic_id, sort_order")
+      .eq("from_topic_id", fromTopicId)
+      .order("sort_order", { ascending: true });
+
+    assertNoError(error, "Failed to fetch topic edges");
+    return (data as TopicEdgeRow[] | null) ?? [];
+  });
+}
+
+async function fetchPublishedQuestionCountByTopicIds(topicIds: string[]) {
+  if (!topicIds.length) {
+    return new Map<string, number>();
+  }
+
+  return withContentClient<Map<string, number>>(new Map(), async (supabase) => {
+    const { data, error } = await supabase
+      .from("question_topics")
+      .select("topic_id, questions(status)")
+      .in("topic_id", topicIds);
+
+    assertNoError(error, "Failed to fetch topic question counts");
+
+    const counts = new Map<string, number>();
+
+    for (const row of (data as QuestionTopicCountRow[] | null) ?? []) {
+      const linkedQuestion = pickSingle(row.questions);
+      if (linkedQuestion?.status !== "published") {
+        continue;
+      }
+
+      counts.set(row.topic_id, (counts.get(row.topic_id) ?? 0) + 1);
+    }
+
+    return counts;
+  });
+}
+
+function mapTopicSummary(
+  topic: TopicRow,
+  countsByTopicId: Map<string, number>,
+): InterviewTopicSummary {
+  return {
+    id: topic.id,
+    slug: topic.slug,
+    name: topic.name,
+    shortDescription:
+      topic.short_description?.trim() ||
+      "Interview concept overview is being prepared.",
+    questionCount: countsByTopicId.get(topic.id) ?? 0,
+  };
+}
+
+async function resolveQuestionSummaryBySlug(slug: string) {
+  const question = await getQuestionBySlug(slug);
+
+  if (!question) {
+    return undefined;
+  }
+
   return {
     id: question.id,
     slug: question.slug,
@@ -243,6 +376,7 @@ function toSummary(question: InterviewQuestion): InterviewQuestionSummary {
     summary: question.summary,
     tags: question.tags,
     estimatedMinutes: question.estimatedMinutes,
+    topicSlugs: question.topicSlugs,
   };
 }
 
@@ -252,29 +386,36 @@ export function isQuestionDifficulty(
   return QUESTION_DIFFICULTIES.includes(value as QuestionDifficulty);
 }
 
-export function listQuestions(filters: QuestionFilters = {}) {
+export async function listQuestions(filters: QuestionFilters = {}) {
   const category = normalize(filters.category ?? "");
   const difficulty = filters.difficulty;
   const search = filters.search ?? "";
 
-  return INTERVIEW_QUESTIONS.filter((question) => {
+  const summaries = (await fetchPublishedQuestionRows()).map(
+    mapQuestionSummary,
+  );
+
+  return summaries.filter((question) => {
     const categoryMatch = category
       ? normalize(question.category) === category
       : true;
     const difficultyMatch = difficulty
       ? question.difficulty === difficulty
       : true;
-    const searchMatch = matchesSearch(question, search);
+    const searchMatch = matchesQuestionSearch(question, search);
 
     return categoryMatch && difficultyMatch && searchMatch;
-  }).map(toSummary);
+  });
 }
 
-export function listQuestionFilterOptions() {
+export async function listQuestionFilterOptions() {
   const categoryMap = new Map<string, number>();
   const difficultyMap = new Map<QuestionDifficulty, number>();
+  const summaries = (await fetchPublishedQuestionRows()).map(
+    mapQuestionSummary,
+  );
 
-  for (const question of INTERVIEW_QUESTIONS) {
+  for (const question of summaries) {
     categoryMap.set(
       question.category,
       (categoryMap.get(question.category) ?? 0) + 1,
@@ -302,14 +443,189 @@ export function listQuestionFilterOptions() {
   return { categories, difficulties };
 }
 
-export function listFeaturedQuestions(limit = 3) {
-  return INTERVIEW_QUESTIONS.slice(0, limit).map(toSummary);
+export async function listFeaturedQuestions(limit = 3) {
+  const summaries = (await fetchPublishedQuestionRows()).map(
+    mapQuestionSummary,
+  );
+  return summaries.slice(0, limit);
 }
 
-export function listQuestionSlugs() {
-  return INTERVIEW_QUESTIONS.map((question) => question.slug);
+export async function listQuestionSlugs() {
+  return withContentClient<string[]>([], async (supabase) => {
+    const { data, error } = await supabase
+      .from("questions")
+      .select("slug")
+      .eq("status", "published")
+      .order("published_at", { ascending: false, nullsFirst: false })
+      .order("created_at", { ascending: false, nullsFirst: false });
+
+    assertNoError(error, "Failed to fetch question slugs");
+
+    return ((data as Array<{ slug: string | null }> | null) ?? [])
+      .map((row) => row.slug)
+      .filter((slug): slug is string => Boolean(slug));
+  });
 }
 
-export function getQuestionBySlug(slug: string) {
-  return INTERVIEW_QUESTIONS.find((question) => question.slug === slug);
+export async function getQuestionBySlug(slug: string) {
+  return withContentClient<InterviewQuestion | undefined>(
+    undefined,
+    async (supabase) => {
+      const { data: questionRow, error: questionError } = await supabase
+        .from("questions")
+        .select(
+          `
+            id,
+            slug,
+            title,
+            difficulty,
+            summary,
+            tags,
+            estimated_minutes,
+            created_at,
+            published_at,
+            categories(name),
+            question_topics(
+              sort_order,
+              topics(
+                id,
+                slug,
+                name,
+                short_description,
+                status
+              )
+            )
+          `,
+        )
+        .eq("slug", slug)
+        .eq("status", "published")
+        .maybeSingle();
+
+      assertNoError(questionError, `Failed to fetch question "${slug}"`);
+
+      if (!questionRow) {
+        return undefined;
+      }
+
+      const { data: answerRows, error: answerError } = await supabase
+        .from("answers")
+        .select("content_markdown")
+        .eq("question_id", questionRow.id)
+        .eq("status", "published")
+        .order("is_primary", { ascending: false })
+        .order("published_at", { ascending: false, nullsFirst: false })
+        .order("created_at", { ascending: false, nullsFirst: false })
+        .limit(1);
+
+      assertNoError(
+        answerError,
+        `Failed to fetch published answer for "${questionRow.slug}"`,
+      );
+
+      const answerRow = ((answerRows as AnswerRow[] | null) ?? [])[0];
+      const answerMarkdown =
+        answerRow?.content_markdown?.trim() ||
+        "Answer content for this question is coming soon.";
+
+      return mapQuestionDetail(questionRow as QuestionRow, answerMarkdown);
+    },
+  );
+}
+
+export async function listTopics(filters: TopicFilters = {}) {
+  const search = filters.search ?? "";
+  const topicRows = await fetchPublishedTopicRows();
+  const countsByTopicId = await fetchPublishedQuestionCountByTopicIds(
+    topicRows.map((topic) => topic.id),
+  );
+
+  return topicRows
+    .map((topic) => mapTopicSummary(topic, countsByTopicId))
+    .filter((topic) => matchesTopicSearch(topic, search));
+}
+
+export async function listTopicSlugs() {
+  const topics = await fetchPublishedTopicRows();
+  return topics.map((topic) => topic.slug);
+}
+
+export async function getTopicBySlug(
+  slug: string,
+): Promise<InterviewTopicDetails | undefined> {
+  const topicRows = await fetchPublishedTopicRows();
+  const currentTopic = topicRows.find((topic) => topic.slug === slug);
+
+  if (!currentTopic) {
+    return undefined;
+  }
+
+  const countsByTopicId = await fetchPublishedQuestionCountByTopicIds(
+    topicRows.map((topic) => topic.id),
+  );
+  const topicSummaries = topicRows.map((topic) =>
+    mapTopicSummary(topic, countsByTopicId),
+  );
+  const topicSummaryById = new Map(
+    topicSummaries.map((topic) => [topic.id, topic]),
+  );
+
+  const [edges, relatedQuestions] = await Promise.all([
+    fetchTopicEdges(currentTopic.id),
+    listQuestions({}),
+  ]);
+
+  const relatedTopics = edges
+    .sort(
+      (a, b) =>
+        (a.sort_order ?? Number.MAX_SAFE_INTEGER) -
+        (b.sort_order ?? Number.MAX_SAFE_INTEGER),
+    )
+    .map((edge) => topicSummaryById.get(edge.to_topic_id))
+    .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
+
+  const relatedQuestionsForTopic = relatedQuestions.filter((question) =>
+    question.topicSlugs.includes(slug),
+  );
+
+  const currentTopicSummary = topicSummaryById.get(currentTopic.id);
+  if (!currentTopicSummary) {
+    return undefined;
+  }
+
+  return {
+    ...currentTopicSummary,
+    overviewMarkdown:
+      currentTopic.overview_markdown?.trim() ||
+      "Topic overview content is being prepared.",
+    relatedQuestions: relatedQuestionsForTopic,
+    relatedTopics,
+  };
+}
+
+export async function listTopicsForQuestion(
+  question: string | InterviewQuestion | InterviewQuestionSummary,
+) {
+  const topicSlugs =
+    typeof question === "string"
+      ? ((await resolveQuestionSummaryBySlug(question))?.topicSlugs ?? [])
+      : question.topicSlugs;
+
+  if (!topicSlugs.length) {
+    return [];
+  }
+
+  const topics = await listTopics();
+  const topicBySlug = new Map(topics.map((topic) => [topic.slug, topic]));
+
+  return topicSlugs
+    .map((topicSlug) => topicBySlug.get(topicSlug))
+    .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
+}
+
+export async function listRabbitHoleTopics(
+  question: string | InterviewQuestion | InterviewQuestionSummary,
+  limit = 3,
+) {
+  const topics = await listTopicsForQuestion(question);
+  return topics.slice(0, limit);
 }

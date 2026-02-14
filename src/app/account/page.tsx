@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { type QuestionDifficulty } from "@/lib/interview/questions";
+import { type QuestionDifficulty } from "@/lib/interview/difficulty";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { PreferencesForm } from "@/app/account/preferences-form";
 

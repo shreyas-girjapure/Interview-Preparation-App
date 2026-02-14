@@ -18,7 +18,7 @@ export default async function RootLayout({
 }>) {
   const hasSupabasePublicEnv = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   );
 
   let isAuthenticated = false;
@@ -45,6 +45,9 @@ export default async function RootLayout({
                 Interview Prep
               </Link>
               <div className="flex items-center gap-2">
+                <Button asChild variant="ghost" size="sm">
+                  <Link href="/topics">Topics</Link>
+                </Button>
                 <Button asChild variant="ghost" size="sm">
                   <Link href="/questions">Questions</Link>
                 </Button>

@@ -55,13 +55,14 @@ export default async function QuestionsPage({
     isQuestionDifficulty(rawDifficulty) ? rawDifficulty : undefined;
   const search = getSingleValue(rawParams.search)?.trim() ?? "";
 
-  const { categories, difficulties } = listQuestionFilterOptions();
-
-  const questions = listQuestions({
-    category: selectedCategory,
-    difficulty: selectedDifficulty,
-    search,
-  });
+  const [{ categories, difficulties }, questions] = await Promise.all([
+    listQuestionFilterOptions(),
+    listQuestions({
+      category: selectedCategory,
+      difficulty: selectedDifficulty,
+      search,
+    }),
+  ]);
 
   const currentQuery = new URLSearchParams();
   if (selectedCategory) currentQuery.set("category", selectedCategory);
@@ -85,6 +86,9 @@ export default async function QuestionsPage({
             Filter by category and difficulty, then open any question to read a
             complete interview-style answer with code where relevant.
           </p>
+          <Button asChild variant="outline" size="sm">
+            <Link href="/topics">Prefer topic-first? Browse topics</Link>
+          </Button>
         </header>
 
         <Separator className="my-8" />

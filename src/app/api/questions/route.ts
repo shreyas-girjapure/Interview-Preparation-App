@@ -15,14 +15,17 @@ export async function GET(request: Request) {
     : undefined;
   const search = searchParams.get("search") ?? undefined;
 
-  const data = listQuestions({
-    category,
-    difficulty,
-    search,
-  });
+  const [data, filters] = await Promise.all([
+    listQuestions({
+      category,
+      difficulty,
+      search,
+    }),
+    listQuestionFilterOptions(),
+  ]);
 
   return NextResponse.json({
     data,
-    filters: listQuestionFilterOptions(),
+    filters,
   });
 }

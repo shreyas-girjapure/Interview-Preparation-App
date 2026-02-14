@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { getQuestionBySlug } from "@/lib/interview/questions";
+import { getTopicBySlug } from "@/lib/interview/questions";
 
 type RouteContext = {
   params: Promise<{
@@ -10,16 +10,16 @@ type RouteContext = {
 
 export async function GET(_: Request, context: RouteContext) {
   const { slug } = await context.params;
-  const question = await getQuestionBySlug(slug);
+  const topic = await getTopicBySlug(slug);
 
-  if (!question) {
+  if (!topic) {
     return NextResponse.json(
-      { error: "Question not found" },
+      { error: "Topic not found" },
       {
         status: 404,
       },
     );
   }
 
-  return NextResponse.json({ data: question });
+  return NextResponse.json({ data: topic });
 }

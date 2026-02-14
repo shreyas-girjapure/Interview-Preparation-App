@@ -148,6 +148,23 @@
   line-height: 1.8;
 }
 
+.interview-prose :where(a) {
+  color: color-mix(in oklch, var(--primary) 88%, black);
+  font-weight: 600;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+.interview-prose :where(a:hover) {
+  color: var(--foreground);
+}
+
+.interview-prose :where(a:focus-visible) {
+  border-radius: 0.2rem;
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
 .interview-prose :where(code):not(:where(pre code)) {
   font-family: var(--font-code), monospace;
   font-size: 0.86em;

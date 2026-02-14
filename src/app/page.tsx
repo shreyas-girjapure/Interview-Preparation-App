@@ -5,8 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { listFeaturedQuestions } from "@/lib/interview/questions";
 
-export default function Home() {
-  const featuredQuestions = listFeaturedQuestions(3);
+export default async function Home() {
+  const featuredQuestions = await listFeaturedQuestions(3);
   const firstFeaturedQuestion = featuredQuestions[0];
 
   return (
@@ -24,11 +24,14 @@ export default function Home() {
           </h1>
           <p className="max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
             Build confidence with concise explanations, realistic code snippets,
-            and category-focused question sets for technical and behavioral
-            rounds.
+            and topic-first learning paths that let you go deeper through
+            related concepts.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
             <Button asChild>
+              <Link href="/topics">Browse topics</Link>
+            </Button>
+            <Button asChild variant="outline">
               <Link href="/questions">Browse all questions</Link>
             </Button>
             <Button asChild variant="secondary">
