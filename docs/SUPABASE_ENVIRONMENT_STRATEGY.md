@@ -57,8 +57,12 @@ Each deployment target must set:
 - Keep backup/restore verification in launch checklist.
 - Track auth callback URLs per environment to avoid misrouting.
 
-## Open Tasks
+## Phase 1 Completion Status (2026-02-14)
 
-- Create dedicated production Supabase project.
-- Add environment-specific Google OAuth credentials and callback URLs for dev and production.
-- Record project IDs and secret-management owners in ops notes.
+- Dedicated production Supabase project is created and in use (`xglbjcouoyjegryxorqo`).
+- Environment-specific Google OAuth credentials and callback URLs are configured for dev and production.
+- Vercel production environment variables are wired for the production Supabase project and app URL.
+
+## Follow-up Ops Notes
+
+- Record secret-management owners in ops notes when ownership is finalized.

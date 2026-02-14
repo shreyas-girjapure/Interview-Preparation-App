@@ -10,14 +10,14 @@ Last updated: 2026-02-14
 
 ## Current Execution Mode
 
-- Crawler discovery work and learner progress tracking are deferred.
+- Crawler discovery work is deferred.
 - Active implementation can proceed for all other approved items.
 - Environment model is `dev + production` (no dedicated staging backend).
 
 ## Phase Snapshot
 
 - Phase 0 Foundation: Completed
-- Phase 1 Data + Identity: In progress
+- Phase 1 Data + Identity: Completed
 - Phase 2 Learner Product: In progress
 - Phase 3 Content Operations (Supabase-managed): In progress
 - Phase 4 Performance + Reliability: Not started
@@ -32,6 +32,8 @@ Last updated: 2026-02-14
 - `public.users` sync after OAuth callback implemented.
 - RBAC and RLS policies implemented in initial migration.
 - Preferences save now uses direct Supabase client writes with RLS (no custom preferences API route).
+- Production Supabase project is configured (`xglbjcouoyjegryxorqo`) with production env vars on Vercel.
+- Production Google OAuth callback configuration is fixed and validated.
 
 ### Learner Surface (current baseline)
 
@@ -54,13 +56,9 @@ Last updated: 2026-02-14
 - Project overview normalized.
 - User stories split into epics/stories folder structure.
 - Supabase environment strategy documented for `dev + production`.
+- Progress-tracking backlog/scope removed from active roadmap.
 
 ## In Progress / Remaining
-
-### Phase 1 Data + Identity
-
-- Create production Supabase project.
-- Configure production env vars and OAuth callback URLs.
 
 ### Phase 3 Content Operations (Supabase-managed)
 
@@ -70,7 +68,7 @@ Last updated: 2026-02-14
 
 ### Phase 2 Learner Product
 
-- Finalize topic-first recommendation flows without progress-state persistence.
+- Finalize topic-first recommendation flows.
 
 ### Phase 6 Content Operations v2
 
@@ -80,7 +78,6 @@ Last updated: 2026-02-14
 ## Deferred (Do Not Implement Yet)
 
 - Crawler ingestion and discovery automation.
-- Learner progress tracking stories (US-006 Mark Topic as Read, US-007 Mark Question as Read, US-008 Progress Summary).
 
 ## Notes
 

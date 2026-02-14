@@ -9,14 +9,14 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 
 - Total phases: 6.
 - Active work can proceed across phases based on priority.
-- Crawler discovery work and learner progress tracking are deferred for now.
+- Crawler discovery work is deferred for now.
 
 ## Goals
 
 - Performant frontend experience.
 - Topic-first learner journey with rabbit-hole navigation between related concepts.
 - Supabase-managed content operations for topics, questions, and answers (dashboard/CSV/SQL).
-- Database support for user preferences and read/progress state.
+- Database support for user preferences.
 - Identity management using Google sign-in.
 - Low long-term maintenance and low early-stage cost.
 
@@ -49,14 +49,14 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - Rabbit-hole behavior: answers expose linked topics so users can branch into adjacent concepts without leaving learning context.
 - Auth entry pattern: provider-neutral actions in header (`Sign in`, `Get started`) instead of showing Google-specific CTA in the main hero.
 - Sign-in flow pattern: dedicated `/login` card with one primary action (`Continue with Google`) and clear post-login redirect context.
-- CTA hierarchy: primary browsing action (`Browse topics`) and secondary account/progress action (`Track your progress`).
+- CTA hierarchy: primary browsing action (`Browse topics`) and secondary account action (`Open account`).
 - Navigation behavior: show account/sign-out controls only when authenticated; keep guest navigation lightweight.
 - Responsive/accessibility baseline: all auth and catalog actions remain usable on mobile and keyboard-focusable with visible focus states.
 
 ## High-Level Architecture
 
 - Public app: topic directory, topic detail (overview + related questions), question detail with topic links, and practice flows.
-- Authenticated user area: onboarding + preferences (progress tracking deferred).
+- Authenticated user area: onboarding + preferences.
 - Content operations: Supabase dashboard/SQL/CSV management for topics/questions/answers and relationships.
 - API layer: Next.js route handlers/server actions.
 - Data layer: Supabase Postgres with Row Level Security (RLS).
@@ -70,8 +70,6 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - topic_edges (optional for related-topic traversal; can be deferred behind recommendation queries)
 - questions
 - answers
-- user_question_progress
-- user_topic_progress
 - content_revisions
 - categories (temporary compatibility layer while migrating topic-first taxonomy)
 
@@ -81,8 +79,6 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - GET `/api/topics/:slug`
 - GET `/api/questions`
 - GET `/api/questions/:slug`
-- POST `/api/user/progress/topics/:topicId`
-- POST `/api/user/progress/questions/:questionId`
 
 ## Delivery Phases
 
@@ -95,8 +91,8 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 ### Phase 1 - Data + Identity
 
 - [x] Implement app-side auth flow (`/login`, `/auth/sign-in`, `/auth/callback`, `/account`).
-- [ ] Create Supabase project(s): dev/production strategy.
-- [ ] Apply strategy from `docs/SUPABASE_ENVIRONMENT_STRATEGY.md` by creating production project and wiring envs.
+- [x] Create Supabase project(s): dev/production strategy.
+- [x] Apply strategy from `docs/SUPABASE_ENVIRONMENT_STRATEGY.md` by creating production project and wiring envs.
 - [x] Define schema + migrations for v1 entities.
 - [x] Configure Google OAuth in Supabase Auth.
 - [x] Implement RBAC roles: admin, editor, user.
@@ -111,7 +107,6 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - [ ] Add canonical topic model and migrate/alias existing categories.
 - [x] Build topic list/detail pages (topic overview + related questions).
 - [x] Add in-answer linked topics for rabbit-hole exploration.
-- [ ] Add user read/progress tracking for both topics and questions. (Deferred)
 - [ ] Add topic-driven recommendations ("continue learning") from topic/question relationships.
 
 ### Phase 3 - Content Operations (Supabase Managed)
@@ -152,7 +147,6 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - Learners can start from a topic and move through related topics/questions.
 - Question details render readable code blocks and linked topics.
 - User preferences are saved and isolated by RLS.
-- Topic/question progress is saved and isolated by RLS. (Deferred)
 - Public pages meet acceptable performance targets.
 
 ## Current Status
@@ -161,15 +155,16 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - 2026-02-13: `public.users` row creation confirmed after successful sign-in.
 - 2026-02-14: Question catalog, markdown answer rendering, and filter flows are in place with local seeded content.
 - 2026-02-14: Topic catalog/detail routes and rabbit-hole topic links are live with seeded topic graph.
-- 2026-02-14: Added Phase 2 schema migration for `topics`, `question_topics`, `topic_edges`, and user topic/question progress tables.
+- 2026-02-14: Added Phase 2 schema migration for `topics`, `question_topics`, and `topic_edges`.
 - 2026-02-14: Topic/question content reads now run from Supabase-backed queries (in-memory content removed).
 - 2026-02-14: Demo content migration added and applied for topics/questions/answers and rabbit-hole links.
 - 2026-02-14: In-app `/admin` route and admin nav entry removed; content management standardized on Supabase dashboard workflows.
-- 2026-02-14: Supabase environment strategy documented in `docs/SUPABASE_ENVIRONMENT_STRATEGY.md`; project creation still pending.
+- 2026-02-14: Production Supabase project (`xglbjcouoyjegryxorqo`) wired with Vercel env vars and production `NEXT_PUBLIC_APP_URL`.
+- 2026-02-14: Production Google OAuth redirect mismatch resolved; sign-in callback config aligned across Google, Supabase, and app URLs.
 - 2026-02-14: Bulk updates moved to Supabase CSV importer workflow (no in-app importer).
 - 2026-02-14: Preferences save flow moved to direct Supabase client writes (RLS) and custom preferences API route removed.
-- Remaining product scope: connect topic-first learner flows to Supabase-backed content (progress tracking deferred).
-- Remaining identity scope: finalize environment strategy across dev/production Supabase projects.
+- 2026-02-14: Progress-tracking tables and stories removed from active scope.
+- Remaining product scope: connect topic-first learner flows to Supabase-backed content.
 
 ## Constraints and Defaults
 
@@ -196,7 +191,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - 2026-02-14: Adopt Supabase-first data access for simple CRUD; removed app-side preferences CRUD wrapper route.
 - 2026-02-14: Standardize on a security-first Supabase pattern: server-side writes by default, direct client writes only for low-risk user-owned rows under RLS, and caching/indexing for performance.
 - 2026-02-14: Dropped custom in-app admin CMS from v1 plan; Supabase dashboard/SQL/CSV is the source of truth for content management.
-- 2026-02-14: Defer progress tracking stories (US-006, US-007, US-008) from the immediate roadmap.
+- 2026-02-14: Remove progress tracking from v1 scope (schema + backlog) to keep roadmap focused on topic-first learning and content quality.
 
 ## Change Control
 

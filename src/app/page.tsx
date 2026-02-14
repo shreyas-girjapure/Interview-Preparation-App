@@ -7,7 +7,6 @@ import { listFeaturedQuestions } from "@/lib/interview/questions";
 
 export default async function Home() {
   const featuredQuestions = await listFeaturedQuestions(3);
-  const firstFeaturedQuestion = featuredQuestions[0];
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
@@ -20,7 +19,7 @@ export default async function Home() {
             Interview Preparation
           </Badge>
           <h1 className="max-w-5xl font-serif text-4xl leading-tight tracking-tight text-foreground md:text-6xl">
-            Practice high-signal interview questions with structured answers.
+            Practice interview questions with structured answers.
           </h1>
           <p className="max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
             Build confidence with concise explanations, realistic code snippets,
@@ -34,16 +33,6 @@ export default async function Home() {
             <Button asChild variant="outline">
               <Link href="/questions">Browse all questions</Link>
             </Button>
-            <Button asChild variant="secondary">
-              <Link href="/account">Track your progress</Link>
-            </Button>
-            {firstFeaturedQuestion ? (
-              <Button asChild variant="outline">
-                <Link href={`/questions/${firstFeaturedQuestion.slug}`}>
-                  Open a sample answer
-                </Link>
-              </Button>
-            ) : null}
           </div>
         </header>
 

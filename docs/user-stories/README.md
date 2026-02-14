@@ -15,7 +15,6 @@
 
 - EPIC-A: Topic-First Discovery (`docs/user-stories/epics/EPIC-A-topic-first-discovery.md`)
 - EPIC-B: Readable Learning Content (`docs/user-stories/epics/EPIC-B-readable-learning-content.md`)
-- EPIC-C: Progress Tracking (`docs/user-stories/epics/EPIC-C-progress-tracking.md`)
 - EPIC-D: Admin Content Management (Archived / not planned for v1) (`docs/user-stories/epics/EPIC-D-admin-content-management.md`)
 - EPIC-E: Content Operations v2 (`docs/user-stories/epics/EPIC-E-content-operations-v2.md`)
 
@@ -26,9 +25,6 @@
 - US-003 Question-to-Topic Linking (`docs/user-stories/stories/US-003-question-to-topic-linking.md`)
 - US-004 Code Snippet Readability (`docs/user-stories/stories/US-004-code-snippet-readability.md`)
 - US-005 Structured Answer Format (`docs/user-stories/stories/US-005-structured-answer-format.md`)
-- US-006 Mark Topic as Read (`docs/user-stories/stories/US-006-mark-topic-as-read.md`)
-- US-007 Mark Question as Read (`docs/user-stories/stories/US-007-mark-question-as-read.md`)
-- US-008 Progress Summary (`docs/user-stories/stories/US-008-progress-summary.md`)
 - US-009 Manage Topics (`docs/user-stories/stories/US-009-manage-topics.md`)
 - US-010 Manage Topic Relationships (`docs/user-stories/stories/US-010-manage-topic-relationships.md`)
 - US-011 Publish Workflow (`docs/user-stories/stories/US-011-publish-workflow.md`)

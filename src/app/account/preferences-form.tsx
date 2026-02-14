@@ -4,6 +4,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
 import {
   QUESTION_DIFFICULTIES,
   type QuestionDifficulty,
@@ -40,6 +41,22 @@ function parseFocusAreas(input: string) {
 
 const MIN_DAILY_GOAL = 0;
 const MAX_DAILY_GOAL = 1440;
+const DIFFICULTY_OPTIONS: ComboboxOption[] = QUESTION_DIFFICULTIES.map(
+  (difficulty) => ({
+    value: difficulty,
+    label: difficulty[0].toUpperCase() + difficulty.slice(1),
+  }),
+);
+
+function toQuestionDifficulty(value: string | null): QuestionDifficulty | null {
+  if (!value) {
+    return null;
+  }
+
+  return QUESTION_DIFFICULTIES.includes(value as QuestionDifficulty)
+    ? (value as QuestionDifficulty)
+    : null;
+}
 
 function parseDailyGoalMinutes(input: string) {
   const trimmed = input.trim();
@@ -74,9 +91,10 @@ export function PreferencesForm({
 }) {
   const router = useRouter();
 
-  const [preferredDifficulty, setPreferredDifficulty] = useState<
-    QuestionDifficulty | ""
-  >(initialPreferences.preferredDifficulty ?? "");
+  const [preferredDifficulty, setPreferredDifficulty] =
+    useState<QuestionDifficulty | null>(
+      initialPreferences.preferredDifficulty ?? null,
+    );
   const [focusAreasText, setFocusAreasText] = useState(
     initialPreferences.focusAreas.join(", "),
   );
@@ -117,7 +135,7 @@ export function PreferencesForm({
     setErrorMessage("");
 
     const payload: SavePreferencesRequest = {
-      preferredDifficulty: preferredDifficulty || null,
+      preferredDifficulty,
       focusAreas: parseFocusAreas(focusAreasText),
       targetRole: targetRole.trim() || null,
       experienceLevel: experienceLevel.trim() || null,
@@ -133,9 +151,9 @@ export function PreferencesForm({
         body: JSON.stringify(payload),
       });
 
-      const body = (await response.json().catch(() => null)) as
-        | { error?: string }
-        | null;
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
 
       if (!response.ok) {
         setSaveState("error");
@@ -159,22 +177,17 @@ export function PreferencesForm({
       <div className="grid gap-4 md:grid-cols-2">
         <label className="space-y-2 text-sm">
           <span className="font-medium">Preferred difficulty</span>
-          <select
+          <Combobox
             value={preferredDifficulty}
-            onChange={(event) =>
-              setPreferredDifficulty(
-                event.target.value as QuestionDifficulty | "",
-              )
+            options={DIFFICULTY_OPTIONS}
+            onValueChange={(value) =>
+              setPreferredDifficulty(toQuestionDifficulty(value))
             }
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
-          >
-            <option value="">No preference</option>
-            {QUESTION_DIFFICULTIES.map((difficulty) => (
-              <option key={difficulty} value={difficulty}>
-                {difficulty[0].toUpperCase() + difficulty.slice(1)}
-              </option>
-            ))}
-          </select>
+            placeholder="Select difficulty"
+            searchPlaceholder="Search difficulty..."
+            noneLabel="No preference"
+            emptyMessage="No difficulty found."
+          />
         </label>
 
         <label className="space-y-2 text-sm">

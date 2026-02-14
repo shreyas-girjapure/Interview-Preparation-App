@@ -1,6 +1,6 @@
 # Interview Preparation App
 
-A Next.js app for interview preparation - question browsing, practice flows, and progress tracking.
+A Next.js app for interview preparation - question browsing, practice flows, and topic-first learning.
 
 ## Repository layout
 
@@ -37,7 +37,10 @@ The app validates these variables at runtime and fails fast when values are miss
 4. Add redirect URLs:
    - Local callback: `http://localhost:3000/auth/callback`
    - Production callback: `https://<your-domain>/auth/callback`
-5. In Google Cloud Console, add the same callback URL in the OAuth client.
+5. In Google Cloud Console (OAuth client), add Supabase callback URL as an authorized redirect URI:
+   - `https://<your-project-ref>.supabase.co/auth/v1/callback`
+   - If you use a custom Supabase auth domain, use that domain instead.
+   - Do **not** use your app callback URL (`/auth/callback`) in Google redirect URIs.
 
 Local auth flow in this app:
 

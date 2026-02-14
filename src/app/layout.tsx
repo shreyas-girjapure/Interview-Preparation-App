@@ -4,6 +4,7 @@ import Link from "next/link";
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { cn } from "@/lib/utils";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,6 +12,17 @@ export const metadata: Metadata = {
   description:
     "Readable interview preparation with clean explanations and code.",
 };
+
+function isMissingWrapCodeBlocksColumnError(
+  error: {
+    message?: string | null;
+  } | null,
+) {
+  const message = error?.message?.toLowerCase() ?? "";
+  return (
+    message.includes("wrap_code_blocks_on_mobile") && message.includes("column")
+  );
+}
 
 export default async function RootLayout({
   children,
@@ -25,6 +37,7 @@ export default async function RootLayout({
   let isAuthenticated = false;
   let accountInitial = "U";
   let accountLabel = "Account";
+  let wrapCodeBlocksOnMobile = false;
 
   if (hasSupabasePublicEnv) {
     try {
@@ -43,6 +56,26 @@ export default async function RootLayout({
         const seed = fullName?.trim() || email || "U";
         accountInitial = seed.charAt(0).toUpperCase();
         accountLabel = fullName?.trim() || email || "Account";
+
+        const { data: preferences, error: preferencesError } = await supabase
+          .from("user_preferences")
+          .select("wrap_code_blocks_on_mobile")
+          .eq("user_id", user.id)
+          .maybeSingle<{
+            wrap_code_blocks_on_mobile: boolean | null;
+          }>();
+
+        if (
+          preferencesError &&
+          !isMissingWrapCodeBlocksColumnError(preferencesError) &&
+          preferencesError.code !== "PGRST116"
+        ) {
+          console.warn("Unable to load wrap-code feature preference.");
+        }
+
+        wrapCodeBlocksOnMobile = Boolean(
+          preferences?.wrap_code_blocks_on_mobile,
+        );
       }
     } catch {
       isAuthenticated = false;
@@ -51,7 +84,12 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className="antialiased">
+      <body
+        className={cn(
+          "antialiased",
+          wrapCodeBlocksOnMobile && "feature-wrap-code-mobile",
+        )}
+      >
         <div className="min-h-screen">
           <header className="border-b border-border/70 bg-background/95 backdrop-blur">
             <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-3 md:px-10">

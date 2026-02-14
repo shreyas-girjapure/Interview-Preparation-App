@@ -57,7 +57,7 @@ export default async function LoginPage({
             Welcome back.
           </h1>
           <p className="mt-3 text-base leading-7 text-muted-foreground">
-            Continue with Google to access your account and interview progress.
+            Continue with Google to access your account preferences.
           </p>
         </div>
 
