@@ -10,7 +10,7 @@ Last updated: 2026-02-14
 
 ## Current Execution Mode
 
-- Only crawler discovery work is deferred.
+- Crawler discovery work and learner progress tracking are deferred.
 - Active implementation can proceed for all other approved items.
 - Environment model is `dev + production` (no dedicated staging backend).
 
@@ -70,7 +70,7 @@ Last updated: 2026-02-14
 
 ### Phase 2 Learner Product
 
-- Implement persisted user progress for topic/question read states on public pages.
+- Finalize topic-first recommendation flows without progress-state persistence.
 
 ### Phase 6 Content Operations v2
 
@@ -80,6 +80,7 @@ Last updated: 2026-02-14
 ## Deferred (Do Not Implement Yet)
 
 - Crawler ingestion and discovery automation.
+- Learner progress tracking stories (US-006 Mark Topic as Read, US-007 Mark Question as Read, US-008 Progress Summary).
 
 ## Notes
 

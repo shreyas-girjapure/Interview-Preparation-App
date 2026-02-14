@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
   QUESTION_DIFFICULTIES,
   type QuestionDifficulty,
 } from "@/lib/interview/difficulty";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 
 export type AccountPreferences = {
   preferredDifficulty: QuestionDifficulty | null;
@@ -18,6 +18,14 @@ export type AccountPreferences = {
 };
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+
+type SavePreferencesRequest = {
+  preferredDifficulty: QuestionDifficulty | null;
+  focusAreas: string[];
+  targetRole: string | null;
+  experienceLevel: string | null;
+  dailyGoalMinutes: number | null;
+};
 
 function parseFocusAreas(input: string) {
   return Array.from(
@@ -30,11 +38,42 @@ function parseFocusAreas(input: string) {
   );
 }
 
+const MIN_DAILY_GOAL = 0;
+const MAX_DAILY_GOAL = 1440;
+
+function parseDailyGoalMinutes(input: string) {
+  const trimmed = input.trim();
+
+  if (!trimmed) {
+    return { value: null as number | null, error: null as string | null };
+  }
+
+  if (!/^\d+$/.test(trimmed)) {
+    return {
+      value: null,
+      error: "Daily goal must be a whole number between 0 and 1440.",
+    };
+  }
+
+  const parsed = Number.parseInt(trimmed, 10);
+
+  if (parsed < MIN_DAILY_GOAL || parsed > MAX_DAILY_GOAL) {
+    return {
+      value: null,
+      error: "Daily goal must be between 0 and 1440 minutes.",
+    };
+  }
+
+  return { value: parsed, error: null as string | null };
+}
+
 export function PreferencesForm({
   initialPreferences,
 }: {
   initialPreferences: AccountPreferences;
 }) {
+  const router = useRouter();
+
   const [preferredDifficulty, setPreferredDifficulty] = useState<
     QuestionDifficulty | ""
   >(initialPreferences.preferredDifficulty ?? "");
@@ -67,51 +106,52 @@ export function PreferencesForm({
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    const parsedDailyGoal =
-      dailyGoalMinutes.trim() === ""
-        ? null
-        : Number.parseInt(dailyGoalMinutes.trim(), 10);
-
-    if (parsedDailyGoal !== null && Number.isNaN(parsedDailyGoal)) {
+    const dailyGoalResult = parseDailyGoalMinutes(dailyGoalMinutes);
+    if (dailyGoalResult.error) {
       setSaveState("error");
-      setErrorMessage("Daily goal must be a valid number.");
+      setErrorMessage(dailyGoalResult.error);
       return;
     }
 
     setSaveState("saving");
     setErrorMessage("");
 
-    const supabase = createSupabaseBrowserClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await supabase.auth.getUser();
+    const payload: SavePreferencesRequest = {
+      preferredDifficulty: preferredDifficulty || null,
+      focusAreas: parseFocusAreas(focusAreasText),
+      targetRole: targetRole.trim() || null,
+      experienceLevel: experienceLevel.trim() || null,
+      dailyGoalMinutes: dailyGoalResult.value,
+    };
 
-    if (userError || !user) {
+    try {
+      const response = await fetch("/api/account/preferences", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+
+      if (!response.ok) {
+        setSaveState("error");
+        setErrorMessage(body?.error || "Unable to save preferences right now.");
+        return;
+      }
+    } catch {
       setSaveState("error");
-      setErrorMessage("You must be signed in to save preferences.");
-      return;
-    }
-
-    const { error } = await supabase.from("user_preferences").upsert(
-      {
-        user_id: user.id,
-        preferred_difficulty: preferredDifficulty || null,
-        focus_areas: parseFocusAreas(focusAreasText),
-        target_role: targetRole.trim() || null,
-        experience_level: experienceLevel.trim() || null,
-        daily_goal_minutes: parsedDailyGoal,
-      },
-      { onConflict: "user_id" },
-    );
-
-    if (error) {
-      setSaveState("error");
-      setErrorMessage("Unable to save preferences right now.");
+      setErrorMessage(
+        "Unable to save preferences right now. Check your connection and try again.",
+      );
       return;
     }
 
     setSaveState("saved");
+    router.refresh();
   }
 
   return (

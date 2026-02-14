@@ -9,7 +9,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 
 - Total phases: 6.
 - Active work can proceed across phases based on priority.
-- Only crawler discovery work is deferred for now.
+- Crawler discovery work and learner progress tracking are deferred for now.
 
 ## Goals
 
@@ -56,7 +56,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 ## High-Level Architecture
 
 - Public app: topic directory, topic detail (overview + related questions), question detail with topic links, and practice flows.
-- Authenticated user area: onboarding + preferences + progress tracking.
+- Authenticated user area: onboarding + preferences (progress tracking deferred).
 - Content operations: Supabase dashboard/SQL/CSV management for topics/questions/answers and relationships.
 - API layer: Next.js route handlers/server actions.
 - Data layer: Supabase Postgres with Row Level Security (RLS).
@@ -111,7 +111,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - [ ] Add canonical topic model and migrate/alias existing categories.
 - [x] Build topic list/detail pages (topic overview + related questions).
 - [x] Add in-answer linked topics for rabbit-hole exploration.
-- [ ] Add user read/progress tracking for both topics and questions.
+- [ ] Add user read/progress tracking for both topics and questions. (Deferred)
 - [ ] Add topic-driven recommendations ("continue learning") from topic/question relationships.
 
 ### Phase 3 - Content Operations (Supabase Managed)
@@ -152,7 +152,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - Learners can start from a topic and move through related topics/questions.
 - Question details render readable code blocks and linked topics.
 - User preferences are saved and isolated by RLS.
-- Topic/question progress is saved and isolated by RLS.
+- Topic/question progress is saved and isolated by RLS. (Deferred)
 - Public pages meet acceptable performance targets.
 
 ## Current Status
@@ -168,7 +168,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - 2026-02-14: Supabase environment strategy documented in `docs/SUPABASE_ENVIRONMENT_STRATEGY.md`; project creation still pending.
 - 2026-02-14: Bulk updates moved to Supabase CSV importer workflow (no in-app importer).
 - 2026-02-14: Preferences save flow moved to direct Supabase client writes (RLS) and custom preferences API route removed.
-- Remaining product scope: connect topic-first learner flows to Supabase-backed content and persist progress state.
+- Remaining product scope: connect topic-first learner flows to Supabase-backed content (progress tracking deferred).
 - Remaining identity scope: finalize environment strategy across dev/production Supabase projects.
 
 ## Constraints and Defaults
@@ -196,6 +196,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - 2026-02-14: Adopt Supabase-first data access for simple CRUD; removed app-side preferences CRUD wrapper route.
 - 2026-02-14: Standardize on a security-first Supabase pattern: server-side writes by default, direct client writes only for low-risk user-owned rows under RLS, and caching/indexing for performance.
 - 2026-02-14: Dropped custom in-app admin CMS from v1 plan; Supabase dashboard/SQL/CSV is the source of truth for content management.
+- 2026-02-14: Defer progress tracking stories (US-006, US-007, US-008) from the immediate roadmap.
 
 ## Change Control
 

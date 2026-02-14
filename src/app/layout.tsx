@@ -63,12 +63,16 @@ export default async function RootLayout({
                 <span className="leading-none">Interview Prep</span>
               </Link>
               <div className="flex items-center gap-2">
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/topics">Topics</Link>
-                </Button>
-                <Button asChild variant="ghost" size="sm">
-                  <Link href="/questions">Questions</Link>
-                </Button>
+                {isAuthenticated ? (
+                  <>
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href="/topics">Topics</Link>
+                    </Button>
+                    <Button asChild variant="ghost" size="sm">
+                      <Link href="/questions">Questions</Link>
+                    </Button>
+                  </>
+                ) : null}
                 {isAuthenticated ? (
                   <Link
                     href="/account"
@@ -79,14 +83,9 @@ export default async function RootLayout({
                     {accountInitial}
                   </Link>
                 ) : (
-                  <>
-                    <Button asChild variant="ghost" size="sm">
-                      <Link href="/login?next=/questions">Sign in</Link>
-                    </Button>
-                    <Button asChild size="sm">
-                      <Link href="/login?next=/account">Get started</Link>
-                    </Button>
-                  </>
+                  <Button asChild size="sm">
+                    <Link href="/login?next=/account">Get started</Link>
+                  </Button>
                 )}
               </div>
             </div>
