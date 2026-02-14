@@ -198,10 +198,7 @@
   padding: 0.15rem 0.35rem;
 }
 
-:where(
-    [data-rehype-pretty-code-fragment],
-    [data-rehype-pretty-code-figure]
-  ) {
+:where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure]) {
   margin: 1.75rem 0;
   overflow: hidden;
   border-radius: 0.9rem;
