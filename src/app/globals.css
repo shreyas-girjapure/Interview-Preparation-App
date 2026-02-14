@@ -137,15 +137,39 @@
 
 .interview-prose {
   font-family: var(--font-reading), serif;
+  color: color-mix(in oklch, var(--foreground) 88%, black);
+  text-wrap: pretty;
+}
+
+@media (min-width: 768px) {
+  .interview-prose {
+    font-size: 1.07rem;
+  }
 }
 
 .interview-prose :where(h1, h2, h3, h4) {
   font-family: var(--font-reading), serif;
+  color: color-mix(in oklch, var(--foreground) 96%, black);
   letter-spacing: -0.01em;
 }
 
+.interview-prose :where(h2) {
+  margin-top: 2.1rem;
+  margin-bottom: 0.85rem;
+}
+
 .interview-prose :where(p, li) {
-  line-height: 1.8;
+  line-height: 1.72;
+  color: color-mix(in oklch, var(--foreground) 82%, black);
+}
+
+.interview-prose :where(ul, ol) {
+  margin: 0.9rem 0 1.2rem;
+  padding-left: 1.25rem;
+}
+
+.interview-prose :where(li) {
+  margin: 0.28rem 0;
 }
 
 .interview-prose :where(a) {
@@ -174,36 +198,48 @@
   padding: 0.15rem 0.35rem;
 }
 
-[data-rehype-pretty-code-fragment] {
+:where(
+    [data-rehype-pretty-code-fragment],
+    [data-rehype-pretty-code-figure]
+  ) {
   margin: 1.75rem 0;
   overflow: hidden;
   border-radius: 0.9rem;
-  border: 1px solid var(--border);
-  background: color-mix(in oklch, var(--muted) 62%, white);
+  border: 1px solid color-mix(in oklch, var(--foreground) 18%, transparent);
+  background: oklch(0.23 0.015 260);
 }
 
 [data-rehype-pretty-code-title] {
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid color-mix(in oklch, white 10%, transparent);
+  background: oklch(0.27 0.016 260);
   padding: 0.55rem 1rem;
   font-family: var(--font-sans), sans-serif;
   font-size: 0.78rem;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--muted-foreground);
+  color: oklch(0.88 0.01 95);
 }
 
-[data-rehype-pretty-code-fragment] pre {
+:where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
+  pre {
   margin: 0;
   overflow-x: auto;
   background: transparent;
+  color: oklch(0.9 0.01 95);
   padding: 1rem 1.15rem;
 }
 
-[data-rehype-pretty-code-fragment] code {
+:where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
+  code {
   font-family: var(--font-code), monospace;
   font-size: 0.84rem;
   line-height: 1.75;
+}
+
+:where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
+  [style*="--shiki-dark"] {
+  color: var(--shiki-dark);
 }
 
 [data-highlighted-line] {
@@ -217,4 +253,172 @@
   border-radius: 0.3rem;
   background: color-mix(in oklch, var(--accent) 80%, white);
   box-shadow: 0 0 0 1px color-mix(in oklch, var(--border) 72%, white);
+}
+
+.brand-cat-logo {
+  display: block;
+}
+
+.brand-cat-logo-image {
+  display: block;
+  object-fit: contain;
+  animation: brand-cat-image-bob 3.2s ease-in-out infinite;
+}
+
+.brand-cat-logo__book-cover,
+.brand-cat-logo__book-page,
+.brand-cat-logo__book-page-turn,
+.brand-cat-logo__book-spine,
+.brand-cat-logo__cat-tail,
+.brand-cat-logo__cat-body,
+.brand-cat-logo__cat-head,
+.brand-cat-logo__cat-ear,
+.brand-cat-logo__cat-nose,
+.brand-cat-logo__cat-mouth,
+.brand-cat-logo__cat-whiskers,
+.brand-cat-logo__cat-paw {
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.brand-cat-logo__book-cover,
+.brand-cat-logo__book-page,
+.brand-cat-logo__book-page-turn,
+.brand-cat-logo__cat-body,
+.brand-cat-logo__cat-head,
+.brand-cat-logo__cat-ear,
+.brand-cat-logo__cat-paw {
+  fill: color-mix(in oklch, var(--background) 86%, white);
+}
+
+.brand-cat-logo__book-cover,
+.brand-cat-logo__book-page,
+.brand-cat-logo__book-page-turn,
+.brand-cat-logo__book-spine {
+  stroke-width: 2.2;
+}
+
+.brand-cat-logo__cat-tail,
+.brand-cat-logo__cat-body,
+.brand-cat-logo__cat-head,
+.brand-cat-logo__cat-ear,
+.brand-cat-logo__cat-nose,
+.brand-cat-logo__cat-mouth,
+.brand-cat-logo__cat-whiskers,
+.brand-cat-logo__cat-paw {
+  stroke-width: 2.4;
+}
+
+.brand-cat-logo__book-page--left,
+.brand-cat-logo__book-page--right {
+  fill: color-mix(in oklch, var(--background) 93%, white);
+}
+
+.brand-cat-logo__book-page-turn {
+  fill: color-mix(in oklch, var(--background) 96%, white);
+  transform-origin: 74px 84px;
+  animation: brand-cat-page-turn 2.8s ease-in-out infinite;
+}
+
+.brand-cat-logo__cat {
+  transform-origin: 70px 60px;
+  animation: brand-cat-bob 3.1s ease-in-out infinite;
+}
+
+.brand-cat-logo__cat-tail {
+  fill: none;
+  transform-origin: 99px 74px;
+  animation: brand-cat-tail 2.2s ease-in-out infinite;
+}
+
+.brand-cat-logo__cat-ear-inner {
+  fill: color-mix(in oklch, var(--primary) 38%, white);
+  opacity: 0.7;
+}
+
+.brand-cat-logo__cat-eyes {
+  stroke: currentColor;
+  stroke-width: 2.6;
+  transform-origin: 70px 43px;
+  animation: brand-cat-blink 4.8s ease-in-out infinite;
+}
+
+.brand-cat-logo__cat-nose {
+  fill: none;
+}
+
+.brand-cat-logo__cat-mouth,
+.brand-cat-logo__cat-whiskers {
+  fill: none;
+}
+
+@keyframes brand-cat-page-turn {
+  0%,
+  12%,
+  100% {
+    transform: rotate(0deg) scaleX(1);
+    opacity: 1;
+  }
+
+  28% {
+    transform: rotate(-14deg) scaleX(0.95);
+    opacity: 0.95;
+  }
+
+  44% {
+    transform: rotate(-29deg) scaleX(0.84);
+    opacity: 0.88;
+  }
+
+  62% {
+    transform: rotate(-8deg) scaleX(0.96);
+    opacity: 0.95;
+  }
+}
+
+@keyframes brand-cat-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(1.5px);
+  }
+}
+
+@keyframes brand-cat-tail {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  50% {
+    transform: rotate(5deg);
+  }
+}
+
+@keyframes brand-cat-blink {
+  0%,
+  44%,
+  48%,
+  100% {
+    transform: scaleY(1);
+  }
+
+  46% {
+    transform: scaleY(0.2);
+  }
+}
+
+@keyframes brand-cat-image-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(1px);
+  }
 }

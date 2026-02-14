@@ -50,12 +50,14 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <article className="mx-auto w-full max-w-[74ch] px-6 py-12 md:py-16">
-        <Button asChild variant="ghost" size="sm" className="mb-5 -ml-2">
-          <Link href="/topics">Back to topics</Link>
-        </Button>
+      <article className="mx-auto w-full max-w-6xl px-6 py-14 md:px-10 md:py-20">
+        <div className="mx-auto w-full max-w-[95ch]">
+          <Button asChild variant="ghost" size="sm" className="mb-5 -ml-2">
+            <Link href="/topics">Back to topics</Link>
+          </Button>
+        </div>
 
-        <header className="space-y-4">
+        <header className="mx-auto w-full max-w-[95ch] space-y-5">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">
               {topic.questionCount} related question
@@ -65,18 +67,21 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
           <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
             {topic.name}
           </h1>
-          <p className="text-base leading-8 text-muted-foreground md:text-lg">
+          <p className="text-base leading-8 text-foreground/70 md:text-lg">
             {topic.shortDescription}
           </p>
         </header>
 
-        <Separator className="my-8" />
+        <Separator className="mx-auto my-9 max-w-[95ch]" />
 
-        <MarkdownContent source={topic.overviewMarkdown} />
+        <MarkdownContent
+          source={topic.overviewMarkdown}
+          className="mx-auto w-full max-w-[95ch]"
+        />
 
-        <Separator className="my-8" />
+        <Separator className="mx-auto my-10 max-w-[95ch]" />
 
-        <section className="space-y-4">
+        <section className="mx-auto w-full max-w-[95ch] space-y-4">
           <h2 className="font-serif text-2xl tracking-tight">
             Related questions
           </h2>
@@ -87,11 +92,11 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
               </p>
             </div>
           ) : (
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {topic.relatedQuestions.map((question) => (
                 <li
                   key={question.slug}
-                  className="rounded-xl border border-border/80 bg-card/70 p-4"
+                  className="rounded-2xl border border-border/80 bg-card/70 p-5"
                 >
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="outline">{question.category}</Badge>
@@ -116,9 +121,9 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
           )}
         </section>
 
-        <Separator className="my-8" />
+        <Separator className="mx-auto my-10 max-w-[95ch]" />
 
-        <section className="space-y-4">
+        <section className="mx-auto w-full max-w-[95ch] space-y-4">
           <h2 className="font-serif text-2xl tracking-tight">Related topics</h2>
           {topic.relatedTopics.length === 0 ? (
             <div className="rounded-xl border border-border/80 bg-card/70 p-4">
@@ -127,11 +132,11 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
               </p>
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               {topic.relatedTopics.map((relatedTopic) => (
                 <div
                   key={relatedTopic.slug}
-                  className="rounded-xl border border-border/80 bg-card/70 p-4"
+                  className="rounded-2xl border border-border/80 bg-card/70 p-5"
                 >
                   <h3 className="font-serif text-xl leading-tight">
                     <Link

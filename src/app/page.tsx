@@ -11,7 +11,7 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <section className="mx-auto w-full max-w-5xl px-6 py-14 md:py-20">
+      <section className="mx-auto w-full max-w-7xl px-6 py-14 md:px-10 md:py-20">
         <header className="space-y-5">
           <Badge
             variant="secondary"
@@ -19,10 +19,10 @@ export default async function Home() {
           >
             Interview Preparation
           </Badge>
-          <h1 className="max-w-4xl font-serif text-4xl leading-tight tracking-tight text-foreground md:text-6xl">
+          <h1 className="max-w-5xl font-serif text-4xl leading-tight tracking-tight text-foreground md:text-6xl">
             Practice high-signal interview questions with structured answers.
           </h1>
-          <p className="max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
+          <p className="max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
             Build confidence with concise explanations, realistic code snippets,
             and topic-first learning paths that let you go deeper through
             related concepts.

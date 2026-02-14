@@ -9,12 +9,16 @@ import {
   listQuestions,
   type QuestionDifficulty,
 } from "@/lib/interview/questions";
+import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 
 type SearchParams = Promise<{
   category?: string | string[];
   difficulty?: string | string[];
   search?: string | string[];
+  page?: string | string[];
 }>;
+
+const QUESTIONS_PAGE_SIZE = 10;
 
 function getSingleValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -22,7 +26,11 @@ function getSingleValue(value: string | string[] | undefined) {
 
 function getHref(
   current: URLSearchParams,
-  updates: { category?: string | null; difficulty?: string | null },
+  updates: {
+    category?: string | null;
+    difficulty?: string | null;
+    page?: number | null;
+  },
 ) {
   const next = new URLSearchParams(current.toString());
 
@@ -38,8 +46,36 @@ function getHref(
     next.set("difficulty", updates.difficulty);
   }
 
+  if (updates.page === null) {
+    next.delete("page");
+  } else if (typeof updates.page === "number") {
+    if (updates.page <= 1) {
+      next.delete("page");
+    } else {
+      next.set("page", String(updates.page));
+    }
+  }
+
   const queryString = next.toString();
   return queryString ? `/questions?${queryString}` : "/questions";
+}
+
+function getVisiblePages(currentPage: number, totalPages: number) {
+  if (totalPages <= 1) {
+    return [1];
+  }
+
+  const candidates = new Set<number>([
+    1,
+    totalPages,
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+  ]);
+
+  return Array.from(candidates)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((a, b) => a - b);
 }
 
 export default async function QuestionsPage({
@@ -54,6 +90,7 @@ export default async function QuestionsPage({
   const selectedDifficulty: QuestionDifficulty | undefined =
     isQuestionDifficulty(rawDifficulty) ? rawDifficulty : undefined;
   const search = getSingleValue(rawParams.search)?.trim() ?? "";
+  const requestedPage = parsePositiveInt(getSingleValue(rawParams.page), 1);
 
   const [{ categories, difficulties }, questions] = await Promise.all([
     listQuestionFilterOptions(),
@@ -64,6 +101,13 @@ export default async function QuestionsPage({
     }),
   ]);
 
+  const pagination = paginateItems(
+    questions,
+    requestedPage,
+    QUESTIONS_PAGE_SIZE,
+  );
+  const visiblePages = getVisiblePages(pagination.page, pagination.totalPages);
+
   const currentQuery = new URLSearchParams();
   if (selectedCategory) currentQuery.set("category", selectedCategory);
   if (selectedDifficulty) currentQuery.set("difficulty", selectedDifficulty);
@@ -71,7 +115,7 @@ export default async function QuestionsPage({
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <div className="mx-auto w-full max-w-5xl px-6 py-12 md:py-16">
+      <div className="mx-auto w-full max-w-7xl px-6 py-12 md:px-10 md:py-16">
         <header className="space-y-4">
           <Badge
             variant="secondary"
@@ -82,7 +126,7 @@ export default async function QuestionsPage({
           <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
             Practice with focused interview questions
           </h1>
-          <p className="max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
+          <p className="max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
             Filter by category and difficulty, then open any question to read a
             complete interview-style answer with code where relevant.
           </p>
@@ -131,7 +175,7 @@ export default async function QuestionsPage({
                 variant={selectedCategory ? "outline" : "default"}
               >
                 <Link
-                  href={getHref(currentQuery, { category: null })}
+                  href={getHref(currentQuery, { category: null, page: null })}
                   scroll={false}
                 >
                   All categories
@@ -147,7 +191,10 @@ export default async function QuestionsPage({
                     variant={active ? "default" : "outline"}
                   >
                     <Link
-                      href={getHref(currentQuery, { category: category.value })}
+                      href={getHref(currentQuery, {
+                        category: category.value,
+                        page: null,
+                      })}
                       scroll={false}
                     >
                       {category.label} ({category.count})
@@ -169,7 +216,10 @@ export default async function QuestionsPage({
                 variant={selectedDifficulty ? "outline" : "default"}
               >
                 <Link
-                  href={getHref(currentQuery, { difficulty: null })}
+                  href={getHref(currentQuery, {
+                    difficulty: null,
+                    page: null,
+                  })}
                   scroll={false}
                 >
                   All levels
@@ -187,6 +237,7 @@ export default async function QuestionsPage({
                     <Link
                       href={getHref(currentQuery, {
                         difficulty: difficulty.value,
+                        page: null,
                       })}
                       scroll={false}
                     >
@@ -203,10 +254,10 @@ export default async function QuestionsPage({
 
         <section className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Showing {questions.length} question
-            {questions.length === 1 ? "" : "s"}
+            Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
+            question{pagination.total === 1 ? "" : "s"}
           </p>
-          {questions.length === 0 ? (
+          {pagination.total === 0 ? (
             <div className="rounded-xl border border-border/80 bg-card/70 p-6">
               <p className="text-muted-foreground">
                 No questions match the current filters. Try clearing one filter
@@ -214,35 +265,100 @@ export default async function QuestionsPage({
               </p>
             </div>
           ) : (
-            <ul className="space-y-4">
-              {questions.map((question) => (
-                <li
-                  key={question.id}
-                  className="rounded-xl border border-border/80 bg-card/70 p-5"
+            <>
+              <ul className="space-y-4">
+                {pagination.items.map((question) => (
+                  <li
+                    key={question.id}
+                    className="rounded-xl border border-border/80 bg-card/70 p-5"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center gap-2">
+                      <Badge variant="outline">{question.category}</Badge>
+                      <Badge variant="secondary">
+                        {question.difficulty.toUpperCase()}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        ~{question.estimatedMinutes} min answer
+                      </span>
+                    </div>
+                    <h2 className="font-serif text-2xl leading-tight">
+                      <Link
+                        href={`/questions/${question.slug}`}
+                        className="underline-offset-4 hover:underline"
+                      >
+                        {question.title}
+                      </Link>
+                    </h2>
+                    <p className="mt-2 text-base leading-7 text-muted-foreground">
+                      {question.summary}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+
+              {pagination.totalPages > 1 ? (
+                <nav
+                  aria-label="Questions pagination"
+                  className="flex flex-wrap items-center gap-2 pt-2"
                 >
-                  <div className="mb-3 flex flex-wrap items-center gap-2">
-                    <Badge variant="outline">{question.category}</Badge>
-                    <Badge variant="secondary">
-                      {question.difficulty.toUpperCase()}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      ~{question.estimatedMinutes} min answer
-                    </span>
-                  </div>
-                  <h2 className="font-serif text-2xl leading-tight">
-                    <Link
-                      href={`/questions/${question.slug}`}
-                      className="underline-offset-4 hover:underline"
+                  {pagination.hasPreviousPage ? (
+                    <Button asChild size="sm" variant="outline">
+                      <Link
+                        href={getHref(currentQuery, {
+                          page: pagination.page - 1,
+                        })}
+                        scroll={false}
+                      >
+                        Previous
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled>
+                      Previous
+                    </Button>
+                  )}
+
+                  {visiblePages.map((pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      asChild
+                      size="sm"
+                      variant={
+                        pageNumber === pagination.page ? "default" : "outline"
+                      }
                     >
-                      {question.title}
-                    </Link>
-                  </h2>
-                  <p className="mt-2 text-base leading-7 text-muted-foreground">
-                    {question.summary}
-                  </p>
-                </li>
-              ))}
-            </ul>
+                      <Link
+                        href={getHref(currentQuery, { page: pageNumber })}
+                        scroll={false}
+                      >
+                        {pageNumber}
+                      </Link>
+                    </Button>
+                  ))}
+
+                  {pagination.hasNextPage ? (
+                    <Button asChild size="sm" variant="outline">
+                      <Link
+                        href={getHref(currentQuery, {
+                          page: pagination.page + 1,
+                        })}
+                        scroll={false}
+                      >
+                        Next
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled>
+                      Next
+                    </Button>
+                  )}
+
+                  <span className="ml-1 text-sm text-muted-foreground">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                </nav>
+              ) : null}
+            </>
           )}
         </section>
       </div>

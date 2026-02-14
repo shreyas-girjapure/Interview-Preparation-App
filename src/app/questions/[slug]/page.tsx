@@ -63,12 +63,14 @@ export default async function QuestionDetailsPage({
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <article className="mx-auto w-full max-w-[74ch] px-6 py-12 md:py-16">
-        <Button asChild variant="ghost" size="sm" className="mb-5 -ml-2">
-          <Link href="/questions">Back to catalog</Link>
-        </Button>
+      <article className="mx-auto w-full max-w-6xl px-6 py-14 md:px-10 md:py-20">
+        <div className="mx-auto w-full max-w-[95ch]">
+          <Button asChild variant="ghost" size="sm" className="mb-5 -ml-2">
+            <Link href="/questions">Back to catalog</Link>
+          </Button>
+        </div>
 
-        <header className="space-y-4">
+        <header className="mx-auto w-full max-w-[95ch] space-y-5">
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline">{question.category}</Badge>
             <Badge variant="secondary">
@@ -81,7 +83,7 @@ export default async function QuestionDetailsPage({
           <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
             {question.title}
           </h1>
-          <p className="text-base leading-8 text-muted-foreground md:text-lg">
+          <p className="text-base leading-8 text-foreground/70 md:text-lg">
             {question.summary}
           </p>
           {linkedTopics.length ? (
@@ -100,22 +102,25 @@ export default async function QuestionDetailsPage({
           ) : null}
         </header>
 
-        <Separator className="my-8" />
+        <Separator className="mx-auto my-9 max-w-[95ch]" />
 
-        <MarkdownContent source={question.answerMarkdown} />
+        <MarkdownContent
+          source={question.answerMarkdown}
+          className="mx-auto w-full max-w-[95ch]"
+        />
 
         {rabbitHoleTopics.length ? (
           <>
-            <Separator className="my-8" />
-            <section className="space-y-3">
+            <Separator className="mx-auto my-10 max-w-[95ch]" />
+            <section className="mx-auto w-full max-w-[95ch] space-y-4">
               <h2 className="font-serif text-2xl tracking-tight">
                 Continue the rabbit-hole
               </h2>
-              <div className="grid gap-3 md:grid-cols-2">
+              <div className="grid gap-4 md:grid-cols-2">
                 {rabbitHoleTopics.map((topic) => (
                   <div
                     key={topic.slug}
-                    className="rounded-xl border border-border/80 bg-card/70 p-4"
+                    className="rounded-2xl border border-border/80 bg-card/70 p-5"
                   >
                     <h3 className="font-serif text-xl leading-tight">
                       <Link

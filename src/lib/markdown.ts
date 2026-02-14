@@ -1,8 +1,8 @@
 import { cache } from "react";
 import rehypePrettyCode, {
+  type LineElement,
   type Options as RehypePrettyCodeOptions,
 } from "rehype-pretty-code";
-import rehypeSanitize from "rehype-sanitize";
 import rehypeStringify from "rehype-stringify";
 import remarkGfm from "remark-gfm";
 import remarkParse from "remark-parse";
@@ -15,6 +15,15 @@ const prettyCodeOptions: RehypePrettyCodeOptions = {
     light: "github-light",
   },
   keepBackground: false,
+  defaultLang: {
+    block: "plaintext",
+    inline: "plaintext",
+  },
+  onVisitLine(line: LineElement) {
+    if (line.children.length === 0) {
+      line.children = [{ type: "text", value: " " }];
+    }
+  },
 };
 
 // Cached because interview answers are read often and recompiled rarely.
@@ -23,7 +32,6 @@ export const renderMarkdown = cache(async (source: string) => {
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkRehype)
-    .use(rehypeSanitize)
     .use(rehypePrettyCode, prettyCodeOptions)
     .use(rehypeStringify)
     .process(source);

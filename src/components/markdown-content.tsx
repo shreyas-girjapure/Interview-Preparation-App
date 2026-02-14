@@ -15,7 +15,7 @@ export async function MarkdownContent({
   return (
     <div
       className={cn(
-        "interview-prose prose prose-neutral prose-lg max-w-none",
+        "interview-prose prose prose-neutral max-w-none md:prose-lg",
         className,
       )}
       dangerouslySetInnerHTML={{ __html: html }}
