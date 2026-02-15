@@ -3,7 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MarkdownContent } from "@/components/markdown-content";
-import { RelatedTopicsCarousel } from "@/components/related-topics-carousel";
+import { RelatedQuestionsTwoRowCarousel } from "@/components/related-questions-two-row-carousel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -93,50 +93,7 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
               </p>
             </div>
           ) : (
-            <ul className="space-y-4">
-              {topic.relatedQuestions.map((question) => (
-                <li
-                  key={question.slug}
-                  className="rounded-2xl border border-border/80 bg-card/70 p-5"
-                >
-                  <div className="mb-2 flex flex-wrap items-center gap-2">
-                    {(question.categories.length ? question.categories : [question.category]).map(
-                      (category) => (
-                        <Badge key={`${question.id}-${category}`} variant="outline">
-                          {category}
-                        </Badge>
-                      ),
-                    )}
-                  </div>
-                  <h3 className="font-serif text-xl leading-tight">
-                    <Link
-                      href={`/questions/${question.slug}`}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {question.title}
-                    </Link>
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {question.summary}
-                  </p>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-
-        <Separator className="mx-auto my-10 max-w-[95ch]" />
-
-        <section className="mx-auto w-full max-w-[95ch] space-y-4">
-          <h2 className="font-serif text-2xl tracking-tight">Related topics</h2>
-          {topic.relatedTopics.length === 0 ? (
-            <div className="rounded-xl border border-border/80 bg-card/70 p-4">
-              <p className="text-sm text-muted-foreground">
-                No related topics configured yet.
-              </p>
-            </div>
-          ) : (
-            <RelatedTopicsCarousel topics={topic.relatedTopics} />
+            <RelatedQuestionsTwoRowCarousel questions={topic.relatedQuestions} />
           )}
         </section>
       </article>
