@@ -56,12 +56,7 @@ Another example:
 
 ## v2 Features
 
-### 1. Bulk Content Upsert
-
-- Support bulk updates for topics, questions, and answers.
-- Keep content aligned with changing technologies and interview trends.
-
-### 2. Crawlers for Discovery
+### 1. Crawlers for Discovery
 
 - Use crawlers to discover candidate questions and topics.
 - New content should go through review before publishing.

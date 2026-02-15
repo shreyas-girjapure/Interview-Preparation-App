@@ -108,6 +108,9 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - [x] Build topic list/detail pages (topic overview + related questions).
 - [x] Add in-answer linked topics for rabbit-hole exploration.
 - [ ] Add topic-driven recommendations ("continue learning") from topic/question relationships.
+- [ ] Add animated cat brand asset integration (GIF import workflow from external design tool). (Low priority)
+- [ ] Run UI polish pass for visual design refinements. (Low priority)
+- [ ] Improve search and filtering interactions, including difficulty filter UX.
 
 ### Phase 3 - Content Operations (Supabase Managed)
 

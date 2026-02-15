@@ -69,6 +69,9 @@ Last updated: 2026-02-14
 ### Phase 2 Learner Product
 
 - Finalize topic-first recommendation flows.
+- Backlog (low priority): add animated cat asset (GIF import after local design iteration).
+- Backlog (low priority): UI polish pass and broader design refinement.
+- Backlog: search and filtering UX improvements (including difficulty filter behavior/options).
 
 ### Phase 6 Content Operations v2
 

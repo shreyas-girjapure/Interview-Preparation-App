@@ -102,9 +102,6 @@ export default async function AccountPage() {
           <h1 className="font-serif text-4xl tracking-tight md:text-5xl">
             Signed in successfully
           </h1>
-          <p className="text-base leading-8 text-muted-foreground md:text-lg">
-            You are authenticated through Supabase Auth.
-          </p>
         </header>
 
         <Separator className="my-8" />
