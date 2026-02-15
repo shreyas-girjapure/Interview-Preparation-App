@@ -96,3 +96,6 @@ npm run ci
 - Build command: `npm run build`
 - Install command: `npm ci`
 - Required env vars: set all variables listed in `.env.example`
+- Main-branch deployment guard: Vercel builds fail automatically when `VERCEL_GIT_COMMIT_REF=main`.
+  - Intended deploy branch should be non-main (for example: `dev`).
+  - Emergency override: set `ALLOW_MAIN_BRANCH_DEPLOY=true` in Vercel envs.
