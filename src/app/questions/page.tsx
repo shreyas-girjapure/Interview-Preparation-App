@@ -3,17 +3,11 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  isQuestionDifficulty,
-  listQuestionFilterOptions,
-  listQuestions,
-  type QuestionDifficulty,
-} from "@/lib/interview/questions";
+import { listQuestionFilterOptions, listQuestions } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 
 type SearchParams = Promise<{
   category?: string | string[];
-  difficulty?: string | string[];
   search?: string | string[];
   page?: string | string[];
 }>;
@@ -28,7 +22,6 @@ function getHref(
   current: URLSearchParams,
   updates: {
     category?: string | null;
-    difficulty?: string | null;
     page?: number | null;
   },
 ) {
@@ -38,12 +31,6 @@ function getHref(
     next.delete("category");
   } else if (updates.category !== undefined) {
     next.set("category", updates.category);
-  }
-
-  if (updates.difficulty === null) {
-    next.delete("difficulty");
-  } else if (updates.difficulty !== undefined) {
-    next.set("difficulty", updates.difficulty);
   }
 
   if (updates.page === null) {
@@ -86,17 +73,13 @@ export default async function QuestionsPage({
   const rawParams = await searchParams;
 
   const selectedCategory = getSingleValue(rawParams.category)?.toLowerCase();
-  const rawDifficulty = getSingleValue(rawParams.difficulty);
-  const selectedDifficulty: QuestionDifficulty | undefined =
-    isQuestionDifficulty(rawDifficulty) ? rawDifficulty : undefined;
   const search = getSingleValue(rawParams.search)?.trim() ?? "";
   const requestedPage = parsePositiveInt(getSingleValue(rawParams.page), 1);
 
-  const [{ categories, difficulties }, questions] = await Promise.all([
+  const [{ categories }, questions] = await Promise.all([
     listQuestionFilterOptions(),
     listQuestions({
       category: selectedCategory,
-      difficulty: selectedDifficulty,
       search,
     }),
   ]);
@@ -110,7 +93,6 @@ export default async function QuestionsPage({
 
   const currentQuery = new URLSearchParams();
   if (selectedCategory) currentQuery.set("category", selectedCategory);
-  if (selectedDifficulty) currentQuery.set("difficulty", selectedDifficulty);
   if (search) currentQuery.set("search", search);
 
   return (
@@ -127,8 +109,8 @@ export default async function QuestionsPage({
             Practice with focused interview questions
           </h1>
           <p className="max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
-            Filter by category and difficulty, then open any question to read a
-            complete interview-style answer with code where relevant.
+            Filter by category, then open any question to read a complete
+            interview-style answer with code where relevant.
           </p>
           <Button asChild variant="outline" size="sm">
             <Link href="/topics">Prefer topic-first? Browse topics</Link>
@@ -151,13 +133,6 @@ export default async function QuestionsPage({
             />
             {selectedCategory ? (
               <input type="hidden" name="category" value={selectedCategory} />
-            ) : null}
-            {selectedDifficulty ? (
-              <input
-                type="hidden"
-                name="difficulty"
-                value={selectedDifficulty}
-              />
             ) : null}
             <Button type="submit" size="sm" className="md:ml-auto">
               Apply
@@ -205,49 +180,6 @@ export default async function QuestionsPage({
             </div>
           </div>
 
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Difficulty
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                asChild
-                size="sm"
-                variant={selectedDifficulty ? "outline" : "default"}
-              >
-                <Link
-                  href={getHref(currentQuery, {
-                    difficulty: null,
-                    page: null,
-                  })}
-                  scroll={false}
-                >
-                  All levels
-                </Link>
-              </Button>
-              {difficulties.map((difficulty) => {
-                const active = selectedDifficulty === difficulty.value;
-                return (
-                  <Button
-                    key={difficulty.value}
-                    asChild
-                    size="sm"
-                    variant={active ? "default" : "outline"}
-                  >
-                    <Link
-                      href={getHref(currentQuery, {
-                        difficulty: difficulty.value,
-                        page: null,
-                      })}
-                      scroll={false}
-                    >
-                      {difficulty.label} ({difficulty.count})
-                    </Link>
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
         </section>
 
         <Separator className="my-8" />
@@ -280,12 +212,6 @@ export default async function QuestionsPage({
                           </Badge>
                         ),
                       )}
-                      <Badge variant="secondary">
-                        {question.difficulty.toUpperCase()}
-                      </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        ~{question.estimatedMinutes} min answer
-                      </span>
                     </div>
                     <h2 className="font-serif text-2xl leading-tight">
                       <Link

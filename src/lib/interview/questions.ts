@@ -257,6 +257,30 @@ function mapQuestionDetail(
   };
 }
 
+function countOverlap(left: string[], right: string[]) {
+  if (!left.length || !right.length) {
+    return 0;
+  }
+
+  const rightSet = new Set(right);
+  const seen = new Set<string>();
+  let count = 0;
+
+  for (const item of left) {
+    if (seen.has(item)) {
+      continue;
+    }
+
+    seen.add(item);
+
+    if (rightSet.has(item)) {
+      count += 1;
+    }
+  }
+
+  return count;
+}
+
 function matchesQuestionSearch(
   question: InterviewQuestionSummary,
   search: string,
@@ -685,4 +709,83 @@ export async function listRabbitHoleTopics(
 ) {
   const topics = await listTopicsForQuestion(question);
   return topics.slice(0, limit);
+}
+
+export async function listRelatedQuestionsForQuestion(
+  question: string | InterviewQuestion | InterviewQuestionSummary,
+  limit = 8,
+) {
+  if (limit <= 0) {
+    return [];
+  }
+
+  const currentQuestion =
+    typeof question === "string"
+      ? await resolveQuestionSummaryBySlug(question)
+      : question;
+
+  if (!currentQuestion) {
+    return [];
+  }
+
+  const allQuestions = await listQuestions({});
+  const candidates = allQuestions.filter(
+    (candidate) =>
+      candidate.id !== currentQuestion.id && candidate.slug !== currentQuestion.slug,
+  );
+
+  const ranked = candidates
+    .map((candidate) => {
+      const sharedTopics = countOverlap(
+        candidate.topicSlugs,
+        currentQuestion.topicSlugs,
+      );
+      const sharedCategories = countOverlap(
+        candidate.categorySlugs,
+        currentQuestion.categorySlugs,
+      );
+      const sharedTags = countOverlap(candidate.tags, currentQuestion.tags);
+      const difficultyMatch =
+        candidate.difficulty === currentQuestion.difficulty ? 1 : 0;
+
+      const score =
+        sharedTopics * 100 +
+        sharedCategories * 30 +
+        sharedTags * 10 +
+        difficultyMatch * 3;
+
+      return {
+        candidate,
+        score,
+      };
+    })
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) {
+        return b.score - a.score;
+      }
+
+      const minutesDistanceA = Math.abs(
+        a.candidate.estimatedMinutes - currentQuestion.estimatedMinutes,
+      );
+      const minutesDistanceB = Math.abs(
+        b.candidate.estimatedMinutes - currentQuestion.estimatedMinutes,
+      );
+
+      if (minutesDistanceA !== minutesDistanceB) {
+        return minutesDistanceA - minutesDistanceB;
+      }
+
+      return a.candidate.title.localeCompare(b.candidate.title);
+    })
+    .map((entry) => entry.candidate);
+
+  if (ranked.length >= limit) {
+    return ranked.slice(0, limit);
+  }
+
+  const seen = new Set(ranked.map((candidate) => candidate.id));
+  const fallback = candidates.filter((candidate) => !seen.has(candidate.id));
+
+  return [...ranked, ...fallback].slice(0, limit);
 }

@@ -3,12 +3,13 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MarkdownContent } from "@/components/markdown-content";
+import { RelatedQuestionsTwoRowCarousel } from "@/components/related-questions-two-row-carousel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   getQuestionBySlug,
-  listRabbitHoleTopics,
+  listRelatedQuestionsForQuestion,
   listQuestionSlugs,
   listTopicsForQuestion,
 } from "@/lib/interview/questions";
@@ -56,9 +57,9 @@ export default async function QuestionDetailsPage({
     notFound();
   }
 
-  const [linkedTopics, rabbitHoleTopics] = await Promise.all([
+  const [linkedTopics, relatedQuestions] = await Promise.all([
     listTopicsForQuestion(question),
-    listRabbitHoleTopics(question, 4),
+    listRelatedQuestionsForQuestion(question, 12),
   ]);
 
   return (
@@ -79,12 +80,6 @@ export default async function QuestionDetailsPage({
                 </Badge>
               ),
             )}
-            <Badge variant="secondary">
-              {question.difficulty.toUpperCase()}
-            </Badge>
-            <span className="text-sm text-muted-foreground">
-              ~{question.estimatedMinutes} min answer
-            </span>
           </div>
           <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
             {question.title}
@@ -115,33 +110,14 @@ export default async function QuestionDetailsPage({
           className="mx-auto w-full max-w-[95ch]"
         />
 
-        {rabbitHoleTopics.length ? (
+        {relatedQuestions.length ? (
           <>
             <Separator className="mx-auto my-10 max-w-[95ch]" />
             <section className="mx-auto w-full max-w-[95ch] space-y-4">
               <h2 className="font-serif text-2xl tracking-tight">
-                Continue the rabbit-hole
+                Related Questions
               </h2>
-              <div className="grid gap-4 md:grid-cols-2">
-                {rabbitHoleTopics.map((topic) => (
-                  <div
-                    key={topic.slug}
-                    className="rounded-2xl border border-border/80 bg-card/70 p-5"
-                  >
-                    <h3 className="font-serif text-xl leading-tight">
-                      <Link
-                        href={`/topics/${topic.slug}`}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {topic.name}
-                      </Link>
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {topic.shortDescription}
-                    </p>
-                  </div>
-                ))}
-              </div>
+              <RelatedQuestionsTwoRowCarousel questions={relatedQuestions} />
             </section>
           </>
         ) : null}

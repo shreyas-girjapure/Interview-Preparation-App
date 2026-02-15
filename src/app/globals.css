@@ -191,11 +191,34 @@
 
 .interview-prose :where(code):not(:where(pre code)) {
   font-family: var(--font-code), monospace;
-  font-size: 0.86em;
-  border-radius: 0.35rem;
-  border: 1px solid var(--border);
-  background: color-mix(in oklch, var(--muted) 70%, white);
-  padding: 0.15rem 0.35rem;
+  font-size: 0.84em;
+  line-height: 1.25;
+  font-weight: 500;
+  border-radius: 0.45rem;
+  border: 0;
+  background: oklch(0.18 0.01 80);
+  color: oklch(0.97 0.003 95);
+  box-shadow: none;
+  outline: none;
+  filter: none;
+  padding: 0.2rem 0.42rem;
+}
+
+.interview-prose :where(code):not(:where(pre code))::before,
+.interview-prose :where(code):not(:where(pre code))::after {
+  content: "" !important;
+}
+
+.interview-prose.inline-code-grey :where(code):not(:where(pre code)) {
+  font-family: var(--font-code), monospace;
+  font-size: 0.84em;
+  line-height: 1.25;
+  font-weight: 500;
+  border-radius: 0.45rem;
+  border: 1px solid oklch(0.86 0.008 88);
+  background: oklch(0.93 0.005 95);
+  color: oklch(0.26 0.01 84);
+  padding: 0.2rem 0.42rem;
 }
 
 :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure]) {
@@ -204,6 +227,15 @@
   border-radius: 0.9rem;
   border: 1px solid color-mix(in oklch, var(--foreground) 18%, transparent);
   background: oklch(0.23 0.015 260);
+}
+
+.interview-prose span[data-rehype-pretty-code-figure] {
+  display: inline;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
 }
 
 [data-rehype-pretty-code-title] {
