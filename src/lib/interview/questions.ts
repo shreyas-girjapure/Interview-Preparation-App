@@ -12,6 +12,8 @@ export type InterviewQuestion = {
   slug: string;
   title: string;
   category: string;
+  categories: string[];
+  categorySlugs: string[];
   difficulty: QuestionDifficulty;
   summary: string;
   answerMarkdown: string;
@@ -56,8 +58,8 @@ type FilterOption = {
 };
 
 type CategoryRelation =
-  | { name: string | null }
-  | Array<{ name: string | null }>;
+  | { slug: string | null; name: string | null }
+  | Array<{ slug: string | null; name: string | null }>;
 
 type TopicRelation = {
   id: string | null;
@@ -65,6 +67,7 @@ type TopicRelation = {
   name: string | null;
   short_description: string | null;
   status: string | null;
+  categories: CategoryRelation | null;
 };
 
 type QuestionRow = {
@@ -77,7 +80,6 @@ type QuestionRow = {
   estimated_minutes: number | null;
   created_at: string | null;
   published_at: string | null;
-  categories: CategoryRelation | null;
   question_topics: Array<{
     sort_order: number | null;
     topics: TopicRelation | TopicRelation[] | null;
@@ -175,9 +177,44 @@ function mapTopicSlugs(questionTopics: QuestionRow["question_topics"]) {
   return topicSlugs;
 }
 
-function mapCategoryName(categories: QuestionRow["categories"]) {
-  const category = pickSingle(categories);
-  return category?.name?.trim() || "General";
+function mapCategoryMetadata(questionTopics: QuestionRow["question_topics"]) {
+  if (!questionTopics?.length) {
+    return {
+      labels: [],
+      slugs: [],
+    };
+  }
+
+  const labels: string[] = [];
+  const slugs: string[] = [];
+  const seen = new Set<string>();
+
+  const mapped = questionTopics
+    .map((relation) => ({
+      sortOrder: relation.sort_order ?? Number.MAX_SAFE_INTEGER,
+      topic: pickSingle(relation.topics),
+    }))
+    .filter((entry) => entry.topic?.status !== "draft")
+    .sort((a, b) => a.sortOrder - b.sortOrder);
+
+  for (const entry of mapped) {
+    const topicCategory = pickSingle(entry.topic?.categories);
+    const categoryLabel = topicCategory?.name?.trim();
+    const categorySlug = topicCategory?.slug?.trim().toLowerCase();
+
+    if (!categoryLabel || !categorySlug || seen.has(categorySlug)) {
+      continue;
+    }
+
+    seen.add(categorySlug);
+    labels.push(categoryLabel);
+    slugs.push(categorySlug);
+  }
+
+  return {
+    labels,
+    slugs,
+  };
 }
 
 function mapDifficulty(difficulty: string | null): QuestionDifficulty {
@@ -193,11 +230,15 @@ function mapDifficulty(difficulty: string | null): QuestionDifficulty {
 }
 
 function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
+  const categories = mapCategoryMetadata(row.question_topics);
+
   return {
     id: row.id,
     slug: row.slug,
     title: row.title,
-    category: mapCategoryName(row.categories),
+    category: categories.labels[0] ?? "General",
+    categories: categories.labels,
+    categorySlugs: categories.slugs,
     difficulty: mapDifficulty(row.difficulty),
     summary: row.summary?.trim() || "No summary available yet.",
     tags: row.tags ?? [],
@@ -230,6 +271,7 @@ function matchesQuestionSearch(
     question.title,
     question.summary,
     question.category,
+    ...question.categories,
     ...question.tags,
     ...question.topicSlugs,
   ]
@@ -266,7 +308,6 @@ async function fetchPublishedQuestionRows() {
           estimated_minutes,
           created_at,
           published_at,
-          categories(name),
           question_topics(
             sort_order,
             topics(
@@ -274,7 +315,11 @@ async function fetchPublishedQuestionRows() {
               slug,
               name,
               short_description,
-              status
+              status,
+              categories(
+                slug,
+                name
+              )
             )
           )
         `,
@@ -372,6 +417,8 @@ async function resolveQuestionSummaryBySlug(slug: string) {
     slug: question.slug,
     title: question.title,
     category: question.category,
+    categories: question.categories,
+    categorySlugs: question.categorySlugs,
     difficulty: question.difficulty,
     summary: question.summary,
     tags: question.tags,
@@ -397,7 +444,7 @@ export async function listQuestions(filters: QuestionFilters = {}) {
 
   return summaries.filter((question) => {
     const categoryMatch = category
-      ? normalize(question.category) === category
+      ? question.categorySlugs.includes(category)
       : true;
     const difficultyMatch = difficulty
       ? question.difficulty === difficulty
@@ -409,17 +456,24 @@ export async function listQuestions(filters: QuestionFilters = {}) {
 }
 
 export async function listQuestionFilterOptions() {
-  const categoryMap = new Map<string, number>();
+  const categoryMap = new Map<string, { label: string; count: number }>();
   const difficultyMap = new Map<QuestionDifficulty, number>();
   const summaries = (await fetchPublishedQuestionRows()).map(
     mapQuestionSummary,
   );
 
   for (const question of summaries) {
-    categoryMap.set(
-      question.category,
-      (categoryMap.get(question.category) ?? 0) + 1,
-    );
+    question.categorySlugs.forEach((slug, index) => {
+      const label = question.categories[index] ?? question.category;
+      const existing = categoryMap.get(slug);
+
+      if (existing) {
+        existing.count += 1;
+      } else {
+        categoryMap.set(slug, { label, count: 1 });
+      }
+    });
+
     difficultyMap.set(
       question.difficulty,
       (difficultyMap.get(question.difficulty) ?? 0) + 1,
@@ -427,10 +481,10 @@ export async function listQuestionFilterOptions() {
   }
 
   const categories: FilterOption[] = Array.from(categoryMap.entries())
-    .map(([label, count]) => ({
-      label,
-      value: label.toLowerCase(),
-      count,
+    .map(([value, entry]) => ({
+      label: entry.label,
+      value,
+      count: entry.count,
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
@@ -484,7 +538,6 @@ export async function getQuestionBySlug(slug: string) {
             estimated_minutes,
             created_at,
             published_at,
-            categories(name),
             question_topics(
               sort_order,
               topics(
@@ -492,7 +545,11 @@ export async function getQuestionBySlug(slug: string) {
                 slug,
                 name,
                 short_description,
-                status
+                status,
+                categories(
+                  slug,
+                  name
+                )
               )
             )
           `,

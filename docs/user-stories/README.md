@@ -17,6 +17,7 @@
 - EPIC-B: Readable Learning Content (`docs/user-stories/epics/EPIC-B-readable-learning-content.md`)
 - EPIC-D: Admin Content Management (Archived / not planned for v1) (`docs/user-stories/epics/EPIC-D-admin-content-management.md`)
 - EPIC-E: Content Operations v2 (`docs/user-stories/epics/EPIC-E-content-operations-v2.md`)
+- EPIC-F: Preparation Category Taxonomy and LLM Intake (`docs/user-stories/epics/EPIC-F-preparation-category-taxonomy-llm-intake.md`)
 
 ## Story Index
 
@@ -31,6 +32,12 @@
 - US-012 CSV Bulk Import Workflow (`docs/user-stories/stories/US-012-bulk-upsert.md`)
 - US-013 Deduplication Controls (`docs/user-stories/stories/US-013-deduplication-controls.md`)
 - US-014 Crawler Ingestion With Review Gate (`docs/user-stories/stories/US-014-crawler-ingestion-review-gate.md`)
+- US-015 Preparation Category Canonical Model (`docs/user-stories/stories/US-015-preparation-category-canonical-model.md`)
+- US-016 Question-Topic Category Integrity (`docs/user-stories/stories/US-016-question-topic-category-integrity.md`)
+- US-017 Query Compatibility During Taxonomy Migration (`docs/user-stories/stories/US-017-query-compatibility-taxonomy-migration.md`)
+- US-018 LLM Topic Candidate Review Workflow (`docs/user-stories/stories/US-018-llm-topic-candidate-review-workflow.md`)
+- US-019 LLM Question Topic Tagging Review Workflow (`docs/user-stories/stories/US-019-llm-question-topic-tagging-review-workflow.md`)
+- US-020 Canonical Promotion and Quality Audit (`docs/user-stories/stories/US-020-canonical-promotion-quality-audit.md`)
 
 ## Recommended First Slice (When Phase 2 Starts)
 

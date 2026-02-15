@@ -10,7 +10,13 @@
     "format": "prettier --check .",
     "format:write": "prettier --write .",
     "test": "vitest run",
-    "ci": "npm run lint && npm run format && npm run test && npm run build"
+    "ci": "npm run lint && npm run format && npm run test && npm run build",
+    "db:migrate:local": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target local",
+    "db:reset:local": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target local -ResetLocal",
+    "db:migrate:dev:dry": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target dev -DryRun",
+    "db:migrate:dev": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target dev",
+    "db:migrate:prod:dry": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target prod -DryRun",
+    "db:migrate:prod": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target prod -ConfirmProd"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

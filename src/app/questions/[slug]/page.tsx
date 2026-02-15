@@ -72,7 +72,13 @@ export default async function QuestionDetailsPage({
 
         <header className="mx-auto w-full max-w-[95ch] space-y-5">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="outline">{question.category}</Badge>
+            {(question.categories.length ? question.categories : [question.category]).map(
+              (category) => (
+                <Badge key={`${question.id}-${category}`} variant="outline">
+                  {category}
+                </Badge>
+              ),
+            )}
             <Badge variant="secondary">
               {question.difficulty.toUpperCase()}
             </Badge>

@@ -99,7 +99,13 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
                   className="rounded-2xl border border-border/80 bg-card/70 p-5"
                 >
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <Badge variant="outline">{question.category}</Badge>
+                    {(question.categories.length ? question.categories : [question.category]).map(
+                      (category) => (
+                        <Badge key={`${question.id}-${category}`} variant="outline">
+                          {category}
+                        </Badge>
+                      ),
+                    )}
                     <Badge variant="secondary">
                       {question.difficulty.toUpperCase()}
                     </Badge>

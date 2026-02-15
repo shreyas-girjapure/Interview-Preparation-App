@@ -57,6 +57,11 @@ Apply the initial schema + RLS migration from:
 
 You can run it in Supabase SQL Editor, or with Supabase CLI if you use local/dev databases.
 
+For ongoing table/column/index changes, use:
+
+- `docs/SUPABASE_MIGRATION_PLAYBOOK.md`
+- `scripts/supabase-migrate.ps1`
+
 ## Quality checks
 
 ```bash

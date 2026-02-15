@@ -48,8 +48,14 @@ export default async function Home() {
                 key={question.id}
                 className="rounded-xl border border-border/80 bg-card/70 p-4"
               >
-                <div className="mb-3 flex items-center gap-2">
-                  <Badge variant="outline">{question.category}</Badge>
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                  {(question.categories.length ? question.categories : [question.category]).map(
+                    (category) => (
+                      <Badge key={`${question.id}-${category}`} variant="outline">
+                        {category}
+                      </Badge>
+                    ),
+                  )}
                   <Badge variant="secondary">
                     {question.difficulty.toUpperCase()}
                   </Badge>

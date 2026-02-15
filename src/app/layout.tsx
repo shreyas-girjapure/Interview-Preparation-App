@@ -97,7 +97,7 @@ export default async function RootLayout({
                 href="/"
                 className="flex items-center gap-2.5 font-sans text-2xl font-extrabold tracking-[-0.03em]"
               >
-                <BrandLogo className="size-12 text-foreground/80" />
+                <BrandLogo className="size-16 text-foreground/80" />
                 <span className="leading-none">Interview Prep</span>
               </Link>
               <div className="flex items-center gap-2">
