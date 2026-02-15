@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { BrandLogo } from "@/components/brand-logo";
 import { Button } from "@/components/ui/button";
+import { hasAdminAreaAccess, isAppRole } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { cn } from "@/lib/utils";
 import "./globals.css";
@@ -37,6 +38,7 @@ export default async function RootLayout({
   let isAuthenticated = false;
   let accountInitial = "U";
   let accountLabel = "Account";
+  let canAccessAdmin = false;
   let wrapCodeBlocksOnMobile = false;
 
   if (hasSupabasePublicEnv) {
@@ -76,6 +78,20 @@ export default async function RootLayout({
         wrapCodeBlocksOnMobile = Boolean(
           preferences?.wrap_code_blocks_on_mobile,
         );
+
+        const { data: userRoleData, error: userRoleError } = await supabase
+          .from("users")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle<{
+            role: string | null;
+          }>();
+
+        if (userRoleError && userRoleError.code !== "PGRST116") {
+          console.warn("Unable to load account role for admin nav.");
+        } else if (isAppRole(userRoleData?.role)) {
+          canAccessAdmin = hasAdminAreaAccess(userRoleData.role);
+        }
       }
     } catch {
       isAuthenticated = false;
@@ -109,6 +125,11 @@ export default async function RootLayout({
                     <Button asChild variant="ghost" size="sm">
                       <Link href="/questions">Questions</Link>
                     </Button>
+                    {canAccessAdmin ? (
+                      <Button asChild variant="ghost" size="sm">
+                        <Link href="/admin">Admin</Link>
+                      </Button>
+                    ) : null}
                   </>
                 ) : null}
                 {isAuthenticated ? (

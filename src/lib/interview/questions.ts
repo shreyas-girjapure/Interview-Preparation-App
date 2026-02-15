@@ -1,11 +1,4 @@
 import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
-import {
-  QUESTION_DIFFICULTIES,
-  type QuestionDifficulty,
-} from "@/lib/interview/difficulty";
-
-export { QUESTION_DIFFICULTIES };
-export type { QuestionDifficulty };
 
 export type InterviewQuestion = {
   id: string;
@@ -14,11 +7,8 @@ export type InterviewQuestion = {
   category: string;
   categories: string[];
   categorySlugs: string[];
-  difficulty: QuestionDifficulty;
   summary: string;
   answerMarkdown: string;
-  tags: string[];
-  estimatedMinutes: number;
   topicSlugs: string[];
 };
 
@@ -29,7 +19,6 @@ export type InterviewQuestionSummary = Omit<
 
 export type QuestionFilters = {
   category?: string;
-  difficulty?: QuestionDifficulty;
   search?: string;
 };
 
@@ -74,10 +63,7 @@ type QuestionRow = {
   id: string;
   slug: string;
   title: string;
-  difficulty: string | null;
   summary: string | null;
-  tags: string[] | null;
-  estimated_minutes: number | null;
   created_at: string | null;
   published_at: string | null;
   question_topics: Array<{
@@ -217,18 +203,6 @@ function mapCategoryMetadata(questionTopics: QuestionRow["question_topics"]) {
   };
 }
 
-function mapDifficulty(difficulty: string | null): QuestionDifficulty {
-  if (
-    difficulty === "easy" ||
-    difficulty === "medium" ||
-    difficulty === "hard"
-  ) {
-    return difficulty;
-  }
-
-  return "medium";
-}
-
 function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
   const categories = mapCategoryMetadata(row.question_topics);
 
@@ -239,10 +213,7 @@ function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
     category: categories.labels[0] ?? "General",
     categories: categories.labels,
     categorySlugs: categories.slugs,
-    difficulty: mapDifficulty(row.difficulty),
     summary: row.summary?.trim() || "No summary available yet.",
-    tags: row.tags ?? [],
-    estimatedMinutes: row.estimated_minutes ?? 5,
     topicSlugs: mapTopicSlugs(row.question_topics),
   };
 }
@@ -296,7 +267,6 @@ function matchesQuestionSearch(
     question.summary,
     question.category,
     ...question.categories,
-    ...question.tags,
     ...question.topicSlugs,
   ]
     .join(" ")
@@ -326,10 +296,7 @@ async function fetchPublishedQuestionRows() {
           id,
           slug,
           title,
-          difficulty,
           summary,
-          tags,
-          estimated_minutes,
           created_at,
           published_at,
           question_topics(
@@ -443,23 +410,13 @@ async function resolveQuestionSummaryBySlug(slug: string) {
     category: question.category,
     categories: question.categories,
     categorySlugs: question.categorySlugs,
-    difficulty: question.difficulty,
     summary: question.summary,
-    tags: question.tags,
-    estimatedMinutes: question.estimatedMinutes,
     topicSlugs: question.topicSlugs,
   };
 }
 
-export function isQuestionDifficulty(
-  value: string | null | undefined,
-): value is QuestionDifficulty {
-  return QUESTION_DIFFICULTIES.includes(value as QuestionDifficulty);
-}
-
 export async function listQuestions(filters: QuestionFilters = {}) {
   const category = normalize(filters.category ?? "");
-  const difficulty = filters.difficulty;
   const search = filters.search ?? "";
 
   const summaries = (await fetchPublishedQuestionRows()).map(
@@ -470,18 +427,14 @@ export async function listQuestions(filters: QuestionFilters = {}) {
     const categoryMatch = category
       ? question.categorySlugs.includes(category)
       : true;
-    const difficultyMatch = difficulty
-      ? question.difficulty === difficulty
-      : true;
     const searchMatch = matchesQuestionSearch(question, search);
 
-    return categoryMatch && difficultyMatch && searchMatch;
+    return categoryMatch && searchMatch;
   });
 }
 
 export async function listQuestionFilterOptions() {
   const categoryMap = new Map<string, { label: string; count: number }>();
-  const difficultyMap = new Map<QuestionDifficulty, number>();
   const summaries = (await fetchPublishedQuestionRows()).map(
     mapQuestionSummary,
   );
@@ -497,11 +450,6 @@ export async function listQuestionFilterOptions() {
         categoryMap.set(slug, { label, count: 1 });
       }
     });
-
-    difficultyMap.set(
-      question.difficulty,
-      (difficultyMap.get(question.difficulty) ?? 0) + 1,
-    );
   }
 
   const categories: FilterOption[] = Array.from(categoryMap.entries())
@@ -512,13 +460,7 @@ export async function listQuestionFilterOptions() {
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  const difficulties: FilterOption[] = QUESTION_DIFFICULTIES.map((value) => ({
-    label: value[0].toUpperCase() + value.slice(1),
-    value,
-    count: difficultyMap.get(value) ?? 0,
-  }));
-
-  return { categories, difficulties };
+  return { categories };
 }
 
 export async function listFeaturedQuestions(limit = 3) {
@@ -556,10 +498,7 @@ export async function getQuestionBySlug(slug: string) {
             id,
             slug,
             title,
-            difficulty,
             summary,
-            tags,
-            estimated_minutes,
             created_at,
             published_at,
             question_topics(
@@ -744,15 +683,10 @@ export async function listRelatedQuestionsForQuestion(
         candidate.categorySlugs,
         currentQuestion.categorySlugs,
       );
-      const sharedTags = countOverlap(candidate.tags, currentQuestion.tags);
-      const difficultyMatch =
-        candidate.difficulty === currentQuestion.difficulty ? 1 : 0;
 
       const score =
         sharedTopics * 100 +
-        sharedCategories * 30 +
-        sharedTags * 10 +
-        difficultyMatch * 3;
+        sharedCategories * 30;
 
       return {
         candidate,
@@ -763,17 +697,6 @@ export async function listRelatedQuestionsForQuestion(
     .sort((a, b) => {
       if (b.score !== a.score) {
         return b.score - a.score;
-      }
-
-      const minutesDistanceA = Math.abs(
-        a.candidate.estimatedMinutes - currentQuestion.estimatedMinutes,
-      );
-      const minutesDistanceB = Math.abs(
-        b.candidate.estimatedMinutes - currentQuestion.estimatedMinutes,
-      );
-
-      if (minutesDistanceA !== minutesDistanceB) {
-        return minutesDistanceA - minutesDistanceB;
       }
 
       return a.candidate.title.localeCompare(b.candidate.title);

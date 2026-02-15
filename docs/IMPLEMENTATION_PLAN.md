@@ -4,6 +4,7 @@
 
 This document is the single source of truth for architecture, execution phases, and deployment tracking.
 Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
+Data gathering and ingestion execution plan: `docs/DATA_GATHERING_AND_INGESTION_PLAN.md`.
 
 ## Execution Focus
 
@@ -26,7 +27,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - Database + Auth: Supabase (Postgres + Google OAuth via Supabase Auth).
 - Data access policy: Supabase-first (`supabase-js` + RLS), add custom app routes only when orchestration or privileged server behavior is required.
 - Hosting: Vercel (web/app), Supabase (DB/Auth).
-- Content management: Supabase dashboard + SQL/CSV workflows (no custom in-app admin panel for v1).
+- Content management: Supabase dashboard + SQL/CSV workflows, plus a lightweight in-app admin composer for manual draft/preview/publish.
 - UI system: `shadcn/ui` + Tailwind v4.
 - Content rendering: Markdown + Shiki (`rehype-pretty-code`) with sanitization.
 
@@ -115,6 +116,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 ### Phase 3 - Content Operations (Supabase Managed)
 
 - [x] Standardize on Supabase dashboard/SQL/CSV as the content management surface.
+- [x] Add in-app admin composer flow for manual category/topic/question/answer draft creation with preview + publish.
 - [ ] Define repeatable update playbooks for topic/question/answer changes.
 - [ ] Add relationship update checklist for `question_topics` and `topic_edges`.
 - [ ] Document publish-state guardrails and review checklist.
@@ -137,9 +139,13 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 ### Phase 6 - Content Operations (v2)
 
 - [x] Use Supabase dashboard CSV importer for bulk category/question/answer updates (manual process).
+- [x] Draft data gathering and ingestion blueprint (`docs/DATA_GATHERING_AND_INGESTION_PLAN.md`).
+- [ ] Create ingestion staging schema migration (`ingest_batches`, `ingest_raw_questions`, `ingest_topic_candidates`, `ingest_question_topic_suggestions`, `ingest_review_decisions`, promotion audit tables) with strict RLS.
 - [ ] Define and document CSV templates + import checklist for repeatable operations.
 - [ ] Add dedupe and conflict handling (slug collisions, semantic duplicates).
 - [ ] Add freshness metadata and source attribution fields.
+- [ ] Implement canonical promotion workflow + integrity audit report for approved staging records.
+- [ ] Add moderation queue SQL views + review reason-code taxonomy.
 - [ ] Build crawler ingestion proof-of-concept behind moderation queue (no auto-publish). (Deferred)
 
 ## Acceptance Criteria
@@ -161,7 +167,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - 2026-02-14: Added Phase 2 schema migration for `topics`, `question_topics`, and `topic_edges`.
 - 2026-02-14: Topic/question content reads now run from Supabase-backed queries (in-memory content removed).
 - 2026-02-14: Demo content migration added and applied for topics/questions/answers and rabbit-hole links.
-- 2026-02-14: In-app `/admin` route and admin nav entry removed; content management standardized on Supabase dashboard workflows.
+- 2026-02-15: In-app `/admin` composer added for manual content entry, question-page preview, and publish action.
 - 2026-02-14: Production Supabase project (`xglbjcouoyjegryxorqo`) wired with Vercel env vars and production `NEXT_PUBLIC_APP_URL`.
 - 2026-02-14: Production Google OAuth redirect mismatch resolved; sign-in callback config aligned across Google, Supabase, and app URLs.
 - 2026-02-14: Bulk updates moved to Supabase CSV importer workflow (no in-app importer).
@@ -170,6 +176,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - 2026-02-15: Canonical Preparation Category migration applied (`topics.preparation_category_id` enforced, `questions.category_id` removed, and query compatibility maintained through `question_topics -> topics -> categories`).
 - 2026-02-15: Multi-category topic/question demo content and relationships seeded for taxonomy compatibility validation.
 - 2026-02-15: DB guardrail added to block `published` questions that have zero linked `question_topics` rows.
+- 2026-02-15: Data gathering and ingestion execution plan documented (`docs/DATA_GATHERING_AND_INGESTION_PLAN.md`) with staged rollout milestones.
 - Remaining product scope: connect topic-first learner flows to Supabase-backed content.
 
 ## Constraints and Defaults
@@ -196,9 +203,11 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - 2026-02-14: Defer crawler ingestion only; manage bulk uploads via Supabase CSV importer.
 - 2026-02-14: Adopt Supabase-first data access for simple CRUD; removed app-side preferences CRUD wrapper route.
 - 2026-02-14: Standardize on a security-first Supabase pattern: server-side writes by default, direct client writes only for low-risk user-owned rows under RLS, and caching/indexing for performance.
-- 2026-02-14: Dropped custom in-app admin CMS from v1 plan; Supabase dashboard/SQL/CSV is the source of truth for content management.
+- 2026-02-14: Dropped full custom in-app admin CMS from v1 plan in favor of Supabase dashboard/SQL/CSV-first operations.
 - 2026-02-14: Remove progress tracking from v1 scope (schema + backlog) to keep roadmap focused on topic-first learning and content quality.
 - 2026-02-15: Adopt canonical Preparation Category linkage on topics and derive question category membership through topic relationships.
+- 2026-02-15: Adopt a formal ingestion blueprint with mandatory human review, auditable promotion runs, and deferred crawler auto-discovery.
+- 2026-02-15: Reintroduce a minimal in-app admin composer for manual-first intake (draft -> preview -> publish) before LLM ingestion optimization.
 
 ## Change Control
 

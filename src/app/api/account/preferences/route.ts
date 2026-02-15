@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { QUESTION_DIFFICULTIES } from "@/lib/interview/difficulty";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const savePreferencesSchema = z
   .object({
-    preferredDifficulty: z.enum(QUESTION_DIFFICULTIES).nullable().optional(),
     focusAreas: z.array(z.string()).optional(),
     targetRole: z.string().nullable().optional(),
     experienceLevel: z.string().nullable().optional(),
@@ -96,7 +94,6 @@ export async function POST(request: Request) {
 
   const upsertPayload: {
     user_id: string;
-    preferred_difficulty?: (typeof payload)["preferredDifficulty"];
     focus_areas?: string[];
     target_role?: string | null;
     experience_level?: string | null;
@@ -105,10 +102,6 @@ export async function POST(request: Request) {
   } = {
     user_id: user.id,
   };
-
-  if (payload.preferredDifficulty !== undefined) {
-    upsertPayload.preferred_difficulty = payload.preferredDifficulty;
-  }
 
   if (payload.focusAreas !== undefined) {
     upsertPayload.focus_areas = normalizeFocusAreas(payload.focusAreas);

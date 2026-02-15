@@ -49,7 +49,7 @@ Last updated: 2026-02-15
 
 - Bulk updates are managed through Supabase dashboard CSV importer (manual process).
 - Demo content migration is in place for test environments.
-- In-app admin routes removed; content management is handled in Supabase dashboard/SQL/CSV workflows.
+- In-app admin composer is now available at `/admin` for manual draft entry, preview, and publish actions.
 
 ### Taxonomy and Query Compatibility
 
@@ -64,6 +64,7 @@ Last updated: 2026-02-15
 - Project overview normalized.
 - User stories split into epics/stories folder structure.
 - Supabase environment strategy documented for `dev + production`.
+- Data gathering and ingestion blueprint documented (`docs/DATA_GATHERING_AND_INGESTION_PLAN.md`).
 - Progress-tracking backlog/scope removed from active roadmap.
 - User story and epic statuses synced to current implementation state.
 
@@ -71,6 +72,7 @@ Last updated: 2026-02-15
 
 ### Phase 3 Content Operations (Supabase-managed)
 
+- Refine and harden the new manual admin composer workflow (`/admin`) with guardrails/playbooks.
 - Define repeatable Supabase playbooks for topic/question/answer updates.
 - Define relationship update checklist (`question_topics`, `topic_edges`).
 - Document publish-state review and rollback steps.
@@ -84,8 +86,12 @@ Last updated: 2026-02-15
 
 ### Phase 6 Content Operations v2
 
+- Implement staging schema migration for ingestion tables, statuses, and RLS policies.
 - Define CSV templates and import checklist.
 - Add dedupe and conflict handling.
+- Add freshness + source attribution metadata at ingestion-stage level.
+- Implement canonical promotion run logging and post-promotion integrity audit report.
+- Add moderation queue views and review-reason taxonomy for maintainers.
 
 ## Deferred (Do Not Implement Yet)
 
