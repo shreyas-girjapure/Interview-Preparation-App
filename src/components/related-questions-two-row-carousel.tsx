@@ -81,7 +81,9 @@ export function RelatedQuestionsTwoRowCarousel({
             >
               <div className="flex h-full flex-col gap-3">
                 <QuestionCard question={topQuestion} />
-                {bottomQuestion ? <QuestionCard question={bottomQuestion} /> : null}
+                {bottomQuestion ? (
+                  <QuestionCard question={bottomQuestion} />
+                ) : null}
               </div>
             </CarouselItem>
           ))}
