@@ -6,7 +6,7 @@ A Next.js app for interview preparation - question browsing, practice flows, and
 
 - `src/` - Next.js app source (App Router, components, lib)
 - `public/` - static assets
-- `docs/` - planning and architecture notes
+- `docs/` - planning and architecture notes (`docs/PROJECT_TRACKING.md` is the primary status file)
 - `.github/workflows/` - CI pipeline
 
 ## Local development
