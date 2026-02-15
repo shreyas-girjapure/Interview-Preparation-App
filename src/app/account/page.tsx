@@ -4,7 +4,6 @@ import { redirect } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { type QuestionDifficulty } from "@/lib/interview/difficulty";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FeaturesForm } from "@/app/account/features-form";
 import { PreferencesForm } from "@/app/account/preferences-form";
@@ -36,11 +35,10 @@ export default async function AccountPage() {
     await supabase
       .from("user_preferences")
       .select(
-        "preferred_difficulty, focus_areas, target_role, experience_level, daily_goal_minutes, wrap_code_blocks_on_mobile",
+        "focus_areas, target_role, experience_level, daily_goal_minutes, wrap_code_blocks_on_mobile",
       )
       .eq("user_id", user.id)
       .maybeSingle<{
-        preferred_difficulty: QuestionDifficulty | null;
         focus_areas: string[] | null;
         target_role: string | null;
         experience_level: string | null;
@@ -55,11 +53,10 @@ export default async function AccountPage() {
     const { data: fallbackPreferences, error: fallbackError } = await supabase
       .from("user_preferences")
       .select(
-        "preferred_difficulty, focus_areas, target_role, experience_level, daily_goal_minutes",
+        "focus_areas, target_role, experience_level, daily_goal_minutes",
       )
       .eq("user_id", user.id)
       .maybeSingle<{
-        preferred_difficulty: QuestionDifficulty | null;
         focus_areas: string[] | null;
         target_role: string | null;
         experience_level: string | null;
@@ -80,7 +77,6 @@ export default async function AccountPage() {
   }
 
   const initialPreferences = {
-    preferredDifficulty: preferences?.preferred_difficulty ?? null,
     focusAreas: preferences?.focus_areas ?? [],
     targetRole: preferences?.target_role ?? null,
     experienceLevel: preferences?.experience_level ?? null,

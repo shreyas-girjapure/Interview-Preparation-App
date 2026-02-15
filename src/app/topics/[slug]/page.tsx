@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MarkdownContent } from "@/components/markdown-content";
+import { RelatedTopicsCarousel } from "@/components/related-topics-carousel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -106,9 +107,6 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
                         </Badge>
                       ),
                     )}
-                    <Badge variant="secondary">
-                      {question.difficulty.toUpperCase()}
-                    </Badge>
                   </div>
                   <h3 className="font-serif text-xl leading-tight">
                     <Link
@@ -138,26 +136,7 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
               </p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
-              {topic.relatedTopics.map((relatedTopic) => (
-                <div
-                  key={relatedTopic.slug}
-                  className="rounded-2xl border border-border/80 bg-card/70 p-5"
-                >
-                  <h3 className="font-serif text-xl leading-tight">
-                    <Link
-                      href={`/topics/${relatedTopic.slug}`}
-                      className="underline-offset-4 hover:underline"
-                    >
-                      {relatedTopic.name}
-                    </Link>
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    {relatedTopic.shortDescription}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <RelatedTopicsCarousel topics={topic.relatedTopics} />
           )}
         </section>
       </article>

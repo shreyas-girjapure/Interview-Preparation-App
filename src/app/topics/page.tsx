@@ -82,7 +82,7 @@ export default async function TopicsPage({
           </h1>
           <p className="max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
             Explore core interview concepts first. Each topic page links into
-            relevant questions and adjacent concepts for rabbit-hole learning.
+            relevant questions and adjacent concepts for deeper learning.
           </p>
         </header>
 

@@ -4,14 +4,8 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
-import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
-import {
-  QUESTION_DIFFICULTIES,
-  type QuestionDifficulty,
-} from "@/lib/interview/difficulty";
 
 export type AccountPreferences = {
-  preferredDifficulty: QuestionDifficulty | null;
   focusAreas: string[];
   targetRole: string | null;
   experienceLevel: string | null;
@@ -21,7 +15,6 @@ export type AccountPreferences = {
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 type SavePreferencesRequest = {
-  preferredDifficulty: QuestionDifficulty | null;
   focusAreas: string[];
   targetRole: string | null;
   experienceLevel: string | null;
@@ -41,22 +34,6 @@ function parseFocusAreas(input: string) {
 
 const MIN_DAILY_GOAL = 0;
 const MAX_DAILY_GOAL = 1440;
-const DIFFICULTY_OPTIONS: ComboboxOption[] = QUESTION_DIFFICULTIES.map(
-  (difficulty) => ({
-    value: difficulty,
-    label: difficulty[0].toUpperCase() + difficulty.slice(1),
-  }),
-);
-
-function toQuestionDifficulty(value: string | null): QuestionDifficulty | null {
-  if (!value) {
-    return null;
-  }
-
-  return QUESTION_DIFFICULTIES.includes(value as QuestionDifficulty)
-    ? (value as QuestionDifficulty)
-    : null;
-}
 
 function parseDailyGoalMinutes(input: string) {
   const trimmed = input.trim();
@@ -91,10 +68,6 @@ export function PreferencesForm({
 }) {
   const router = useRouter();
 
-  const [preferredDifficulty, setPreferredDifficulty] =
-    useState<QuestionDifficulty | null>(
-      initialPreferences.preferredDifficulty ?? null,
-    );
   const [focusAreasText, setFocusAreasText] = useState(
     initialPreferences.focusAreas.join(", "),
   );
@@ -135,7 +108,6 @@ export function PreferencesForm({
     setErrorMessage("");
 
     const payload: SavePreferencesRequest = {
-      preferredDifficulty,
       focusAreas: parseFocusAreas(focusAreasText),
       targetRole: targetRole.trim() || null,
       experienceLevel: experienceLevel.trim() || null,
@@ -174,33 +146,16 @@ export function PreferencesForm({
 
   return (
     <form className="space-y-5" onSubmit={onSubmit}>
-      <div className="grid gap-4 md:grid-cols-2">
-        <label className="space-y-2 text-sm">
-          <span className="font-medium">Preferred difficulty</span>
-          <Combobox
-            value={preferredDifficulty}
-            options={DIFFICULTY_OPTIONS}
-            onValueChange={(value) =>
-              setPreferredDifficulty(toQuestionDifficulty(value))
-            }
-            placeholder="Select difficulty"
-            searchPlaceholder="Search difficulty..."
-            noneLabel="No preference"
-            emptyMessage="No difficulty found."
-          />
-        </label>
-
-        <label className="space-y-2 text-sm">
-          <span className="font-medium">Daily goal (minutes)</span>
-          <input
-            inputMode="numeric"
-            value={dailyGoalMinutes}
-            onChange={(event) => setDailyGoalMinutes(event.target.value)}
-            placeholder="e.g. 30"
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-          />
-        </label>
-      </div>
+      <label className="space-y-2 text-sm">
+        <span className="font-medium">Daily goal (minutes)</span>
+        <input
+          inputMode="numeric"
+          value={dailyGoalMinutes}
+          onChange={(event) => setDailyGoalMinutes(event.target.value)}
+          placeholder="e.g. 30"
+          className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+        />
+      </label>
 
       <label className="space-y-2 text-sm">
         <span className="font-medium">Focus areas</span>

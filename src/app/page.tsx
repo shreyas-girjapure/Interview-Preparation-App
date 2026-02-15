@@ -56,9 +56,6 @@ export default async function Home() {
                       </Badge>
                     ),
                   )}
-                  <Badge variant="secondary">
-                    {question.difficulty.toUpperCase()}
-                  </Badge>
                 </div>
                 <h3 className="font-serif text-xl leading-snug">
                   <Link
