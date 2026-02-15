@@ -40,7 +40,12 @@ function normalizeSlug(value: string) {
   return value.trim().toLowerCase();
 }
 
-function parseBoundedInt(value: string, fallback: number, min: number, max: number) {
+function parseBoundedInt(
+  value: string,
+  fallback: number,
+  min: number,
+  max: number,
+) {
   const parsed = Number.parseInt(value, 10);
 
   if (Number.isNaN(parsed)) {
@@ -80,13 +85,7 @@ function HelpHint({ text }: { text: string }) {
   );
 }
 
-function LabelWithHelp({
-  label,
-  help,
-}: {
-  label: string;
-  help: string;
-}) {
+function LabelWithHelp({ label, help }: { label: string; help: string }) {
   return (
     <span className="inline-flex items-center gap-1.5 font-medium">
       {label}
@@ -124,7 +123,8 @@ export function AdminContentComposer({
     [initialTopics],
   );
   const categoryBySlug = useMemo(
-    () => new Map(initialCategories.map((category) => [category.slug, category])),
+    () =>
+      new Map(initialCategories.map((category) => [category.slug, category])),
     [initialCategories],
   );
 
@@ -168,8 +168,9 @@ export function AdminContentComposer({
     .map((slug) => topicBySlug.get(slug))
     .filter((topic): topic is TopicOption => Boolean(topic));
 
-  const selectedCreateCategory =
-    createTopicCategorySlug ? categoryBySlug.get(createTopicCategorySlug) : null;
+  const selectedCreateCategory = createTopicCategorySlug
+    ? categoryBySlug.get(createTopicCategorySlug)
+    : null;
 
   const computedAutoQuestionSlug = useMemo(() => {
     if (questionSlug.trim()) {
@@ -280,16 +281,14 @@ export function AdminContentComposer({
         body: JSON.stringify(payload),
       });
 
-      const body = (await response.json().catch(() => null)) as
-        | {
-            error?: string;
-            warnings?: string[];
-            previewUrl?: string;
-            publishPayload?: {
-              questionSlug?: string;
-            };
-          }
-        | null;
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+        warnings?: string[];
+        previewUrl?: string;
+        publishPayload?: {
+          questionSlug?: string;
+        };
+      } | null;
 
       if (!response.ok) {
         setSaveState("error");
@@ -304,7 +303,9 @@ export function AdminContentComposer({
       setPreviewUrl(body?.previewUrl ?? "");
       setWarningMessages(body?.warnings ?? []);
       setSaveState("saved");
-      setSuccessMessage("Draft saved. Review runtime/full preview, then publish.");
+      setSuccessMessage(
+        "Draft saved. Review runtime/full preview, then publish.",
+      );
     } catch {
       setSaveState("error");
       setErrorMessage(
@@ -318,7 +319,9 @@ export function AdminContentComposer({
 
     if (!publishSlug) {
       setPublishState("error");
-      setErrorMessage("Save a draft with a valid question slug before publishing.");
+      setErrorMessage(
+        "Save a draft with a valid question slug before publishing.",
+      );
       return;
     }
 
@@ -341,14 +344,12 @@ export function AdminContentComposer({
         }),
       });
 
-      const body = (await response.json().catch(() => null)) as
-        | {
-            error?: string;
-            warnings?: string[];
-            publicUrl?: string;
-            previewUrl?: string;
-          }
-        | null;
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+        warnings?: string[];
+        publicUrl?: string;
+        previewUrl?: string;
+      } | null;
 
       if (!response.ok) {
         setPublishState("error");
@@ -586,7 +587,8 @@ export function AdminContentComposer({
           </div>
 
           <p className="text-xs text-muted-foreground">
-            Effective slug: <span className="font-mono">{computedAutoQuestionSlug}</span>
+            Effective slug:{" "}
+            <span className="font-mono">{computedAutoQuestionSlug}</span>
           </p>
 
           <label className="space-y-2 text-sm">
@@ -602,7 +604,6 @@ export function AdminContentComposer({
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm outline-none ring-offset-background focus-visible:ring-2 focus-visible:ring-ring"
             />
           </label>
-
         </section>
 
         <section className="space-y-4 rounded-2xl border border-border/80 bg-card/70 p-5">
@@ -653,9 +654,11 @@ export function AdminContentComposer({
           >
             {publishState === "publishing" ? "Publishing..." : "Publish"}
           </Button>
-          {(previewUrl || inferredPreviewUrl) ? (
+          {previewUrl || inferredPreviewUrl ? (
             <Button asChild type="button" variant="outline">
-              <Link href={previewUrl || inferredPreviewUrl}>Open Full Preview</Link>
+              <Link href={previewUrl || inferredPreviewUrl}>
+                Open Full Preview
+              </Link>
             </Button>
           ) : null}
           {publicUrl ? (

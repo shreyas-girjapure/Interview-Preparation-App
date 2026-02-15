@@ -73,13 +73,14 @@ export default async function QuestionDetailsPage({
 
         <header className="mx-auto w-full max-w-[95ch] space-y-5">
           <div className="flex flex-wrap items-center gap-2">
-            {(question.categories.length ? question.categories : [question.category]).map(
-              (category) => (
-                <Badge key={`${question.id}-${category}`} variant="outline">
-                  {category}
-                </Badge>
-              ),
-            )}
+            {(question.categories.length
+              ? question.categories
+              : [question.category]
+            ).map((category) => (
+              <Badge key={`${question.id}-${category}`} variant="outline">
+                {category}
+              </Badge>
+            ))}
           </div>
           <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
             {question.title}

@@ -42,47 +42,55 @@ function pickSingle<T>(value: T | T[] | null | undefined): T | null {
 export default async function AdminPage() {
   const { supabase } = await requireAdminPageAccess("/admin");
 
-  const [{ data: categoriesData, error: categoriesError }, { data: topicsData, error: topicsError }] =
-    await Promise.all([
-      supabase
-        .from("categories")
-        .select("id, slug, name, sort_order")
-        .order("sort_order", { ascending: true })
-        .order("name", { ascending: true }),
-      supabase
-        .from("topics")
-        .select("id, slug, name, status, categories(slug, name)")
-        .order("name", { ascending: true }),
-    ]);
+  const [
+    { data: categoriesData, error: categoriesError },
+    { data: topicsData, error: topicsError },
+  ] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, slug, name, sort_order")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase
+      .from("topics")
+      .select("id, slug, name, status, categories(slug, name)")
+      .order("name", { ascending: true }),
+  ]);
 
   if (categoriesError) {
-    throw new Error(`Unable to load categories for admin page: ${categoriesError.message}`);
+    throw new Error(
+      `Unable to load categories for admin page: ${categoriesError.message}`,
+    );
   }
 
   if (topicsError) {
-    throw new Error(`Unable to load topics for admin page: ${topicsError.message}`);
+    throw new Error(
+      `Unable to load topics for admin page: ${topicsError.message}`,
+    );
   }
 
-  const initialCategories = ((categoriesData as CategoryRow[] | null) ?? []).map(
-    (category) => ({
-      id: category.id,
-      slug: category.slug,
-      name: category.name,
-      sortOrder: category.sort_order,
-    }),
-  );
+  const initialCategories = (
+    (categoriesData as CategoryRow[] | null) ?? []
+  ).map((category) => ({
+    id: category.id,
+    slug: category.slug,
+    name: category.name,
+    sortOrder: category.sort_order,
+  }));
 
-  const initialTopics = ((topicsData as TopicRow[] | null) ?? []).map((topic) => {
-    const category = pickSingle(topic.categories);
-    return {
-      id: topic.id,
-      slug: topic.slug,
-      name: topic.name,
-      status: topic.status ?? "draft",
-      categorySlug: category?.slug ?? "",
-      categoryName: category?.name ?? "",
-    };
-  });
+  const initialTopics = ((topicsData as TopicRow[] | null) ?? []).map(
+    (topic) => {
+      const category = pickSingle(topic.categories);
+      return {
+        id: topic.id,
+        slug: topic.slug,
+        name: topic.name,
+        status: topic.status ?? "draft",
+        categorySlug: category?.slug ?? "",
+        categoryName: category?.name ?? "",
+      };
+    },
+  );
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">

@@ -670,7 +670,8 @@ export async function listRelatedQuestionsForQuestion(
   const allQuestions = await listQuestions({});
   const candidates = allQuestions.filter(
     (candidate) =>
-      candidate.id !== currentQuestion.id && candidate.slug !== currentQuestion.slug,
+      candidate.id !== currentQuestion.id &&
+      candidate.slug !== currentQuestion.slug,
   );
 
   const ranked = candidates
@@ -684,9 +685,7 @@ export async function listRelatedQuestionsForQuestion(
         currentQuestion.categorySlugs,
       );
 
-      const score =
-        sharedTopics * 100 +
-        sharedCategories * 30;
+      const score = sharedTopics * 100 + sharedCategories * 30;
 
       return {
         candidate,
