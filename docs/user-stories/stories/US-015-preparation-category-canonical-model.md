@@ -17,4 +17,4 @@ As a platform maintainer, I want categories repurposed as canonical Preparation 
 
 ## Status
 
-- Draft backlog (pre-implementation)
+- Implemented (taxonomy migration baseline)

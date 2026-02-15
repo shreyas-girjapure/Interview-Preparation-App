@@ -16,4 +16,4 @@ As a learner, I want to browse all topics, so that I can choose what to study fi
 
 ## Status
 
-- Backlog (Phase 2+)
+- Implemented (Phase 2 baseline)

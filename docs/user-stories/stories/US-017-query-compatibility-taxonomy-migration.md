@@ -17,4 +17,4 @@ As a developer, I want query-layer compatibility during taxonomy migration, so t
 
 ## Status
 
-- Draft backlog (pre-implementation)
+- In progress (query compatibility shipped; smoke checks to formalize)

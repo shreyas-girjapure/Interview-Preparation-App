@@ -6,7 +6,7 @@ Make answers easy to scan and understand, including code examples.
 
 ## Status
 
-- Backlog (Phase 2+)
+- Implemented (Phase 2 baseline)
 
 ## In Scope
 

@@ -16,7 +16,10 @@
     "db:migrate:dev:dry": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target dev -DryRun",
     "db:migrate:dev": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target dev",
     "db:migrate:prod:dry": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target prod -DryRun",
-    "db:migrate:prod": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target prod -ConfirmProd"
+    "db:migrate:prod": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target prod -ConfirmProd",
+    "db:smoke:guardrail": "node scripts/smoke-published-question-topic-guardrail.mjs",
+    "db:smoke:guardrail:dev": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref stxikhpofortkerjeuhf",
+    "db:smoke:guardrail:prod": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref xglbjcouoyjegryxorqo"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",

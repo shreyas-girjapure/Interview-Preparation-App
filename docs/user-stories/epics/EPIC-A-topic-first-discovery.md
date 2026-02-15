@@ -6,7 +6,7 @@ Enable learners to discover and navigate interview content primarily through top
 
 ## Status
 
-- Backlog (Phase 2+)
+- Implemented (Phase 2 baseline)
 
 ## In Scope
 

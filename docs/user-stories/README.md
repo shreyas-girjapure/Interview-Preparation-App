@@ -2,8 +2,9 @@
 
 ## Status
 
-- These stories are backlog artifacts.
-- Current execution includes active Phase 2 learner work.
+- These stories are implementation-tracking artifacts for delivered and pending work.
+- Phase 2 learner baseline stories (US-001 to US-005) are implemented.
+- Taxonomy migration stories are mostly implemented (US-015 and US-016); US-017 remains in progress.
 - In-app admin CMS scope is dropped for v1; content operations are managed in Supabase dashboard/SQL/CSV.
 
 ## Structure
@@ -39,7 +40,7 @@
 - US-019 LLM Question Topic Tagging Review Workflow (`docs/user-stories/stories/US-019-llm-question-topic-tagging-review-workflow.md`)
 - US-020 Canonical Promotion and Quality Audit (`docs/user-stories/stories/US-020-canonical-promotion-quality-audit.md`)
 
-## Recommended First Slice (When Phase 2 Starts)
+## Delivered First Slice (Phase 2 Baseline)
 
 - US-001
 - US-002

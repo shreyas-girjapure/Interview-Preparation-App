@@ -62,6 +62,19 @@ For ongoing table/column/index changes, use:
 - `docs/SUPABASE_MIGRATION_PLAYBOOK.md`
 - `scripts/supabase-migrate.ps1`
 
+Common DB workflow commands:
+
+```bash
+npm run db:migrate:dev:dry
+npm run db:migrate:dev
+npm run db:smoke:guardrail:dev
+```
+
+Notes:
+
+- `db:smoke:guardrail*` validates the published-question topic-link guardrail end to end and cleans up test data.
+- It uses `SUPABASE_SERVICE_ROLE_KEY` when present; if that value is a placeholder, it falls back to fetching the key using `SUPABASE_ACCESS_TOKEN`.
+
 ## Quality checks
 
 ```bash

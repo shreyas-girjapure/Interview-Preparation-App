@@ -17,4 +17,4 @@ As a platform maintainer, I want DB-level integrity rules for question-topic map
 
 ## Status
 
-- Draft backlog (pre-implementation)
+- Implemented (integrity constraints + publish guardrail baseline)

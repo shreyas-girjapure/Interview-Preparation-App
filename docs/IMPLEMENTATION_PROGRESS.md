@@ -1,6 +1,6 @@
 # Implementation Progress Dashboard
 
-Last updated: 2026-02-14
+Last updated: 2026-02-15
 
 ## Where To Check
 
@@ -51,12 +51,21 @@ Last updated: 2026-02-14
 - Demo content migration is in place for test environments.
 - In-app admin routes removed; content management is handled in Supabase dashboard/SQL/CSV workflows.
 
+### Taxonomy and Query Compatibility
+
+- `categories` now acts as the canonical Preparation Category model.
+- `topics.preparation_category_id` is enforced and backfilled for existing topic data.
+- `questions.category_id` and `questions.primary_topic_id` were removed; category membership is derived via `question_topics -> topics -> categories`.
+- Learner routes continue to serve category metadata without route contract changes.
+- DB guardrail now blocks `published` questions from existing without linked `question_topics` rows.
+
 ### Planning and Operations Docs
 
 - Project overview normalized.
 - User stories split into epics/stories folder structure.
 - Supabase environment strategy documented for `dev + production`.
 - Progress-tracking backlog/scope removed from active roadmap.
+- User story and epic statuses synced to current implementation state.
 
 ## In Progress / Remaining
 

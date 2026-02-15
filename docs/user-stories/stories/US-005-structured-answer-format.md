@@ -16,4 +16,4 @@ As a learner, I want answers to follow a predictable structure, so that I can sc
 
 ## Status
 
-- Backlog (Phase 2+)
+- Implemented (Phase 2 baseline)

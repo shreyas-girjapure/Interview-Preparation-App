@@ -16,4 +16,4 @@ As a learner, I want readable code snippets in answers, so that I can understand
 
 ## Status
 
-- Backlog (Phase 2+)
+- Implemented (Phase 2 baseline)

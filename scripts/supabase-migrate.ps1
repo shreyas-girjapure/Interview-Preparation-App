@@ -1,6 +1,3 @@
-Set-StrictMode -Version Latest
-$ErrorActionPreference = "Stop"
-
 param(
   [ValidateSet("local", "dev", "prod")]
   [string]$Target = "local",
@@ -9,6 +6,9 @@ param(
   [switch]$ResetLocal,
   [switch]$ConfirmProd
 )
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
 
 $DevProjectRef = "stxikhpofortkerjeuhf"
 $ProdProjectRef = "xglbjcouoyjegryxorqo"

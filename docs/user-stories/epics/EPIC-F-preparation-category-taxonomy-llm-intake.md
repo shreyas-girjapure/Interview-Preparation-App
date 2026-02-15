@@ -6,7 +6,7 @@ Establish a canonical backend taxonomy and a scalable, review-gated ingestion pa
 
 ## Status
 
-- Draft backlog (pre-implementation)
+- In progress (taxonomy foundation in place; LLM intake remains backlog)
 
 ## In Scope
 

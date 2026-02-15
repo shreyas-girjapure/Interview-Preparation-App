@@ -16,4 +16,4 @@ As a learner, I want a topic overview page, so that I can understand the concept
 
 ## Status
 
-- Backlog (Phase 2+)
+- Implemented (Phase 2 baseline)

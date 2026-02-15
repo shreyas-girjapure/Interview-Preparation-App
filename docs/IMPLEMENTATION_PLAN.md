@@ -71,7 +71,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - questions
 - answers
 - content_revisions
-- categories (temporary compatibility layer while migrating topic-first taxonomy)
+- categories (canonical Preparation Category taxonomy)
 
 ## API Surface (v1)
 
@@ -104,7 +104,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - [x] Build question list/detail pages.
 - [x] Add category + difficulty filters (temporary before topic-first navigation is complete).
 - [x] Build preference onboarding + persistence.
-- [ ] Add canonical topic model and migrate/alias existing categories.
+- [x] Add canonical topic model and migrate/alias existing categories.
 - [x] Build topic list/detail pages (topic overview + related questions).
 - [x] Add in-answer linked topics for rabbit-hole exploration.
 - [ ] Add topic-driven recommendations ("continue learning") from topic/question relationships.
@@ -167,6 +167,9 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - 2026-02-14: Bulk updates moved to Supabase CSV importer workflow (no in-app importer).
 - 2026-02-14: Preferences save flow moved to direct Supabase client writes (RLS) and custom preferences API route removed.
 - 2026-02-14: Progress-tracking tables and stories removed from active scope.
+- 2026-02-15: Canonical Preparation Category migration applied (`topics.preparation_category_id` enforced, `questions.category_id` removed, and query compatibility maintained through `question_topics -> topics -> categories`).
+- 2026-02-15: Multi-category topic/question demo content and relationships seeded for taxonomy compatibility validation.
+- 2026-02-15: DB guardrail added to block `published` questions that have zero linked `question_topics` rows.
 - Remaining product scope: connect topic-first learner flows to Supabase-backed content.
 
 ## Constraints and Defaults
@@ -195,6 +198,7 @@ Implementation status dashboard: `docs/IMPLEMENTATION_PROGRESS.md`.
 - 2026-02-14: Standardize on a security-first Supabase pattern: server-side writes by default, direct client writes only for low-risk user-owned rows under RLS, and caching/indexing for performance.
 - 2026-02-14: Dropped custom in-app admin CMS from v1 plan; Supabase dashboard/SQL/CSV is the source of truth for content management.
 - 2026-02-14: Remove progress tracking from v1 scope (schema + backlog) to keep roadmap focused on topic-first learning and content quality.
+- 2026-02-15: Adopt canonical Preparation Category linkage on topics and derive question category membership through topic relationships.
 
 ## Change Control
 

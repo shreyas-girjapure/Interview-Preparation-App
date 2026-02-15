@@ -16,4 +16,4 @@ As a learner, I want key topics in an answer to be clickable, so that I can foll
 
 ## Status
 
-- Backlog (Phase 2+)
+- Implemented (Phase 2 baseline)
