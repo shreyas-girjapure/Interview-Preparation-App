@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { requireAdminPageAccess } from "@/lib/auth/admin-access";
+import { pickSingle } from "@/lib/utils";
 
 import { AdminContentComposer } from "./admin-content-composer";
 
@@ -43,14 +44,6 @@ type TopicRow = {
   status: string | null;
   subcategories: TopicSubcategoryRelation | null;
 };
-
-function pickSingle<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) {
-    return null;
-  }
-
-  return Array.isArray(value) ? (value[0] ?? null) : value;
-}
 
 export default async function AdminPage() {
   const { supabase } = await requireAdminPageAccess("/admin");

@@ -1,4 +1,5 @@
 import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
+import { dedupeKeepOrder, pickSingle } from "@/lib/utils";
 
 export type InterviewQuestion = {
   id: string;
@@ -117,16 +118,8 @@ type AnswerRow = {
 
 type SupabaseServerClient = ReturnType<typeof createSupabasePublicServerClient>;
 
-function normalize(text: string) {
+export function normalize(text: string) {
   return text.trim().toLowerCase();
-}
-
-function pickSingle<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) {
-    return null;
-  }
-
-  return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
 function assertNoError(error: { message?: string } | null, context: string) {
@@ -148,7 +141,7 @@ async function withContentClient<T>(
   }
 }
 
-function mapTopicSlugs(questionTopics: QuestionRow["question_topics"]) {
+export function mapTopicSlugs(questionTopics: QuestionRow["question_topics"]) {
   if (!questionTopics?.length) {
     return [];
   }
@@ -180,7 +173,9 @@ function mapTopicSlugs(questionTopics: QuestionRow["question_topics"]) {
   return topicSlugs;
 }
 
-function mapCategoryMetadata(questionTopics: QuestionRow["question_topics"]) {
+export function mapCategoryMetadata(
+  questionTopics: QuestionRow["question_topics"],
+) {
   if (!questionTopics?.length) {
     return {
       labels: [],
@@ -221,7 +216,7 @@ function mapCategoryMetadata(questionTopics: QuestionRow["question_topics"]) {
   };
 }
 
-function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
+export function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
   const categories = mapCategoryMetadata(row.question_topics);
 
   return {
@@ -236,7 +231,7 @@ function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
   };
 }
 
-function mapQuestionDetail(
+export function mapQuestionDetail(
   row: QuestionRow,
   answerMarkdown: string,
 ): InterviewQuestion {
@@ -246,7 +241,7 @@ function mapQuestionDetail(
   };
 }
 
-function countOverlap(left: string[], right: string[]) {
+export function countOverlap(left: string[], right: string[]) {
   if (!left.length || !right.length) {
     return 0;
   }
@@ -270,23 +265,7 @@ function countOverlap(left: string[], right: string[]) {
   return count;
 }
 
-function dedupeKeepOrder(values: string[]) {
-  const seen = new Set<string>();
-  const result: string[] = [];
-
-  for (const value of values) {
-    if (seen.has(value)) {
-      continue;
-    }
-
-    seen.add(value);
-    result.push(value);
-  }
-
-  return result;
-}
-
-function stripGeneratedTopicSections(source: string) {
+export function stripGeneratedTopicSections(source: string) {
   const lines = source.split(/\r?\n/);
   const headingsToStrip = new Set(["prerequisites", "related topics"]);
   const kept: string[] = [];
@@ -316,7 +295,7 @@ function stripGeneratedTopicSections(source: string) {
   return kept.join("\n").trim();
 }
 
-function deriveFallbackPrerequisiteTopicIds(
+export function deriveFallbackPrerequisiteTopicIds(
   currentTopic: TopicRow,
   topicRows: TopicRow[],
 ) {
@@ -370,7 +349,7 @@ function deriveFallbackPrerequisiteTopicIds(
   return candidates.map((candidate) => candidate.id);
 }
 
-function deriveFallbackRelatedTopicIds(
+export function deriveFallbackRelatedTopicIds(
   currentTopic: TopicRow,
   topicRows: TopicRow[],
   relatedQuestions: InterviewQuestionSummary[],
@@ -459,7 +438,7 @@ function deriveFallbackRelatedTopicIds(
   ]);
 }
 
-function matchesQuestionSearch(
+export function matchesQuestionSearch(
   question: InterviewQuestionSummary,
   search: string,
 ) {
@@ -481,7 +460,10 @@ function matchesQuestionSearch(
     .includes(term);
 }
 
-function matchesTopicSearch(topic: InterviewTopicSummary, search: string) {
+export function matchesTopicSearch(
+  topic: InterviewTopicSummary,
+  search: string,
+) {
   const term = normalize(search);
 
   if (!term) {
@@ -908,14 +890,6 @@ export async function listTopicsForQuestion(
   return topicSlugs
     .map((topicSlug) => topicBySlug.get(topicSlug))
     .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
-}
-
-export async function listRabbitHoleTopics(
-  question: string | InterviewQuestion | InterviewQuestionSummary,
-  limit = 3,
-) {
-  const topics = await listTopicsForQuestion(question);
-  return topics.slice(0, limit);
 }
 
 export async function listRelatedQuestionsForQuestion(

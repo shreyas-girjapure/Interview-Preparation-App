@@ -4,6 +4,7 @@ import { z } from "zod";
 import { getUserRole } from "@/lib/auth/admin-access";
 import { hasAdminAreaAccess } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { dedupeKeepOrder, pickSingle } from "@/lib/utils";
 
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
@@ -12,7 +13,7 @@ const strictSlugSchema = z
   .trim()
   .regex(slugPattern, "Must be a lowercase slug.");
 
-const saveDraftSchema = z
+export const saveDraftSchema = z
   .object({
     action: z.literal("save_draft"),
     data: z
@@ -87,7 +88,7 @@ const saveDraftSchema = z
     }
   });
 
-const publishSchema = z
+export const publishSchema = z
   .object({
     action: z.literal("publish"),
     data: z
@@ -161,20 +162,12 @@ type AnswerRow = {
   status: string | null;
 };
 
-function pickSingle<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) {
-    return null;
-  }
-
-  return Array.isArray(value) ? (value[0] ?? null) : value;
-}
-
-function normalizeOptionalText(value: string | undefined) {
+export function normalizeOptionalText(value: string | undefined) {
   const trimmed = value?.trim() ?? "";
   return trimmed || null;
 }
 
-function slugifyText(value: string, fallback = "untitled") {
+export function slugifyText(value: string, fallback = "untitled") {
   const normalized = value
     .toLowerCase()
     .trim()
@@ -219,7 +212,7 @@ async function ensureUniqueSlug(
   );
 }
 
-function formatQuestionDuplicateWarning(rows: QuestionDuplicateRow[]) {
+export function formatQuestionDuplicateWarning(rows: QuestionDuplicateRow[]) {
   if (!rows.length) {
     return null;
   }
@@ -232,7 +225,7 @@ function formatQuestionDuplicateWarning(rows: QuestionDuplicateRow[]) {
   return `Possible duplicate question title found: ${examples}.`;
 }
 
-function formatTopicDuplicateWarning(rows: TopicDuplicateRow[]) {
+export function formatTopicDuplicateWarning(rows: TopicDuplicateRow[]) {
   if (!rows.length) {
     return null;
   }
@@ -243,21 +236,6 @@ function formatTopicDuplicateWarning(rows: TopicDuplicateRow[]) {
     .join(", ");
 
   return `Possible duplicate topic name found in selected subcategory: ${examples}.`;
-}
-
-function dedupeKeepOrder(values: string[]) {
-  const seen = new Set<string>();
-  const result: string[] = [];
-
-  for (const value of values) {
-    if (seen.has(value)) {
-      continue;
-    }
-    seen.add(value);
-    result.push(value);
-  }
-
-  return result;
 }
 
 export async function POST(request: Request) {

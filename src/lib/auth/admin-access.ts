@@ -1,4 +1,4 @@
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { redirect } from "next/navigation";
 
 import { hasAdminAreaAccess, isAppRole, type AppRole } from "@/lib/auth/roles";
@@ -47,12 +47,3 @@ export async function requireAdminPageAccess(nextPath: string) {
     role,
   };
 }
-
-export function hasAdminAccessForRole(role: AppRole | null) {
-  return hasAdminAreaAccess(role);
-}
-
-export type AuthenticatedAdmin = {
-  user: User;
-  role: AppRole;
-};

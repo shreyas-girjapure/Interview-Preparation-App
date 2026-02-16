@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { requireAdminPageAccess } from "@/lib/auth/admin-access";
+import { pickSingle } from "@/lib/utils";
 
 import { PreviewPublishControls } from "./publish-controls";
 
@@ -68,14 +69,6 @@ type AnswerRow = {
   content_markdown: string | null;
   status: string | null;
 };
-
-function pickSingle<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) {
-    return null;
-  }
-
-  return Array.isArray(value) ? (value[0] ?? null) : value;
-}
 
 function collectCategories(questionTopics: QuestionRow["question_topics"]) {
   if (!questionTopics?.length) {
