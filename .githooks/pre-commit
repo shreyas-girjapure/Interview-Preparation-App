@@ -1,0 +1,6 @@
+#!/usr/bin/env sh
+set -e
+
+echo "pre-commit: formatting staged files"
+npx prettier --write .
+git add -u

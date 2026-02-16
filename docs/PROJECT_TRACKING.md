@@ -25,23 +25,23 @@ Last updated: 2026-02-17
 
 ## Delivered
 
-| Area | Status | Notes |
-|------|--------|-------|
-| Topic catalog | ✅ Done | Browse/search topics |
-| Topic overview page | ✅ Done | Markdown overview + related questions + related topics |
-| Question-to-topic linking | ✅ Done | Many-to-many via `question_topics` |
-| Code snippet readability | ✅ Done | Syntax-highlighted markdown code blocks |
-| Structured answer format | ✅ Done | 3 answer templates (standard, scenario, code review) |
-| Admin composer | ✅ Done | Create topics + questions + answers with live preview |
-| Admin auth guard | ✅ Done | Role-based access via `requireAdminPageAccess` |
-| Content API | ✅ Done | Save draft + publish flow with Zod validation |
-| Publish workflow | ✅ Done | Draft → preview → publish |
-| Bulk upsert | ✅ Done | Supabase CSV workflow + SQL seed migrations |
-| Deduplication controls | ✅ Partial | Draft-time duplicate warnings in admin composer |
-| Taxonomy model | ✅ Done | Category → Subcategory → Topic hierarchy |
-| Question-topic integrity | ✅ Done | Published questions require linked topics |
-| Query compatibility | ✅ Done | Queries derive categories through topic chain |
-| Topic relationships | ✅ Partial | Question-topic links done; topic-edge management pending |
+| Area                      | Status     | Notes                                                    |
+| ------------------------- | ---------- | -------------------------------------------------------- |
+| Topic catalog             | ✅ Done    | Browse/search topics                                     |
+| Topic overview page       | ✅ Done    | Markdown overview + related questions + related topics   |
+| Question-to-topic linking | ✅ Done    | Many-to-many via `question_topics`                       |
+| Code snippet readability  | ✅ Done    | Syntax-highlighted markdown code blocks                  |
+| Structured answer format  | ✅ Done    | 3 answer templates (standard, scenario, code review)     |
+| Admin composer            | ✅ Done    | Create topics + questions + answers with live preview    |
+| Admin auth guard          | ✅ Done    | Role-based access via `requireAdminPageAccess`           |
+| Content API               | ✅ Done    | Save draft + publish flow with Zod validation            |
+| Publish workflow          | ✅ Done    | Draft → preview → publish                                |
+| Bulk upsert               | ✅ Done    | Supabase CSV workflow + SQL seed migrations              |
+| Deduplication controls    | ✅ Partial | Draft-time duplicate warnings in admin composer          |
+| Taxonomy model            | ✅ Done    | Category → Subcategory → Topic hierarchy                 |
+| Question-topic integrity  | ✅ Done    | Published questions require linked topics                |
+| Query compatibility       | ✅ Done    | Queries derive categories through topic chain            |
+| Topic relationships       | ✅ Partial | Question-topic links done; topic-edge management pending |
 
 ## Active Next
 

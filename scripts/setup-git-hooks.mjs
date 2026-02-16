@@ -7,6 +7,7 @@ const scriptsDir = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(scriptsDir, "..");
 const gitMetadataPath = resolve(repoRoot, ".git");
 const prePushHookPath = resolve(repoRoot, ".githooks", "pre-push");
+const preCommitHookPath = resolve(repoRoot, ".githooks", "pre-commit");
 
 if (!existsSync(gitMetadataPath)) {
   console.log("[hooks] .git metadata not found. Skipping Git hook setup.");
@@ -15,6 +16,10 @@ if (!existsSync(gitMetadataPath)) {
 
 if (existsSync(prePushHookPath) && process.platform !== "win32") {
   chmodSync(prePushHookPath, 0o755);
+}
+
+if (existsSync(preCommitHookPath) && process.platform !== "win32") {
+  chmodSync(preCommitHookPath, 0o755);
 }
 
 const configureHooksPath = spawnSync(
@@ -37,4 +42,6 @@ if (configureHooksPath.status !== 0) {
   process.exit(configureHooksPath.status ?? 1);
 }
 
-console.log("[hooks] Configured Git pre-push hook at .githooks/pre-push");
+console.log(
+  "[hooks] Configured Git hooks at .githooks/ (pre-commit, pre-push)",
+);
