@@ -134,11 +134,13 @@ npx supabase migration list --linked
 - Keep backup/restore verification in launch checklist.
 - Track auth callback URLs per environment to avoid misrouting.
 
-## Phase 1 Completion Status (2026-02-14)
+## Phase 1 Completion Status (2026-02-17)
 
 - Dedicated production Supabase project is created and in use (`xglbjcouoyjegryxorqo`).
 - Environment-specific Google OAuth credentials and callback URLs are configured for dev and production.
 - Vercel production environment variables are wired for the production Supabase project and app URL.
+- Phase 1 features schema applied: subcategories, question types, seniority levels, playlists, spaced repetition.
+- Salesforce content seeded in dev (7 subcategories, topics, questions with answers).
 
 ## Follow-up Ops Notes
 

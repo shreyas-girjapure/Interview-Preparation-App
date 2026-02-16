@@ -5,7 +5,7 @@ Use this playbook whenever you add a table, alter a table, add/drop indexes, or 
 ## Scope
 
 - Source of truth for schema changes: `supabase/migrations/`
-- Safe flow: local -> dev -> prod
+- Safe flow: local → dev → prod
 - Rule: forward-only migrations, never edit an already-applied migration version
 
 ## When You Change Schema
@@ -20,44 +20,15 @@ Use this playbook whenever you add a table, alter a table, add/drop indexes, or 
 4. If a migration can fail on existing data, add explicit precheck logic and clear error messages.
 5. Run app build/tests after migration changes.
 
-## Automation Script
+## Workflows
 
-Use `scripts/supabase-migrate.ps1`.
+### Agent Workflow
 
-- Targets:
-  - `local`
-  - `dev` (`stxikhpofortkerjeuhf`)
-  - `prod` (`xglbjcouoyjegryxorqo`)
-- Safety:
-  - Always runs dry-run before remote apply.
-  - Requires explicit `-ConfirmProd` for prod apply.
+Use the `/db-push` workflow (`.agent/workflows/db-push.md`) for pushing migrations to the remote dev database.
 
-## NPM Shortcuts
+### Manual Command Flow
 
-```bash
-npm run db:migrate:local
-npm run db:reset:local
-npm run db:migrate:dev:dry
-npm run db:migrate:dev
-npm run db:migrate:prod:dry
-npm run db:migrate:prod
-```
-
-## Manual Command Flow
-
-### Local
-
-```bash
-npx supabase migration up --local
-```
-
-or full replay:
-
-```bash
-npx supabase db reset --local
-```
-
-### Dev
+#### Dev
 
 ```bash
 npx supabase link --project-ref stxikhpofortkerjeuhf --yes
@@ -66,7 +37,7 @@ npx supabase db push --linked --yes
 npx supabase migration list --linked
 ```
 
-### Prod
+#### Prod
 
 ```bash
 npx supabase link --project-ref xglbjcouoyjegryxorqo --yes
@@ -75,16 +46,28 @@ npx supabase db push --linked --yes
 npx supabase migration list --linked
 ```
 
+#### Local (requires Docker Desktop)
+
+Incremental apply:
+
+```bash
+npx supabase migration up --local
+```
+
+Reset local DB and replay migrations:
+
+```bash
+npx supabase db reset --local
+```
+
 ## Verification Checklist (after push)
 
 1. Migration appears in `supabase migration list --linked`.
 2. App build passes: `npm run build`.
-3. API smoke:
-   - `/api/questions`
-   - `/api/topics`
-4. Page smoke:
+3. Page smoke:
    - `/questions`
    - `/topics`
+   - `/admin` (requires admin role)
 
 ## Troubleshooting
 
