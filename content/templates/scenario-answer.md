@@ -11,7 +11,7 @@ You are an expert Salesforce architect and interview coach. Generate a scenario-
 
 ## Prompt
 
-```
+````
 You are a Salesforce architect and interview coach with 8+ years of experience. Write a scenario-based answer for the following interview question.
 
 **Question:** {QUESTION_TITLE}
@@ -41,11 +41,12 @@ Describe this solution in detail:
 
 ```apex
 // Optional code snippet showing key implementation detail
-```
+````
 
 ## Approach: [Descriptive Name for Approach B]
 
 Describe the alternative solution:
+
 - Different architecture or tool choices
 - What trade-offs this approach makes vs. Approach A
 - When this approach would be preferred
@@ -58,19 +59,20 @@ Describe the alternative solution:
 
 Create a comparison table:
 
-| Criteria | [Approach A Name] | [Approach B Name] |
-|----------|------------------|------------------|
-| Scalability | Assessment with emoji (✅/⚠️/❌) | Assessment |
-| Maintainability | Assessment | Assessment |
-| Cost | Assessment | Assessment |
-| Time to Implement | Assessment | Assessment |
-| Governor Limit Risk | Assessment | Assessment |
+| Criteria            | [Approach A Name]                | [Approach B Name] |
+| ------------------- | -------------------------------- | ----------------- |
+| Scalability         | Assessment with emoji (✅/⚠️/❌) | Assessment        |
+| Maintainability     | Assessment                       | Assessment        |
+| Cost                | Assessment                       | Assessment        |
+| Time to Implement   | Assessment                       | Assessment        |
+| Governor Limit Risk | Assessment                       | Assessment        |
 
 Include 2-3 rows specific to the scenario (e.g., "Data Volume Handling", "User Experience", "Compliance")
 
 ## Recommendation
 
 In 1-2 paragraphs:
+
 - State which approach you recommend and WHY
 - Under what conditions you would switch to the other approach
 - Any hybrid strategies worth considering
@@ -81,6 +83,7 @@ In 1-2 paragraphs:
 ## Follow-ups
 
 List 3-5 follow-up questions the interviewer might ask:
+
 - "What if [constraint changes]?"
 - "How would you handle [edge case]?"
 - "What monitoring/alerting would you put in place?"
@@ -90,9 +93,11 @@ For each, include a 1-2 sentence answer direction.
 ---
 
 **Seniority calibration:**
+
 - **Junior/Mid:** 2 approaches, simpler trade-offs, focus on Salesforce declarative vs. code
 - **Senior:** More nuanced approaches, mention specific APIs, patterns (Enterprise Integration Patterns)
 - **Lead/Architect:** Include org strategy, multi-team considerations, long-term tech debt, platform limits at scale
+
 ```
 
 ## Output Rules
@@ -104,3 +109,4 @@ For each, include a 1-2 sentence answer direction.
 5. Keep total length between 600–1200 words (excluding code/tables)
 6. Name approaches descriptively (e.g., "Platform Events + Flow" not "Approach A")
 7. Never use first person. Use "you" or neutral voice
+```

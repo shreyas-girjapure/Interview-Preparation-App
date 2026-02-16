@@ -14,7 +14,11 @@ type RelatedTopicCard = {
   shortDescription: string;
 };
 
-export function RelatedTopicsCarousel({ topics }: { topics: RelatedTopicCard[] }) {
+export function RelatedTopicsCarousel({
+  topics,
+}: {
+  topics: RelatedTopicCard[];
+}) {
   if (!topics.length) {
     return null;
   }

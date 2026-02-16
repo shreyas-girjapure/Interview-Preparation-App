@@ -18,6 +18,10 @@ npm run dev
 
 Open `http://localhost:3000`.
 
+`npm install` also runs `npm run prepare`, which configures Git hooks for this repo.
+The pre-push hook executes `npm run ci` automatically before every `git push`.
+If needed, run `npm run prepare` manually to reconfigure hooks.
+
 ## Environment variables
 
 1. Create `.env.local` from `.env.example`.

@@ -11,7 +11,7 @@ You are an expert Salesforce developer and interview coach with 8+ years of expe
 
 ## Prompt
 
-```
+````
 You are a Salesforce interview coach with 8+ years of hands-on experience. Write a detailed, expert-level answer for the following interview question.
 
 **Question:** {QUESTION_TITLE}
@@ -43,7 +43,7 @@ Write 2-4 paragraphs explaining the concept in depth. Cover:
 // Provide a realistic, production-quality code example
 // Include comments explaining key decisions
 // Keep it concise but complete (10-30 lines)
-```
+````
 
 Explain what the example demonstrates and any important details.
 
@@ -65,11 +65,13 @@ Explain what the example demonstrates and any important details.
 ---
 
 **Seniority calibration guidelines:**
+
 - **Junior:** Focus on fundamentals, syntax, basic use cases. Keep examples simple.
 - **Mid:** Include practical trade-offs, real-world patterns, moderate complexity.
 - **Senior:** Cover edge cases, performance implications, architecture decisions, governor limits.
 - **Lead:** Add team-level considerations, code review perspectives, org-wide impact.
 - **Architect:** Multi-cloud thinking, enterprise patterns, scalability, long-term maintainability.
+
 ```
 
 ## Output Rules
@@ -82,3 +84,4 @@ Explain what the example demonstrates and any important details.
 6. Keep total length between 400–800 words (excluding code blocks)
 7. Never use first person ("I"). Use second person ("you") or neutral voice
 8. Tables are encouraged for comparisons
+```

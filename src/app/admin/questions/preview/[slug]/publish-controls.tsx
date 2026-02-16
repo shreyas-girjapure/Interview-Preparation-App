@@ -7,7 +7,11 @@ import { Button } from "@/components/ui/button";
 
 type PublishState = "idle" | "publishing" | "published" | "error";
 
-export function PreviewPublishControls({ questionSlug }: { questionSlug: string }) {
+export function PreviewPublishControls({
+  questionSlug,
+}: {
+  questionSlug: string;
+}) {
   const [publishState, setPublishState] = useState<PublishState>("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [publicUrl, setPublicUrl] = useState("");
@@ -30,12 +34,10 @@ export function PreviewPublishControls({ questionSlug }: { questionSlug: string 
         }),
       });
 
-      const body = (await response.json().catch(() => null)) as
-        | {
-            error?: string;
-            publicUrl?: string;
-          }
-        | null;
+      const body = (await response.json().catch(() => null)) as {
+        error?: string;
+        publicUrl?: string;
+      } | null;
 
       if (!response.ok) {
         setPublishState("error");
@@ -56,7 +58,11 @@ export function PreviewPublishControls({ questionSlug }: { questionSlug: string 
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="button" onClick={onPublish} disabled={publishState === "publishing"}>
+        <Button
+          type="button"
+          onClick={onPublish}
+          disabled={publishState === "publishing"}
+        >
           {publishState === "publishing" ? "Publishing..." : "Publish"}
         </Button>
         {publicUrl ? (

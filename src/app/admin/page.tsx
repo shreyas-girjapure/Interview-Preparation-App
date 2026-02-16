@@ -55,20 +55,22 @@ function pickSingle<T>(value: T | T[] | null | undefined): T | null {
 export default async function AdminPage() {
   const { supabase } = await requireAdminPageAccess("/admin");
 
-  const [{ data: subcategoriesData, error: subcategoriesError }, { data: topicsData, error: topicsError }] =
-    await Promise.all([
-      supabase
-        .from("subcategories")
-        .select("id, slug, name, sort_order, categories(slug, name)")
-        .order("sort_order", { ascending: true })
-        .order("name", { ascending: true }),
-      supabase
-        .from("topics")
-        .select(
-          "id, slug, name, status, subcategories(slug, name, categories(slug, name))",
-        )
-        .order("name", { ascending: true }),
-    ]);
+  const [
+    { data: subcategoriesData, error: subcategoriesError },
+    { data: topicsData, error: topicsError },
+  ] = await Promise.all([
+    supabase
+      .from("subcategories")
+      .select("id, slug, name, sort_order, categories(slug, name)")
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true }),
+    supabase
+      .from("topics")
+      .select(
+        "id, slug, name, status, subcategories(slug, name, categories(slug, name))",
+      )
+      .order("name", { ascending: true }),
+  ]);
 
   if (subcategoriesError) {
     throw new Error(
@@ -77,37 +79,41 @@ export default async function AdminPage() {
   }
 
   if (topicsError) {
-    throw new Error(`Unable to load topics for admin page: ${topicsError.message}`);
+    throw new Error(
+      `Unable to load topics for admin page: ${topicsError.message}`,
+    );
   }
 
-  const initialSubcategories = ((subcategoriesData as SubcategoryRow[] | null) ?? []).map(
-    (subcategory) => {
-      const category = pickSingle(subcategory.categories);
+  const initialSubcategories = (
+    (subcategoriesData as SubcategoryRow[] | null) ?? []
+  ).map((subcategory) => {
+    const category = pickSingle(subcategory.categories);
+    return {
+      id: subcategory.id,
+      slug: subcategory.slug,
+      name: subcategory.name,
+      sortOrder: subcategory.sort_order,
+      categorySlug: category?.slug ?? "",
+      categoryName: category?.name ?? "",
+    };
+  });
+
+  const initialTopics = ((topicsData as TopicRow[] | null) ?? []).map(
+    (topic) => {
+      const subcategory = pickSingle(topic.subcategories);
+      const category = pickSingle(subcategory?.categories);
       return {
-        id: subcategory.id,
-        slug: subcategory.slug,
-        name: subcategory.name,
-        sortOrder: subcategory.sort_order,
+        id: topic.id,
+        slug: topic.slug,
+        name: topic.name,
+        status: topic.status ?? "draft",
+        subcategorySlug: subcategory?.slug ?? "",
+        subcategoryName: subcategory?.name ?? "",
         categorySlug: category?.slug ?? "",
         categoryName: category?.name ?? "",
       };
     },
   );
-
-  const initialTopics = ((topicsData as TopicRow[] | null) ?? []).map((topic) => {
-    const subcategory = pickSingle(topic.subcategories);
-    const category = pickSingle(subcategory?.categories);
-    return {
-      id: topic.id,
-      slug: topic.slug,
-      name: topic.name,
-      status: topic.status ?? "draft",
-      subcategorySlug: subcategory?.slug ?? "",
-      subcategoryName: subcategory?.name ?? "",
-      categorySlug: category?.slug ?? "",
-      categoryName: category?.name ?? "",
-    };
-  });
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">

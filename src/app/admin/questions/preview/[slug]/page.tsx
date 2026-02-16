@@ -57,12 +57,10 @@ type QuestionRow = {
   title: string;
   summary: string | null;
   status: string | null;
-  question_topics:
-    | Array<{
-        sort_order: number | null;
-        topics: TopicRelation | null;
-      }>
-    | null;
+  question_topics: Array<{
+    sort_order: number | null;
+    topics: TopicRelation | null;
+  }> | null;
 };
 
 type AnswerRow = {
@@ -136,7 +134,9 @@ export default async function AdminQuestionPreviewPage({
   params: Params;
 }) {
   const { slug } = await params;
-  const { supabase } = await requireAdminPageAccess(`/admin/questions/preview/${slug}`);
+  const { supabase } = await requireAdminPageAccess(
+    `/admin/questions/preview/${slug}`,
+  );
 
   const { data: questionData, error: questionError } = await supabase
     .from("questions")
@@ -169,7 +169,9 @@ export default async function AdminQuestionPreviewPage({
     .maybeSingle<QuestionRow>();
 
   if (questionError) {
-    throw new Error(`Unable to load admin preview question: ${questionError.message}`);
+    throw new Error(
+      `Unable to load admin preview question: ${questionError.message}`,
+    );
   }
 
   if (!questionData) {
@@ -185,7 +187,9 @@ export default async function AdminQuestionPreviewPage({
     .limit(1);
 
   if (answerError) {
-    throw new Error(`Unable to load admin preview answer: ${answerError.message}`);
+    throw new Error(
+      `Unable to load admin preview answer: ${answerError.message}`,
+    );
   }
 
   const answer = ((answerRows as AnswerRow[] | null) ?? [])[0];
@@ -201,8 +205,12 @@ export default async function AdminQuestionPreviewPage({
               <Link href="/admin">Back to admin composer</Link>
             </Button>
             <Badge variant="secondary">Preview Mode</Badge>
-            <Badge variant="outline">Question status: {questionData.status ?? "draft"}</Badge>
-            <Badge variant="outline">Answer status: {answer?.status ?? "missing"}</Badge>
+            <Badge variant="outline">
+              Question status: {questionData.status ?? "draft"}
+            </Badge>
+            <Badge variant="outline">
+              Answer status: {answer?.status ?? "missing"}
+            </Badge>
           </div>
           <PreviewPublishControls questionSlug={questionData.slug} />
         </div>
@@ -225,7 +233,8 @@ export default async function AdminQuestionPreviewPage({
             {questionData.title}
           </h1>
           <p className="text-base leading-8 text-foreground/70 md:text-lg">
-            {questionData.summary?.trim() || "No summary provided for this draft yet."}
+            {questionData.summary?.trim() ||
+              "No summary provided for this draft yet."}
           </p>
           {topicNames.length ? (
             <div className="pt-1">

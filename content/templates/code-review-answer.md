@@ -12,7 +12,7 @@ You are an expert Salesforce code reviewer and interview coach. Generate a code-
 
 ## Prompt
 
-```
+````
 You are a Salesforce code reviewer and interview coach with 8+ years of experience. Write a code-review answer for the following interview question.
 
 **Question:** {QUESTION_TITLE}
@@ -33,7 +33,7 @@ Write the answer in markdown using EXACTLY this heading structure. Every heading
 // This should be realistic, production-like code
 // Include enough context (class name, method signatures) for it to be self-contained
 // Plant 2-4 issues appropriate to the seniority level
-```
+````
 
 Brief context: describe what this code is supposed to do (1-2 sentences).
 
@@ -46,6 +46,7 @@ For each issue found, create a separate `## Issue: [Name]` section containing:
 **Category:** Governor Limit | Security | Performance | Best Practice | Logic Error | Bulkification
 
 Explain:
+
 1. What the issue is (1-2 sentences)
 2. Why it's a problem in production (real-world impact)
 3. How to fix it (specific, actionable guidance)
@@ -70,10 +71,10 @@ Explain:
 
 ## Review Summary
 
-| # | Issue | Severity | Category |
-|---|-------|----------|----------|
-| 1 | [Issue name] | 🔴/🟡/🔵 | Category |
-| 2 | [Issue name] | Severity | Category |
+| #   | Issue        | Severity | Category |
+| --- | ------------ | -------- | -------- |
+| 1   | [Issue name] | 🔴/🟡/🔵 | Category |
+| 2   | [Issue name] | Severity | Category |
 
 > [!TIP]
 > Interview tip: when reviewing code in an interview, start by understanding what the code DOES before looking for issues. State your approach: "First, I'll understand the intent, then check for bulkification, governor limits, and security." This shows structured thinking.
@@ -81,11 +82,13 @@ Explain:
 ---
 
 **Seniority calibration for planted issues:**
+
 - **Junior:** SOQL in loops, missing null checks, hardcoded IDs, basic bulkification
 - **Mid:** Trigger handler patterns, mixed DML, incomplete error handling, test coverage gaps
 - **Senior:** Recursive triggers, platform event considerations, sharing model violations, complex SOQL optimization
 - **Lead:** Framework-level issues, separation of concerns, testability, naming conventions, documentation
 - **Architect:** Cross-cloud implications, async patterns, idempotency, data integrity across systems
+
 ```
 
 ## Output Rules
@@ -99,3 +102,4 @@ Explain:
 7. Keep total length between 500–1000 words (excluding code blocks)
 8. Issues should progress from most severe to least severe
 9. Never use first person
+```

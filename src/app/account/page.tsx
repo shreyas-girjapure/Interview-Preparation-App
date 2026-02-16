@@ -52,9 +52,7 @@ export default async function AccountPage() {
   if (isMissingWrapCodeBlocksColumnError(preferencesWithFeatureError)) {
     const { data: fallbackPreferences, error: fallbackError } = await supabase
       .from("user_preferences")
-      .select(
-        "focus_areas, target_role, experience_level, daily_goal_minutes",
-      )
+      .select("focus_areas, target_role, experience_level, daily_goal_minutes")
       .eq("user_id", user.id)
       .maybeSingle<{
         focus_areas: string[] | null;

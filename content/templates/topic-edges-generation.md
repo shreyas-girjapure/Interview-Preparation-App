@@ -60,9 +60,11 @@ Output format:
 2. Do not include self-links (`to_topic_slug` cannot equal `{FROM_TOPIC_SLUG}`).
 3. Do not duplicate the same `(to_topic_slug, relation_type)` pair.
 4. Suggest at most:
+
 - `prerequisite`: 3
 - `related`: 4
 - `deep_dive`: 2
+
 5. Prefer `prerequisite` edges for foundational concepts that should be learned first.
 6. Prefer `deep_dive` for advanced follow-up study, not basics.
 7. If confidence is below `0.65`, omit the edge.
@@ -72,10 +74,10 @@ Output format:
 ## Deterministic Gate Reminder
 
 Your output is advisory only. The importer/validator will enforce:
+
 - existing slugs only
 - no self loops
 - cycle checks for prerequisite edges
 - duplicate removal
 - limit caps
 - canonical sort order assignment
-

@@ -124,7 +124,9 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
               </p>
             </div>
           ) : (
-            <RelatedQuestionsTwoRowCarousel questions={topic.relatedQuestions} />
+            <RelatedQuestionsTwoRowCarousel
+              questions={topic.relatedQuestions}
+            />
           )}
         </section>
       </article>

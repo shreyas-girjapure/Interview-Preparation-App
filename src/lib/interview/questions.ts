@@ -337,7 +337,10 @@ function deriveFallbackPrerequisiteTopicIds(
         Boolean(candidate.subcategory_id) &&
         candidate.subcategory_id === currentTopic.subcategory_id,
     )
-    .filter((candidate) => (candidate.sort_order ?? Number.MAX_SAFE_INTEGER) < currentSort)
+    .filter(
+      (candidate) =>
+        (candidate.sort_order ?? Number.MAX_SAFE_INTEGER) < currentSort,
+    )
     .map((candidate) => {
       const topicText = `${candidate.slug} ${candidate.name}`.toLowerCase();
       const hasFoundationalKeyword = foundationalKeywords.some((keyword) =>
@@ -384,7 +387,10 @@ function deriveFallbackRelatedTopicIds(
         continue;
       }
 
-      cooccurrenceScores.set(topicSlug, (cooccurrenceScores.get(topicSlug) ?? 0) + 1);
+      cooccurrenceScores.set(
+        topicSlug,
+        (cooccurrenceScores.get(topicSlug) ?? 0) + 1,
+      );
     }
   }
 
@@ -422,12 +428,15 @@ function deriveFallbackRelatedTopicIds(
     .filter((topic) => topic.id !== currentTopic.id)
     .filter(
       (topic) =>
-        Boolean(topic.subcategory_id) && topic.subcategory_id === currentTopic.subcategory_id,
+        Boolean(topic.subcategory_id) &&
+        topic.subcategory_id === currentTopic.subcategory_id,
     )
     .map((topic) => ({
       id: topic.id,
-      distance:
-        Math.abs((topic.sort_order ?? Number.MAX_SAFE_INTEGER) - (currentTopic.sort_order ?? Number.MAX_SAFE_INTEGER)),
+      distance: Math.abs(
+        (topic.sort_order ?? Number.MAX_SAFE_INTEGER) -
+          (currentTopic.sort_order ?? Number.MAX_SAFE_INTEGER),
+      ),
       sortOrder: topic.sort_order ?? Number.MAX_SAFE_INTEGER,
       name: topic.name,
     }))
@@ -444,7 +453,10 @@ function deriveFallbackRelatedTopicIds(
     })
     .map((topic) => topic.id);
 
-  return dedupeKeepOrder([...cooccurrenceTopicIds, ...sameSubcategoryNeighbors]);
+  return dedupeKeepOrder([
+    ...cooccurrenceTopicIds,
+    ...sameSubcategoryNeighbors,
+  ]);
 }
 
 function matchesQuestionSearch(
@@ -926,7 +938,8 @@ export async function listRelatedQuestionsForQuestion(
   const allQuestions = await listQuestions({});
   const candidates = allQuestions.filter(
     (candidate) =>
-      candidate.id !== currentQuestion.id && candidate.slug !== currentQuestion.slug,
+      candidate.id !== currentQuestion.id &&
+      candidate.slug !== currentQuestion.slug,
   );
 
   const ranked = candidates
@@ -940,9 +953,7 @@ export async function listRelatedQuestionsForQuestion(
         currentQuestion.categorySlugs,
       );
 
-      const score =
-        sharedTopics * 100 +
-        sharedCategories * 30;
+      const score = sharedTopics * 100 + sharedCategories * 30;
 
       return {
         candidate,

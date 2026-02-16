@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prepare": "node scripts/setup-git-hooks.mjs",
     "prebuild": "node scripts/prevent-main-branch-deploy.mjs",
     "build": "next build",
     "start": "next start",

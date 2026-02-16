@@ -99,7 +99,9 @@ function loadRuntimeEnv() {
 
   const url = getValue("NEXT_PUBLIC_SUPABASE_URL");
   const projectRef =
-    args["project-ref"] || getValue("SUPABASE_PROJECT_REF") || resolveProjectRef(url);
+    args["project-ref"] ||
+    getValue("SUPABASE_PROJECT_REF") ||
+    resolveProjectRef(url);
   const accessToken = getValue("SUPABASE_ACCESS_TOKEN");
   const serviceRoleKey = getValue("SUPABASE_SERVICE_ROLE_KEY");
 
@@ -349,7 +351,10 @@ async function runGuardrailSmokeTest({ url, serviceRoleKey }) {
       .update({ status: "draft", published_at: null })
       .eq("id", questionId);
 
-    await supabase.from("question_topics").delete().eq("question_id", questionId);
+    await supabase
+      .from("question_topics")
+      .delete()
+      .eq("question_id", questionId);
     await supabase.from("questions").delete().eq("id", questionId);
   }
 }
