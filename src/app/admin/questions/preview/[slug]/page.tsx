@@ -25,18 +25,30 @@ type CategoryRelation =
       name: string | null;
     }>;
 
-type TopicRelation =
+type SubcategoryRelation =
   | {
       slug: string | null;
       name: string | null;
-      status: string | null;
       categories: CategoryRelation | null;
     }
   | Array<{
       slug: string | null;
       name: string | null;
-      status: string | null;
       categories: CategoryRelation | null;
+    }>;
+
+type TopicRelation =
+  | {
+      slug: string | null;
+      name: string | null;
+      status: string | null;
+      subcategories: SubcategoryRelation | null;
+    }
+  | Array<{
+      slug: string | null;
+      name: string | null;
+      status: string | null;
+      subcategories: SubcategoryRelation | null;
     }>;
 
 type QuestionRow = {
@@ -84,7 +96,8 @@ function collectCategories(questionTopics: QuestionRow["question_topics"]) {
   const categories: string[] = [];
 
   for (const item of items) {
-    const category = pickSingle(item.topic?.categories);
+    const subcategory = pickSingle(item.topic?.subcategories);
+    const category = pickSingle(subcategory?.categories);
     const categorySlug = category?.slug?.trim().toLowerCase();
     const categoryName = category?.name?.trim();
 
@@ -140,9 +153,13 @@ export default async function AdminQuestionPreviewPage({
             slug,
             name,
             status,
-            categories(
+            subcategories(
               slug,
-              name
+              name,
+              categories(
+                slug,
+                name
+              )
             )
           )
         )

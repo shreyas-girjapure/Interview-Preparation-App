@@ -26,7 +26,7 @@ const saveDraftSchema = z
             shortDescription: z.string().default(""),
             overviewMarkdown: z.string().default(""),
             sortOrder: z.number().int().min(0).max(100000).default(0),
-            categorySlug: z.string().default(""),
+            subcategorySlug: z.string().default(""),
             publishNow: z.boolean().default(true),
           })
           .strict()
@@ -37,7 +37,7 @@ const saveDraftSchema = z
             shortDescription: "",
             overviewMarkdown: "",
             sortOrder: 0,
-            categorySlug: "",
+            subcategorySlug: "",
             publishNow: true,
           }),
         question: z
@@ -77,11 +77,11 @@ const saveDraftSchema = z
         });
       }
 
-      if (!createTopic.categorySlug.trim()) {
+      if (!createTopic.subcategorySlug.trim()) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: "Topic category is required when creating a topic.",
-          path: ["data", "createTopic", "categorySlug"],
+          message: "Topic subcategory is required when creating a topic.",
+          path: ["data", "createTopic", "subcategorySlug"],
         });
       }
     }
@@ -100,7 +100,7 @@ const publishSchema = z
 
 const contentPackageSchema = z.union([saveDraftSchema, publishSchema]);
 
-type TopicCategoryRelation =
+type CategoryRelation =
   | {
       slug: string | null;
       name: string | null;
@@ -110,12 +110,24 @@ type TopicCategoryRelation =
       name: string | null;
     }>;
 
+type SubcategoryRelation =
+  | {
+      slug: string | null;
+      name: string | null;
+      categories: CategoryRelation | null;
+    }
+  | Array<{
+      slug: string | null;
+      name: string | null;
+      categories: CategoryRelation | null;
+    }>;
+
 type TopicRow = {
   id: string;
   slug: string;
   name: string;
   status: string | null;
-  categories: TopicCategoryRelation | null;
+  subcategories: SubcategoryRelation | null;
 };
 
 type TopicDuplicateRow = {
@@ -124,10 +136,11 @@ type TopicDuplicateRow = {
   status: string | null;
 };
 
-type CategoryRow = {
+type SubcategoryRow = {
   id: string;
   slug: string;
   name: string;
+  categories: CategoryRelation | null;
 };
 
 type QuestionRow = {
@@ -225,7 +238,7 @@ function formatTopicDuplicateWarning(rows: TopicDuplicateRow[]) {
     .map((row) => `${row.slug} (${row.status ?? "draft"})`)
     .join(", ");
 
-  return `Possible duplicate topic name found in selected category: ${examples}.`;
+  return `Possible duplicate topic name found in selected subcategory: ${examples}.`;
 }
 
 function dedupeKeepOrder(values: string[]) {
@@ -295,7 +308,7 @@ export async function POST(request: Request) {
     if (normalizedExistingTopicSlugs.length) {
       const { data: existingTopicRows, error: existingTopicsError } = await supabase
         .from("topics")
-        .select("id, slug, name, status, categories(slug, name)")
+        .select("id, slug, name, status, subcategories(slug, name, categories(slug, name))")
         .in("slug", normalizedExistingTopicSlugs)
         .returns<TopicRow[]>();
 
@@ -326,7 +339,8 @@ export async function POST(request: Request) {
         linkedTopicIdsOrdered.push(topic.id);
         linkedTopicSlugsOrdered.push(topic.slug);
 
-        const category = pickSingle(topic.categories);
+        const subcategory = pickSingle(topic.subcategories);
+        const category = pickSingle(subcategory?.categories);
         if (category?.name) {
           linkedCategoryLabelsOrdered.push(category.name);
         }
@@ -340,40 +354,42 @@ export async function POST(request: Request) {
     }
 
     if (createTopicInput.enabled) {
-      const categorySlug = createTopicInput.categorySlug.trim().toLowerCase();
+      const subcategorySlug = createTopicInput.subcategorySlug.trim().toLowerCase();
 
-      if (!slugPattern.test(categorySlug)) {
+      if (!slugPattern.test(subcategorySlug)) {
         return NextResponse.json(
           {
-            error: "Topic category slug is invalid.",
+            error: "Topic subcategory slug is invalid.",
           },
           { status: 400 },
         );
       }
 
-      const { data: categoryRow, error: categoryError } = await supabase
-        .from("categories")
-        .select("id, slug, name")
-        .eq("slug", categorySlug)
-        .maybeSingle<CategoryRow>();
+      const { data: subcategoryRow, error: subcategoryError } = await supabase
+        .from("subcategories")
+        .select("id, slug, name, categories(slug, name)")
+        .eq("slug", subcategorySlug)
+        .maybeSingle<SubcategoryRow>();
 
-      if (categoryError) {
+      if (subcategoryError) {
         return NextResponse.json(
           {
-            error: `Unable to resolve topic category: ${categoryError.message}`,
+            error: `Unable to resolve topic subcategory: ${subcategoryError.message}`,
           },
           { status: 500 },
         );
       }
 
-      if (!categoryRow) {
+      if (!subcategoryRow) {
         return NextResponse.json(
           {
-            error: `Category "${categorySlug}" was not found.`,
+            error: `Subcategory "${subcategorySlug}" was not found.`,
           },
           { status: 400 },
         );
       }
+
+      const subcategoryCategory = pickSingle(subcategoryRow.categories);
 
       const requestedTopicSlugRaw = createTopicInput.slug.trim().toLowerCase();
       const requestedTopicSlug = requestedTopicSlugRaw
@@ -406,7 +422,7 @@ export async function POST(request: Request) {
       const { data: duplicateTopicRows, error: duplicateTopicError } = await supabase
         .from("topics")
         .select("slug, name, status")
-        .eq("preparation_category_id", categoryRow.id)
+        .eq("subcategory_id", subcategoryRow.id)
         .ilike("name", createTopicInput.name)
         .neq("slug", topicSlug)
         .limit(5);
@@ -438,7 +454,7 @@ export async function POST(request: Request) {
             short_description: createTopicInput.shortDescription.trim(),
             overview_markdown: createTopicInput.overviewMarkdown,
             sort_order: createTopicInput.sortOrder,
-            preparation_category_id: categoryRow.id,
+            subcategory_id: subcategoryRow.id,
             status: createTopicInput.publishNow ? "published" : "draft",
             published_at: createTopicInput.publishNow ? nowIso : null,
             created_by: user.id,
@@ -495,7 +511,7 @@ export async function POST(request: Request) {
               short_description: createTopicInput.shortDescription.trim(),
               overview_markdown: createTopicInput.overviewMarkdown,
               sort_order: createTopicInput.sortOrder,
-              preparation_category_id: categoryRow.id,
+              subcategory_id: subcategoryRow.id,
               status: createTopicInput.publishNow ? "published" : "draft",
               published_at: createTopicInput.publishNow ? nowIso : null,
               updated_by: user.id,
@@ -521,7 +537,7 @@ export async function POST(request: Request) {
               short_description: createTopicInput.shortDescription.trim(),
               overview_markdown: createTopicInput.overviewMarkdown,
               sort_order: createTopicInput.sortOrder,
-              preparation_category_id: categoryRow.id,
+              subcategory_id: subcategoryRow.id,
               status: createTopicInput.publishNow ? "published" : "draft",
               published_at: createTopicInput.publishNow ? nowIso : null,
               created_by: user.id,
@@ -554,7 +570,9 @@ export async function POST(request: Request) {
 
       linkedTopicIdsOrdered.push(createdTopicId);
       linkedTopicSlugsOrdered.push(topicSlug);
-      linkedCategoryLabelsOrdered.push(categoryRow.name);
+      if (subcategoryCategory?.name) {
+        linkedCategoryLabelsOrdered.push(subcategoryCategory.name);
+      }
 
       if (!createTopicInput.publishNow) {
         warnings.push(

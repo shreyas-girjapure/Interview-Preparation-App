@@ -17,11 +17,13 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 
-type CategoryOption = {
+type SubcategoryOption = {
   id: string;
   slug: string;
   name: string;
   sortOrder: number;
+  categorySlug: string;
+  categoryName: string;
 };
 
 type TopicOption = {
@@ -29,6 +31,8 @@ type TopicOption = {
   slug: string;
   name: string;
   status: string;
+  subcategorySlug: string;
+  subcategoryName: string;
   categorySlug: string;
   categoryName: string;
 };
@@ -96,10 +100,10 @@ function LabelWithHelp({
 }
 
 export function AdminContentComposer({
-  initialCategories,
+  initialSubcategories,
   initialTopics,
 }: {
-  initialCategories: CategoryOption[];
+  initialSubcategories: SubcategoryOption[];
   initialTopics: TopicOption[];
 }) {
   const topicOptions = useMemo<ComboboxOption[]>(
@@ -107,25 +111,35 @@ export function AdminContentComposer({
       initialTopics.map((topic) => ({
         value: topic.slug,
         label: `${topic.name} (${topic.slug})`,
-        keywords: [topic.categoryName, topic.categorySlug, topic.status],
+        keywords: [
+          topic.subcategoryName,
+          topic.subcategorySlug,
+          topic.categoryName,
+          topic.categorySlug,
+          topic.status,
+        ],
       })),
     [initialTopics],
   );
-  const categoryOptions = useMemo<ComboboxOption[]>(
+  const subcategoryOptions = useMemo<ComboboxOption[]>(
     () =>
-      initialCategories.map((category) => ({
-        value: category.slug,
-        label: `${category.name} (${category.slug})`,
+      initialSubcategories.map((subcategory) => ({
+        value: subcategory.slug,
+        label: `${subcategory.name} (${subcategory.slug})`,
+        keywords: [subcategory.categoryName, subcategory.categorySlug],
       })),
-    [initialCategories],
+    [initialSubcategories],
   );
   const topicBySlug = useMemo(
     () => new Map(initialTopics.map((topic) => [topic.slug, topic])),
     [initialTopics],
   );
-  const categoryBySlug = useMemo(
-    () => new Map(initialCategories.map((category) => [category.slug, category])),
-    [initialCategories],
+  const subcategoryBySlug = useMemo(
+    () =>
+      new Map(
+        initialSubcategories.map((subcategory) => [subcategory.slug, subcategory]),
+      ),
+    [initialSubcategories],
   );
 
   const [topicPickerSlug, setTopicPickerSlug] = useState<string | null>(
@@ -143,9 +157,9 @@ export function AdminContentComposer({
   const [createTopicOverviewMarkdown, setCreateTopicOverviewMarkdown] =
     useState("");
   const [createTopicSortOrder, setCreateTopicSortOrder] = useState(0);
-  const [createTopicCategorySlug, setCreateTopicCategorySlug] = useState<
+  const [createTopicSubcategorySlug, setCreateTopicSubcategorySlug] = useState<
     string | null
-  >(initialCategories[0]?.slug ?? null);
+  >(initialSubcategories[0]?.slug ?? null);
   const [publishCreatedTopicNow, setPublishCreatedTopicNow] = useState(true);
 
   const [questionSlug, setQuestionSlug] = useState("");
@@ -168,8 +182,9 @@ export function AdminContentComposer({
     .map((slug) => topicBySlug.get(slug))
     .filter((topic): topic is TopicOption => Boolean(topic));
 
-  const selectedCreateCategory =
-    createTopicCategorySlug ? categoryBySlug.get(createTopicCategorySlug) : null;
+  const selectedCreateSubcategory = createTopicSubcategorySlug
+    ? subcategoryBySlug.get(createTopicSubcategorySlug)
+    : null;
 
   const computedAutoQuestionSlug = useMemo(() => {
     if (questionSlug.trim()) {
@@ -198,12 +213,12 @@ export function AdminContentComposer({
       }
     });
 
-    if (createTopicEnabled && selectedCreateCategory?.name) {
-      names.add(selectedCreateCategory.name);
+    if (createTopicEnabled && selectedCreateSubcategory?.categoryName) {
+      names.add(selectedCreateSubcategory.categoryName);
     }
 
     return Array.from(names);
-  }, [selectedLinkedTopics, createTopicEnabled, selectedCreateCategory]);
+  }, [selectedLinkedTopics, createTopicEnabled, selectedCreateSubcategory]);
 
   const previewTopicNames = useMemo(() => {
     const names = new Set<string>();
@@ -256,7 +271,7 @@ export function AdminContentComposer({
           shortDescription: createTopicShortDescription,
           overviewMarkdown: createTopicOverviewMarkdown,
           sortOrder: createTopicSortOrder,
-          categorySlug: normalizeSlug(createTopicCategorySlug ?? ""),
+          subcategorySlug: normalizeSlug(createTopicSubcategorySlug ?? ""),
           publishNow: publishCreatedTopicNow,
         },
         question: {
@@ -392,7 +407,7 @@ export function AdminContentComposer({
               onValueChange={setTopicPickerSlug}
               options={topicOptions}
               placeholder="Search and select topic"
-              searchPlaceholder="Search by topic, slug, category"
+              searchPlaceholder="Search by topic, slug, category, subcategory"
               emptyMessage="No topics found."
               noneLabel="No topic selected"
             />
@@ -410,7 +425,12 @@ export function AdminContentComposer({
                   className="inline-flex items-center gap-2"
                 >
                   <span>
-                    {topic.name} ({topic.categoryName || topic.categorySlug})
+                    {topic.name} (
+                    {topic.subcategoryName ||
+                      topic.subcategorySlug ||
+                      topic.categoryName ||
+                      topic.categorySlug}
+                    )
                   </span>
                   <button
                     type="button"
@@ -486,18 +506,21 @@ export function AdminContentComposer({
 
               <label className="space-y-2 text-sm">
                 <LabelWithHelp
-                  label="Category"
-                  help="Existing category only. Used as canonical topic owner."
+                  label="Subcategory"
+                  help="Select an existing subcategory. Category is inferred from this selection."
                 />
                 <Combobox
-                  value={createTopicCategorySlug}
-                  onValueChange={setCreateTopicCategorySlug}
-                  options={categoryOptions}
-                  placeholder="Select category"
-                  searchPlaceholder="Search categories"
-                  emptyMessage="No categories found."
-                  noneLabel="No category selected"
+                  value={createTopicSubcategorySlug}
+                  onValueChange={setCreateTopicSubcategorySlug}
+                  options={subcategoryOptions}
+                  placeholder="Select subcategory"
+                  searchPlaceholder="Search subcategories"
+                  emptyMessage="No subcategories found."
+                  noneLabel="No subcategory selected"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Category: {selectedCreateSubcategory?.categoryName || "Unknown"}
+                </p>
               </label>
 
               <label className="space-y-2 text-sm">

@@ -32,6 +32,7 @@ export type InterviewTopicSummary = {
 
 export type InterviewTopicDetails = InterviewTopicSummary & {
   overviewMarkdown: string;
+  prerequisiteTopics: InterviewTopicSummary[];
   relatedQuestions: InterviewQuestionSummary[];
   relatedTopics: InterviewTopicSummary[];
 };
@@ -50,13 +51,25 @@ type CategoryRelation =
   | { slug: string | null; name: string | null }
   | Array<{ slug: string | null; name: string | null }>;
 
+type SubcategoryRelation =
+  | {
+      slug: string | null;
+      name: string | null;
+      categories: CategoryRelation | null;
+    }
+  | Array<{
+      slug: string | null;
+      name: string | null;
+      categories: CategoryRelation | null;
+    }>;
+
 type TopicRelation = {
   id: string | null;
   slug: string | null;
   name: string | null;
   short_description: string | null;
   status: string | null;
-  categories: CategoryRelation | null;
+  subcategories: SubcategoryRelation | null;
 };
 
 type QuestionRow = {
@@ -79,11 +92,15 @@ type TopicRow = {
   short_description: string | null;
   overview_markdown: string | null;
   sort_order: number | null;
+  subcategory_id: string | null;
 };
+
+type TopicRelationType = "related" | "prerequisite" | "deep_dive";
 
 type TopicEdgeRow = {
   to_topic_id: string;
   sort_order: number | null;
+  relation_type: TopicRelationType;
 };
 
 type QuestionTopicCountRow = {
@@ -184,7 +201,8 @@ function mapCategoryMetadata(questionTopics: QuestionRow["question_topics"]) {
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   for (const entry of mapped) {
-    const topicCategory = pickSingle(entry.topic?.categories);
+    const topicSubcategory = pickSingle(entry.topic?.subcategories);
+    const topicCategory = pickSingle(topicSubcategory?.categories);
     const categoryLabel = topicCategory?.name?.trim();
     const categorySlug = topicCategory?.slug?.trim().toLowerCase();
 
@@ -252,6 +270,183 @@ function countOverlap(left: string[], right: string[]) {
   return count;
 }
 
+function dedupeKeepOrder(values: string[]) {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  for (const value of values) {
+    if (seen.has(value)) {
+      continue;
+    }
+
+    seen.add(value);
+    result.push(value);
+  }
+
+  return result;
+}
+
+function stripGeneratedTopicSections(source: string) {
+  const lines = source.split(/\r?\n/);
+  const headingsToStrip = new Set(["prerequisites", "related topics"]);
+  const kept: string[] = [];
+  let skipping = false;
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^##\s+(.+?)\s*$/i);
+
+    if (headingMatch) {
+      const heading = headingMatch[1]?.trim().toLowerCase() ?? "";
+
+      if (headingsToStrip.has(heading)) {
+        skipping = true;
+        continue;
+      }
+
+      skipping = false;
+      kept.push(line);
+      continue;
+    }
+
+    if (!skipping) {
+      kept.push(line);
+    }
+  }
+
+  return kept.join("\n").trim();
+}
+
+function deriveFallbackPrerequisiteTopicIds(
+  currentTopic: TopicRow,
+  topicRows: TopicRow[],
+) {
+  const currentSort = currentTopic.sort_order ?? Number.MAX_SAFE_INTEGER;
+  const foundationalKeywords = [
+    "fundamentals",
+    "basics",
+    "intro",
+    "introduction",
+    "core",
+    "101",
+  ];
+
+  const candidates = topicRows
+    .filter((candidate) => candidate.id !== currentTopic.id)
+    .filter(
+      (candidate) =>
+        Boolean(candidate.subcategory_id) &&
+        candidate.subcategory_id === currentTopic.subcategory_id,
+    )
+    .filter((candidate) => (candidate.sort_order ?? Number.MAX_SAFE_INTEGER) < currentSort)
+    .map((candidate) => {
+      const topicText = `${candidate.slug} ${candidate.name}`.toLowerCase();
+      const hasFoundationalKeyword = foundationalKeywords.some((keyword) =>
+        topicText.includes(keyword),
+      );
+
+      return {
+        id: candidate.id,
+        sortOrder: candidate.sort_order ?? Number.MAX_SAFE_INTEGER,
+        hasFoundationalKeyword,
+        name: candidate.name,
+      };
+    });
+
+  candidates.sort((left, right) => {
+    if (left.hasFoundationalKeyword !== right.hasFoundationalKeyword) {
+      return left.hasFoundationalKeyword ? -1 : 1;
+    }
+
+    if (left.sortOrder !== right.sortOrder) {
+      return left.sortOrder - right.sortOrder;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+
+  return candidates.map((candidate) => candidate.id);
+}
+
+function deriveFallbackRelatedTopicIds(
+  currentTopic: TopicRow,
+  topicRows: TopicRow[],
+  relatedQuestions: InterviewQuestionSummary[],
+) {
+  const cooccurrenceScores = new Map<string, number>();
+
+  for (const question of relatedQuestions) {
+    if (!question.topicSlugs.includes(currentTopic.slug)) {
+      continue;
+    }
+
+    for (const topicSlug of question.topicSlugs) {
+      if (topicSlug === currentTopic.slug) {
+        continue;
+      }
+
+      cooccurrenceScores.set(topicSlug, (cooccurrenceScores.get(topicSlug) ?? 0) + 1);
+    }
+  }
+
+  const topicBySlug = new Map(topicRows.map((topic) => [topic.slug, topic]));
+
+  const cooccurrenceTopicIds = Array.from(cooccurrenceScores.entries())
+    .map(([topicSlug, score]) => {
+      const topic = topicBySlug.get(topicSlug);
+      if (!topic) {
+        return null;
+      }
+
+      return {
+        id: topic.id,
+        score,
+        sortOrder: topic.sort_order ?? Number.MAX_SAFE_INTEGER,
+        name: topic.name,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .map((entry) => entry.id);
+
+  const sameSubcategoryNeighbors = topicRows
+    .filter((topic) => topic.id !== currentTopic.id)
+    .filter(
+      (topic) =>
+        Boolean(topic.subcategory_id) && topic.subcategory_id === currentTopic.subcategory_id,
+    )
+    .map((topic) => ({
+      id: topic.id,
+      distance:
+        Math.abs((topic.sort_order ?? Number.MAX_SAFE_INTEGER) - (currentTopic.sort_order ?? Number.MAX_SAFE_INTEGER)),
+      sortOrder: topic.sort_order ?? Number.MAX_SAFE_INTEGER,
+      name: topic.name,
+    }))
+    .sort((left, right) => {
+      if (left.distance !== right.distance) {
+        return left.distance - right.distance;
+      }
+
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .map((topic) => topic.id);
+
+  return dedupeKeepOrder([...cooccurrenceTopicIds, ...sameSubcategoryNeighbors]);
+}
+
 function matchesQuestionSearch(
   question: InterviewQuestionSummary,
   search: string,
@@ -307,9 +502,13 @@ async function fetchPublishedQuestionRows() {
               name,
               short_description,
               status,
-              categories(
+              subcategories(
                 slug,
-                name
+                name,
+                categories(
+                  slug,
+                  name
+                )
               )
             )
           )
@@ -329,7 +528,7 @@ async function fetchPublishedTopicRows() {
     const { data, error } = await supabase
       .from("topics")
       .select(
-        "id, slug, name, short_description, overview_markdown, sort_order",
+        "id, slug, name, short_description, overview_markdown, sort_order, subcategory_id",
       )
       .eq("status", "published")
       .order("sort_order", { ascending: true })
@@ -344,7 +543,7 @@ async function fetchTopicEdges(fromTopicId: string) {
   return withContentClient<TopicEdgeRow[]>([], async (supabase) => {
     const { data, error } = await supabase
       .from("topic_edges")
-      .select("to_topic_id, sort_order")
+      .select("to_topic_id, relation_type, sort_order")
       .eq("from_topic_id", fromTopicId)
       .order("sort_order", { ascending: true });
 
@@ -509,9 +708,13 @@ export async function getQuestionBySlug(slug: string) {
                 name,
                 short_description,
                 status,
-                categories(
+                subcategories(
                   slug,
-                  name
+                  name,
+                  categories(
+                    slug,
+                    name
+                  )
                 )
               )
             )
@@ -594,29 +797,82 @@ export async function getTopicBySlug(
     listQuestions({}),
   ]);
 
-  const relatedTopics = edges
-    .sort(
-      (a, b) =>
-        (a.sort_order ?? Number.MAX_SAFE_INTEGER) -
-        (b.sort_order ?? Number.MAX_SAFE_INTEGER),
-    )
-    .map((edge) => topicSummaryById.get(edge.to_topic_id))
-    .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
-
   const relatedQuestionsForTopic = relatedQuestions.filter((question) =>
     question.topicSlugs.includes(slug),
   );
+
+  const sortedEdges = [...edges].sort((left, right) => {
+    const sortOrderDiff =
+      (left.sort_order ?? Number.MAX_SAFE_INTEGER) -
+      (right.sort_order ?? Number.MAX_SAFE_INTEGER);
+
+    if (sortOrderDiff !== 0) {
+      return sortOrderDiff;
+    }
+
+    return left.relation_type.localeCompare(right.relation_type);
+  });
+
+  const prerequisiteTopicIdsFromEdges = dedupeKeepOrder(
+    sortedEdges
+      .filter((edge) => edge.relation_type === "prerequisite")
+      .map((edge) => edge.to_topic_id),
+  );
+
+  const relatedTopicIdsFromEdges = dedupeKeepOrder(
+    sortedEdges
+      .filter((edge) => edge.relation_type !== "prerequisite")
+      .map((edge) => edge.to_topic_id),
+  );
+
+  const fallbackPrerequisiteTopicIds = deriveFallbackPrerequisiteTopicIds(
+    currentTopic,
+    topicRows,
+  );
+  const prerequisiteTopicIds = dedupeKeepOrder([
+    ...prerequisiteTopicIdsFromEdges,
+    ...fallbackPrerequisiteTopicIds,
+  ])
+    .filter((topicId) => topicId !== currentTopic.id)
+    .slice(0, 3);
+
+  const prerequisiteTopicIdSet = new Set(prerequisiteTopicIds);
+
+  const fallbackRelatedTopicIds = deriveFallbackRelatedTopicIds(
+    currentTopic,
+    topicRows,
+    relatedQuestionsForTopic,
+  );
+  const relatedTopicIds = dedupeKeepOrder([
+    ...relatedTopicIdsFromEdges,
+    ...fallbackRelatedTopicIds,
+  ])
+    .filter((topicId) => topicId !== currentTopic.id)
+    .filter((topicId) => !prerequisiteTopicIdSet.has(topicId))
+    .slice(0, 4);
+
+  const prerequisiteTopics = prerequisiteTopicIds
+    .map((topicId) => topicSummaryById.get(topicId))
+    .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
+
+  const relatedTopics = relatedTopicIds
+    .map((topicId) => topicSummaryById.get(topicId))
+    .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
 
   const currentTopicSummary = topicSummaryById.get(currentTopic.id);
   if (!currentTopicSummary) {
     return undefined;
   }
 
+  const cleanedOverviewMarkdown = stripGeneratedTopicSections(
+    currentTopic.overview_markdown?.trim() || "",
+  );
+
   return {
     ...currentTopicSummary,
     overviewMarkdown:
-      currentTopic.overview_markdown?.trim() ||
-      "Topic overview content is being prepared.",
+      cleanedOverviewMarkdown || "Topic overview content is being prepared.",
+    prerequisiteTopics,
     relatedQuestions: relatedQuestionsForTopic,
     relatedTopics,
   };
