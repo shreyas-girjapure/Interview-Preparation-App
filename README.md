@@ -74,6 +74,18 @@ npm run db:migrate:dev
 npm run db:smoke:guardrail:dev
 ```
 
+Dev -> prod data sync commands:
+
+```bash
+npm run db:verify:dev-prod
+npm run db:sync:dev-prod
+npm run db:sync:dev-prod:reset
+```
+
+Cutover runbook:
+
+- `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
+
 Notes:
 
 - `db:smoke:guardrail*` validates the published-question topic-link guardrail end to end and cleans up test data.

@@ -69,6 +69,21 @@ npx supabase db reset --local
    - `/topics`
    - `/admin` (requires admin role)
 
+## Dev -> Prod Data Parity
+
+If production must match dev data exactly (not just schema), use:
+
+```bash
+npm run db:verify:dev-prod
+npm run db:sync:dev-prod
+# or destructive reset + sync
+npm run db:sync:dev-prod:reset
+```
+
+Detailed procedure and safeguards:
+
+- `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
+
 ## Troubleshooting
 
 1. Docker pipe/engine error on local commands:

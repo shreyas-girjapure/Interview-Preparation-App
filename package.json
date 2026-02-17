@@ -16,7 +16,10 @@
     "templates:validate": "node scripts/validate-content-templates.mjs",
     "db:smoke:guardrail": "node scripts/smoke-published-question-topic-guardrail.mjs",
     "db:smoke:guardrail:dev": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref stxikhpofortkerjeuhf",
-    "db:smoke:guardrail:prod": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref xglbjcouoyjegryxorqo"
+    "db:smoke:guardrail:prod": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref xglbjcouoyjegryxorqo",
+    "db:verify:dev-prod": "node scripts/sync-dev-to-prod-public-data.mjs --verify-only",
+    "db:sync:dev-prod": "node scripts/sync-dev-to-prod-public-data.mjs",
+    "db:sync:dev-prod:reset": "node scripts/sync-dev-to-prod-public-data.mjs --reset-target"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
