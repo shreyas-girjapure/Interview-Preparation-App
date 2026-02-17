@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { requireAdminPageAccess } from "@/lib/auth/admin-access";
 import { pickSingle } from "@/lib/utils";
 
-import { AdminContentComposer } from "./admin-content-composer";
+import { AiContentComposer } from "./ai-content-composer";
 
 export const dynamic = "force-dynamic";
 
@@ -44,12 +44,13 @@ type TopicRow = {
   id: string;
   slug: string;
   name: string;
+  short_description: string | null;
   status: string | null;
   subcategories: TopicSubcategoryRelation | null;
 };
 
-export default async function AdminPage() {
-  const { supabase } = await requireAdminPageAccess("/admin");
+export default async function AdminAiComposePage() {
+  const { supabase } = await requireAdminPageAccess("/admin/ai-compose");
 
   const [
     { data: subcategoriesData, error: subcategoriesError },
@@ -63,20 +64,20 @@ export default async function AdminPage() {
     supabase
       .from("topics")
       .select(
-        "id, slug, name, status, subcategories(slug, name, categories(slug, name))",
+        "id, slug, name, short_description, status, subcategories(slug, name, categories(slug, name))",
       )
       .order("name", { ascending: true }),
   ]);
 
   if (subcategoriesError) {
     throw new Error(
-      `Unable to load subcategories for admin page: ${subcategoriesError.message}`,
+      `Unable to load subcategories for AI compose page: ${subcategoriesError.message}`,
     );
   }
 
   if (topicsError) {
     throw new Error(
-      `Unable to load topics for admin page: ${topicsError.message}`,
+      `Unable to load topics for AI compose page: ${topicsError.message}`,
     );
   }
 
@@ -102,6 +103,7 @@ export default async function AdminPage() {
         id: topic.id,
         slug: topic.slug,
         name: topic.name,
+        shortDescription: topic.short_description ?? "",
         status: topic.status ?? "draft",
         subcategorySlug: subcategory?.slug ?? "",
         subcategoryName: subcategory?.name ?? "",
@@ -119,25 +121,25 @@ export default async function AdminPage() {
             variant="secondary"
             className="rounded-full px-3 py-1 text-xs tracking-wide uppercase"
           >
-            Admin
+            Admin AI
           </Badge>
           <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
-            Manual content composer
+            AI-assisted content composer
           </h1>
           <p className="max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
-            Select an existing topic or create one, then write a question and
-            answer with live preview before publishing.
+            Add question details, generate an answer from the question-type
+            template, review and edit it, then save a draft with dedup checks.
           </p>
           <div className="flex flex-wrap gap-3">
             <Button asChild type="button" variant="outline">
-              <Link href="/admin/ai-compose">Open AI-Assisted Composer</Link>
+              <Link href="/admin">Open Manual Composer</Link>
             </Button>
           </div>
         </header>
 
         <Separator className="my-8" />
 
-        <AdminContentComposer
+        <AiContentComposer
           initialSubcategories={initialSubcategories}
           initialTopics={initialTopics}
         />

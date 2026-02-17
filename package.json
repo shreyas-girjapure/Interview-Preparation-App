@@ -13,6 +13,7 @@
     "format:write": "prettier --write .",
     "test": "vitest run",
     "ci": "npm run lint && npm run format && npm run test && npm run build",
+    "templates:validate": "node scripts/validate-content-templates.mjs",
     "db:smoke:guardrail": "node scripts/smoke-published-question-topic-guardrail.mjs",
     "db:smoke:guardrail:dev": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref stxikhpofortkerjeuhf",
     "db:smoke:guardrail:prod": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref xglbjcouoyjegryxorqo"

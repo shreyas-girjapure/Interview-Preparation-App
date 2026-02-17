@@ -62,6 +62,16 @@ export function RelatedQuestionsTwoRowCarousel({
     return null;
   }
 
+  if (questions.length <= 4) {
+    return (
+      <div className="grid gap-3 md:grid-cols-2">
+        {questions.map((question) => (
+          <QuestionCard key={question.id} question={question} />
+        ))}
+      </div>
+    );
+  }
+
   const pairs = toQuestionPairs(questions);
 
   return (

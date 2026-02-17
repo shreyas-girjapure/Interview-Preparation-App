@@ -14,6 +14,24 @@ type RelatedTopicCard = {
   shortDescription: string;
 };
 
+function TopicCard({ topic }: { topic: RelatedTopicCard }) {
+  return (
+    <div className="h-full rounded-2xl border border-border/80 bg-card/70 p-5">
+      <h3 className="font-serif text-xl leading-tight">
+        <Link
+          href={`/topics/${topic.slug}`}
+          className="underline-offset-4 hover:underline"
+        >
+          {topic.name}
+        </Link>
+      </h3>
+      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+        {topic.shortDescription}
+      </p>
+    </div>
+  );
+}
+
 export function RelatedTopicsCarousel({
   topics,
 }: {
@@ -21,6 +39,16 @@ export function RelatedTopicsCarousel({
 }) {
   if (!topics.length) {
     return null;
+  }
+
+  if (topics.length <= 3) {
+    return (
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {topics.map((topic) => (
+          <TopicCard key={topic.slug} topic={topic} />
+        ))}
+      </div>
+    );
   }
 
   return (
@@ -35,19 +63,7 @@ export function RelatedTopicsCarousel({
         <CarouselContent>
           {topics.map((topic) => (
             <CarouselItem key={topic.slug} className="basis-[260px]">
-              <div className="h-full rounded-2xl border border-border/80 bg-card/70 p-5">
-                <h3 className="font-serif text-xl leading-tight">
-                  <Link
-                    href={`/topics/${topic.slug}`}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {topic.name}
-                  </Link>
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {topic.shortDescription}
-                </p>
-              </div>
+              <TopicCard topic={topic} />
             </CarouselItem>
           ))}
         </CarouselContent>
