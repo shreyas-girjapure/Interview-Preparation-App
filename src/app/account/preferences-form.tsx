@@ -4,11 +4,15 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import {
+  EXPERIENCE_LEVELS,
+  type ExperienceLevel,
+} from "@/lib/account/experience-level";
 
 export type AccountPreferences = {
   focusAreas: string[];
   targetRole: string | null;
-  experienceLevel: string | null;
+  experienceLevel: ExperienceLevel | null;
   dailyGoalMinutes: number | null;
 };
 
@@ -17,7 +21,7 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 type SavePreferencesRequest = {
   focusAreas: string[];
   targetRole: string | null;
-  experienceLevel: string | null;
+  experienceLevel: ExperienceLevel | null;
   dailyGoalMinutes: number | null;
 };
 
@@ -74,7 +78,7 @@ export function PreferencesForm({
   const [targetRole, setTargetRole] = useState(
     initialPreferences.targetRole ?? "",
   );
-  const [experienceLevel, setExperienceLevel] = useState(
+  const [experienceLevel, setExperienceLevel] = useState<ExperienceLevel | "">(
     initialPreferences.experienceLevel ?? "",
   );
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState(
@@ -110,7 +114,7 @@ export function PreferencesForm({
     const payload: SavePreferencesRequest = {
       focusAreas: parseFocusAreas(focusAreasText),
       targetRole: targetRole.trim() || null,
-      experienceLevel: experienceLevel.trim() || null,
+      experienceLevel: experienceLevel || null,
       dailyGoalMinutes: dailyGoalResult.value,
     };
 
@@ -183,12 +187,20 @@ export function PreferencesForm({
 
         <label className="space-y-2 text-sm">
           <span className="font-medium">Experience level</span>
-          <input
+          <select
             value={experienceLevel}
-            onChange={(event) => setExperienceLevel(event.target.value)}
-            placeholder="e.g. 2 years"
+            onChange={(event) =>
+              setExperienceLevel(event.target.value as ExperienceLevel | "")
+            }
             className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
-          />
+          >
+            <option value="">Not set</option>
+            {EXPERIENCE_LEVELS.map((level) => (
+              <option key={level} value={level}>
+                {level}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
 

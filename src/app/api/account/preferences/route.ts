@@ -1,13 +1,19 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import {
+  EXPERIENCE_LEVELS,
+  type ExperienceLevel,
+} from "@/lib/account/experience-level";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+const experienceLevelSchema = z.enum(EXPERIENCE_LEVELS);
 
 const savePreferencesSchema = z
   .object({
     focusAreas: z.array(z.string()).optional(),
     targetRole: z.string().nullable().optional(),
-    experienceLevel: z.string().nullable().optional(),
+    experienceLevel: experienceLevelSchema.nullable().optional(),
     dailyGoalMinutes: z.number().int().min(0).max(1440).nullable().optional(),
     wrapCodeBlocksOnMobile: z.boolean().optional(),
   })
@@ -96,7 +102,7 @@ export async function POST(request: Request) {
     user_id: string;
     focus_areas?: string[];
     target_role?: string | null;
-    experience_level?: string | null;
+    experience_level?: ExperienceLevel | null;
     daily_goal_minutes?: number | null;
     wrap_code_blocks_on_mobile?: boolean;
   } = {
@@ -112,9 +118,7 @@ export async function POST(request: Request) {
   }
 
   if (payload.experienceLevel !== undefined) {
-    upsertPayload.experience_level = normalizeNullableText(
-      payload.experienceLevel,
-    );
+    upsertPayload.experience_level = payload.experienceLevel;
   }
 
   if (payload.dailyGoalMinutes !== undefined) {
