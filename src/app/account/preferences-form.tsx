@@ -4,11 +4,16 @@ import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
+import {
+  EXPERIENCE_LEVELS,
+  type ExperienceLevel,
+} from "@/lib/account/experience-level";
 
 export type AccountPreferences = {
   focusAreas: string[];
   targetRole: string | null;
-  experienceLevel: string | null;
+  experienceLevel: ExperienceLevel | null;
   dailyGoalMinutes: number | null;
 };
 
@@ -17,7 +22,7 @@ type SaveState = "idle" | "saving" | "saved" | "error";
 type SavePreferencesRequest = {
   focusAreas: string[];
   targetRole: string | null;
-  experienceLevel: string | null;
+  experienceLevel: ExperienceLevel | null;
   dailyGoalMinutes: number | null;
 };
 
@@ -74,9 +79,10 @@ export function PreferencesForm({
   const [targetRole, setTargetRole] = useState(
     initialPreferences.targetRole ?? "",
   );
-  const [experienceLevel, setExperienceLevel] = useState(
-    initialPreferences.experienceLevel ?? "",
-  );
+  const [experienceLevel, setExperienceLevel] =
+    useState<ExperienceLevel | null>(
+      initialPreferences.experienceLevel ?? null,
+    );
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState(
     initialPreferences.dailyGoalMinutes?.toString() ?? "",
   );
@@ -94,6 +100,15 @@ export function PreferencesForm({
     }
   }, [saveState]);
 
+  const experienceLevelOptions = useMemo<ComboboxOption[]>(
+    () =>
+      EXPERIENCE_LEVELS.map((level) => ({
+        value: level,
+        label: level,
+      })),
+    [],
+  );
+
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
@@ -110,7 +125,7 @@ export function PreferencesForm({
     const payload: SavePreferencesRequest = {
       focusAreas: parseFocusAreas(focusAreasText),
       targetRole: targetRole.trim() || null,
-      experienceLevel: experienceLevel.trim() || null,
+      experienceLevel,
       dailyGoalMinutes: dailyGoalResult.value,
     };
 
@@ -183,11 +198,16 @@ export function PreferencesForm({
 
         <label className="space-y-2 text-sm">
           <span className="font-medium">Experience level</span>
-          <input
+          <Combobox
             value={experienceLevel}
-            onChange={(event) => setExperienceLevel(event.target.value)}
-            placeholder="e.g. 2 years"
-            className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            onValueChange={(value) =>
+              setExperienceLevel((value as ExperienceLevel | null) ?? null)
+            }
+            options={experienceLevelOptions}
+            placeholder="Select experience level"
+            searchPlaceholder="Search experience levels"
+            emptyMessage="No experience levels found."
+            noneLabel="Not set"
           />
         </label>
       </div>

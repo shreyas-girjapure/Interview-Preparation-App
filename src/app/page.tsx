@@ -49,13 +49,14 @@ export default async function Home() {
                 className="rounded-xl border border-border/80 bg-card/70 p-4"
               >
                 <div className="mb-3 flex flex-wrap items-center gap-2">
-                  {(question.categories.length ? question.categories : [question.category]).map(
-                    (category) => (
-                      <Badge key={`${question.id}-${category}`} variant="outline">
-                        {category}
-                      </Badge>
-                    ),
-                  )}
+                  {(question.categories.length
+                    ? question.categories
+                    : [question.category]
+                  ).map((category) => (
+                    <Badge key={`${question.id}-${category}`} variant="outline">
+                      {category}
+                    </Badge>
+                  ))}
                 </div>
                 <h3 className="font-serif text-xl leading-snug">
                   <Link

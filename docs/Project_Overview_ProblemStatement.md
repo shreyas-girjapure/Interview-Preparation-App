@@ -10,12 +10,12 @@ Most interview prep tools are question-by-question only and do not help learners
 The app is a topic-first interview preparation product.
 Users should be able to start from a topic, read a concise overview, jump to related questions, and continue learning through linked topics.
 
-## v1 Features
+## v1 Features (Live)
 
 ### 1. Rabbit-Hole Learning Through Topics
 
-- Answers should expose key topics as links.
-- Each topic page should include:
+- Answers expose key topics as links.
+- Each topic page includes:
   - A short overview.
   - Related questions.
   - Related topics.
@@ -25,38 +25,48 @@ Users should be able to start from a topic, read a concise overview, jump to rel
   - User opens related questions.
   - User follows linked topics and continues learning.
 
-Example:
-
-- Question: "What is a Future method in Salesforce?"
-- Answer mentions topics such as:
-  - Future Method
-  - Asynchronous Apex
-  - Transaction
-  - Limits
-- Each topic should be linkable to its own content path.
-
-Another example:
-
-- Question: "What is better: Custom Settings or Custom Metadata?"
-- Answer mentions topics such as:
-  - Custom Settings
-  - Custom Metadata
-  - SFDX CLI
-  - Deployment
-
 ### 2. Readable Answers With Code Snippets
 
-- Answers can include code examples.
-- Code blocks should be readable and consistently formatted.
+- Answers include code examples with syntax highlighting.
+- Code blocks are readable and consistently formatted.
+- Three answer formats: standard Q&A, scenario-based, and code review.
 
-### 3. Progress Tracking
+### 3. Question Types & Seniority Levels
+
+- Questions are typed: **standard** (factual), **scenario** (design/architecture), **code_review** (spot-the-bug).
+- Questions have optional seniority level: junior, mid, senior, lead, architect.
+- Each format has a dedicated answer template for consistent structure.
+
+### 4. Progress Tracking
 
 - Users can mark both topics and questions as read.
-- Progress state should be visible and persisted.
+- Progress state is visible and persisted.
 
-## v2 Features
+### 5. Admin Content Composer
 
-### 1. Crawlers for Discovery
+- Role-gated admin page at `/admin`.
+- Create or link topics, write questions and answers with live markdown preview.
+- Save draft → preview → publish workflow.
+
+## v2 Features (Planned)
+
+### 1. Playlist-Based Preparation
+
+- Curated question playlists for specific roles and companies.
+- Schema is live (playlists, playlist_items, access levels) — UI coming next.
+
+### 2. Spaced Repetition
+
+- Review queue with "Got It" / "Review Later" controls.
+- Ease factor and review scheduling on progress tables.
+
+### 3. LLM-Assisted Content Ingestion
+
+- Use LLM to generate topics, questions, and answers from templates.
+- Staging tables with human review gate before canonical writes.
+- Content generation templates already created in `content/templates/`.
+
+### 4. Crawlers for Discovery
 
 - Use crawlers to discover candidate questions and topics.
-- New content should go through review before publishing.
+- New content goes through review before publishing.

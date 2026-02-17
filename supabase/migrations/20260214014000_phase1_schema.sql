@@ -23,6 +23,10 @@ begin
   if not exists (select 1 from pg_type where typname = 'content_entity_type') then
     create type public.content_entity_type as enum ('category', 'question', 'answer');
   end if;
+
+  if not exists (select 1 from pg_type where typname = 'experience_level') then
+    create type public.experience_level as enum ('junior', 'mid', 'senior', 'lead', 'architect');
+  end if;
 end
 $$;
 
@@ -53,7 +57,7 @@ create table if not exists public.user_preferences (
   preferred_difficulty public.question_difficulty,
   focus_areas text[] not null default '{}',
   target_role text,
-  experience_level text,
+  experience_level public.experience_level,
   daily_goal_minutes integer check (
     daily_goal_minutes is null
     or daily_goal_minutes between 0 and 1440

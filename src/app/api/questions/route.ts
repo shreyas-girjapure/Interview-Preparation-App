@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 
 import {
-  isQuestionDifficulty,
   listQuestionFilterOptions,
   listQuestions,
 } from "@/lib/interview/questions";
@@ -13,10 +12,6 @@ const MAX_PAGE_SIZE = 50;
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const category = searchParams.get("category") ?? undefined;
-  const difficultyParam = searchParams.get("difficulty");
-  const difficulty = isQuestionDifficulty(difficultyParam)
-    ? difficultyParam
-    : undefined;
   const search = searchParams.get("search") ?? undefined;
   const page = parsePositiveInt(searchParams.get("page"), 1);
   const pageSize = Math.min(
@@ -27,7 +22,6 @@ export async function GET(request: Request) {
   const [data, filters] = await Promise.all([
     listQuestions({
       category,
-      difficulty,
       search,
     }),
     listQuestionFilterOptions(),

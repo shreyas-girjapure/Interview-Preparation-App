@@ -3,7 +3,10 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { listQuestionFilterOptions, listQuestions } from "@/lib/interview/questions";
+import {
+  listQuestionFilterOptions,
+  listQuestions,
+} from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 
 type SearchParams = Promise<{
@@ -179,7 +182,6 @@ export default async function QuestionsPage({
               })}
             </div>
           </div>
-
         </section>
 
         <Separator className="my-8" />
@@ -205,13 +207,17 @@ export default async function QuestionsPage({
                     className="rounded-xl border border-border/80 bg-card/70 p-5"
                   >
                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                      {(question.categories.length ? question.categories : [question.category]).map(
-                        (category) => (
-                          <Badge key={`${question.id}-${category}`} variant="outline">
-                            {category}
-                          </Badge>
-                        ),
-                      )}
+                      {(question.categories.length
+                        ? question.categories
+                        : [question.category]
+                      ).map((category) => (
+                        <Badge
+                          key={`${question.id}-${category}`}
+                          variant="outline"
+                        >
+                          {category}
+                        </Badge>
+                      ))}
                     </div>
                     <h2 className="font-serif text-2xl leading-tight">
                       <Link

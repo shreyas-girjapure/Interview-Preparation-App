@@ -1,11 +1,5 @@
 import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
-import {
-  QUESTION_DIFFICULTIES,
-  type QuestionDifficulty,
-} from "@/lib/interview/difficulty";
-
-export { QUESTION_DIFFICULTIES };
-export type { QuestionDifficulty };
+import { dedupeKeepOrder, pickSingle } from "@/lib/utils";
 
 export type InterviewQuestion = {
   id: string;
@@ -14,11 +8,8 @@ export type InterviewQuestion = {
   category: string;
   categories: string[];
   categorySlugs: string[];
-  difficulty: QuestionDifficulty;
   summary: string;
   answerMarkdown: string;
-  tags: string[];
-  estimatedMinutes: number;
   topicSlugs: string[];
 };
 
@@ -29,7 +20,6 @@ export type InterviewQuestionSummary = Omit<
 
 export type QuestionFilters = {
   category?: string;
-  difficulty?: QuestionDifficulty;
   search?: string;
 };
 
@@ -43,6 +33,7 @@ export type InterviewTopicSummary = {
 
 export type InterviewTopicDetails = InterviewTopicSummary & {
   overviewMarkdown: string;
+  prerequisiteTopics: InterviewTopicSummary[];
   relatedQuestions: InterviewQuestionSummary[];
   relatedTopics: InterviewTopicSummary[];
 };
@@ -61,23 +52,32 @@ type CategoryRelation =
   | { slug: string | null; name: string | null }
   | Array<{ slug: string | null; name: string | null }>;
 
+type SubcategoryRelation =
+  | {
+      slug: string | null;
+      name: string | null;
+      categories: CategoryRelation | null;
+    }
+  | Array<{
+      slug: string | null;
+      name: string | null;
+      categories: CategoryRelation | null;
+    }>;
+
 type TopicRelation = {
   id: string | null;
   slug: string | null;
   name: string | null;
   short_description: string | null;
   status: string | null;
-  categories: CategoryRelation | null;
+  subcategories: SubcategoryRelation | null;
 };
 
 type QuestionRow = {
   id: string;
   slug: string;
   title: string;
-  difficulty: string | null;
   summary: string | null;
-  tags: string[] | null;
-  estimated_minutes: number | null;
   created_at: string | null;
   published_at: string | null;
   question_topics: Array<{
@@ -93,11 +93,15 @@ type TopicRow = {
   short_description: string | null;
   overview_markdown: string | null;
   sort_order: number | null;
+  subcategory_id: string | null;
 };
+
+type TopicRelationType = "related" | "prerequisite" | "deep_dive";
 
 type TopicEdgeRow = {
   to_topic_id: string;
   sort_order: number | null;
+  relation_type: TopicRelationType;
 };
 
 type QuestionTopicCountRow = {
@@ -114,16 +118,8 @@ type AnswerRow = {
 
 type SupabaseServerClient = ReturnType<typeof createSupabasePublicServerClient>;
 
-function normalize(text: string) {
+export function normalize(text: string) {
   return text.trim().toLowerCase();
-}
-
-function pickSingle<T>(value: T | T[] | null | undefined): T | null {
-  if (!value) {
-    return null;
-  }
-
-  return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
 function assertNoError(error: { message?: string } | null, context: string) {
@@ -145,7 +141,7 @@ async function withContentClient<T>(
   }
 }
 
-function mapTopicSlugs(questionTopics: QuestionRow["question_topics"]) {
+export function mapTopicSlugs(questionTopics: QuestionRow["question_topics"]) {
   if (!questionTopics?.length) {
     return [];
   }
@@ -177,7 +173,9 @@ function mapTopicSlugs(questionTopics: QuestionRow["question_topics"]) {
   return topicSlugs;
 }
 
-function mapCategoryMetadata(questionTopics: QuestionRow["question_topics"]) {
+export function mapCategoryMetadata(
+  questionTopics: QuestionRow["question_topics"],
+) {
   if (!questionTopics?.length) {
     return {
       labels: [],
@@ -198,7 +196,8 @@ function mapCategoryMetadata(questionTopics: QuestionRow["question_topics"]) {
     .sort((a, b) => a.sortOrder - b.sortOrder);
 
   for (const entry of mapped) {
-    const topicCategory = pickSingle(entry.topic?.categories);
+    const topicSubcategory = pickSingle(entry.topic?.subcategories);
+    const topicCategory = pickSingle(topicSubcategory?.categories);
     const categoryLabel = topicCategory?.name?.trim();
     const categorySlug = topicCategory?.slug?.trim().toLowerCase();
 
@@ -217,19 +216,7 @@ function mapCategoryMetadata(questionTopics: QuestionRow["question_topics"]) {
   };
 }
 
-function mapDifficulty(difficulty: string | null): QuestionDifficulty {
-  if (
-    difficulty === "easy" ||
-    difficulty === "medium" ||
-    difficulty === "hard"
-  ) {
-    return difficulty;
-  }
-
-  return "medium";
-}
-
-function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
+export function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
   const categories = mapCategoryMetadata(row.question_topics);
 
   return {
@@ -239,15 +226,12 @@ function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
     category: categories.labels[0] ?? "General",
     categories: categories.labels,
     categorySlugs: categories.slugs,
-    difficulty: mapDifficulty(row.difficulty),
     summary: row.summary?.trim() || "No summary available yet.",
-    tags: row.tags ?? [],
-    estimatedMinutes: row.estimated_minutes ?? 5,
     topicSlugs: mapTopicSlugs(row.question_topics),
   };
 }
 
-function mapQuestionDetail(
+export function mapQuestionDetail(
   row: QuestionRow,
   answerMarkdown: string,
 ): InterviewQuestion {
@@ -257,7 +241,7 @@ function mapQuestionDetail(
   };
 }
 
-function countOverlap(left: string[], right: string[]) {
+export function countOverlap(left: string[], right: string[]) {
   if (!left.length || !right.length) {
     return 0;
   }
@@ -281,7 +265,180 @@ function countOverlap(left: string[], right: string[]) {
   return count;
 }
 
-function matchesQuestionSearch(
+export function stripGeneratedTopicSections(source: string) {
+  const lines = source.split(/\r?\n/);
+  const headingsToStrip = new Set(["prerequisites", "related topics"]);
+  const kept: string[] = [];
+  let skipping = false;
+
+  for (const line of lines) {
+    const headingMatch = line.match(/^##\s+(.+?)\s*$/i);
+
+    if (headingMatch) {
+      const heading = headingMatch[1]?.trim().toLowerCase() ?? "";
+
+      if (headingsToStrip.has(heading)) {
+        skipping = true;
+        continue;
+      }
+
+      skipping = false;
+      kept.push(line);
+      continue;
+    }
+
+    if (!skipping) {
+      kept.push(line);
+    }
+  }
+
+  return kept.join("\n").trim();
+}
+
+export function deriveFallbackPrerequisiteTopicIds(
+  currentTopic: TopicRow,
+  topicRows: TopicRow[],
+) {
+  const currentSort = currentTopic.sort_order ?? Number.MAX_SAFE_INTEGER;
+  const foundationalKeywords = [
+    "fundamentals",
+    "basics",
+    "intro",
+    "introduction",
+    "core",
+    "101",
+  ];
+
+  const candidates = topicRows
+    .filter((candidate) => candidate.id !== currentTopic.id)
+    .filter(
+      (candidate) =>
+        Boolean(candidate.subcategory_id) &&
+        candidate.subcategory_id === currentTopic.subcategory_id,
+    )
+    .filter(
+      (candidate) =>
+        (candidate.sort_order ?? Number.MAX_SAFE_INTEGER) < currentSort,
+    )
+    .map((candidate) => {
+      const topicText = `${candidate.slug} ${candidate.name}`.toLowerCase();
+      const hasFoundationalKeyword = foundationalKeywords.some((keyword) =>
+        topicText.includes(keyword),
+      );
+
+      return {
+        id: candidate.id,
+        sortOrder: candidate.sort_order ?? Number.MAX_SAFE_INTEGER,
+        hasFoundationalKeyword,
+        name: candidate.name,
+      };
+    });
+
+  candidates.sort((left, right) => {
+    if (left.hasFoundationalKeyword !== right.hasFoundationalKeyword) {
+      return left.hasFoundationalKeyword ? -1 : 1;
+    }
+
+    if (left.sortOrder !== right.sortOrder) {
+      return left.sortOrder - right.sortOrder;
+    }
+
+    return left.name.localeCompare(right.name);
+  });
+
+  return candidates.map((candidate) => candidate.id);
+}
+
+export function deriveFallbackRelatedTopicIds(
+  currentTopic: TopicRow,
+  topicRows: TopicRow[],
+  relatedQuestions: InterviewQuestionSummary[],
+) {
+  const cooccurrenceScores = new Map<string, number>();
+
+  for (const question of relatedQuestions) {
+    if (!question.topicSlugs.includes(currentTopic.slug)) {
+      continue;
+    }
+
+    for (const topicSlug of question.topicSlugs) {
+      if (topicSlug === currentTopic.slug) {
+        continue;
+      }
+
+      cooccurrenceScores.set(
+        topicSlug,
+        (cooccurrenceScores.get(topicSlug) ?? 0) + 1,
+      );
+    }
+  }
+
+  const topicBySlug = new Map(topicRows.map((topic) => [topic.slug, topic]));
+
+  const cooccurrenceTopicIds = Array.from(cooccurrenceScores.entries())
+    .map(([topicSlug, score]) => {
+      const topic = topicBySlug.get(topicSlug);
+      if (!topic) {
+        return null;
+      }
+
+      return {
+        id: topic.id,
+        score,
+        sortOrder: topic.sort_order ?? Number.MAX_SAFE_INTEGER,
+        name: topic.name,
+      };
+    })
+    .filter((entry): entry is NonNullable<typeof entry> => Boolean(entry))
+    .sort((left, right) => {
+      if (right.score !== left.score) {
+        return right.score - left.score;
+      }
+
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .map((entry) => entry.id);
+
+  const sameSubcategoryNeighbors = topicRows
+    .filter((topic) => topic.id !== currentTopic.id)
+    .filter(
+      (topic) =>
+        Boolean(topic.subcategory_id) &&
+        topic.subcategory_id === currentTopic.subcategory_id,
+    )
+    .map((topic) => ({
+      id: topic.id,
+      distance: Math.abs(
+        (topic.sort_order ?? Number.MAX_SAFE_INTEGER) -
+          (currentTopic.sort_order ?? Number.MAX_SAFE_INTEGER),
+      ),
+      sortOrder: topic.sort_order ?? Number.MAX_SAFE_INTEGER,
+      name: topic.name,
+    }))
+    .sort((left, right) => {
+      if (left.distance !== right.distance) {
+        return left.distance - right.distance;
+      }
+
+      if (left.sortOrder !== right.sortOrder) {
+        return left.sortOrder - right.sortOrder;
+      }
+
+      return left.name.localeCompare(right.name);
+    })
+    .map((topic) => topic.id);
+
+  return dedupeKeepOrder([
+    ...cooccurrenceTopicIds,
+    ...sameSubcategoryNeighbors,
+  ]);
+}
+
+export function matchesQuestionSearch(
   question: InterviewQuestionSummary,
   search: string,
 ) {
@@ -296,7 +453,6 @@ function matchesQuestionSearch(
     question.summary,
     question.category,
     ...question.categories,
-    ...question.tags,
     ...question.topicSlugs,
   ]
     .join(" ")
@@ -304,7 +460,10 @@ function matchesQuestionSearch(
     .includes(term);
 }
 
-function matchesTopicSearch(topic: InterviewTopicSummary, search: string) {
+export function matchesTopicSearch(
+  topic: InterviewTopicSummary,
+  search: string,
+) {
   const term = normalize(search);
 
   if (!term) {
@@ -326,10 +485,7 @@ async function fetchPublishedQuestionRows() {
           id,
           slug,
           title,
-          difficulty,
           summary,
-          tags,
-          estimated_minutes,
           created_at,
           published_at,
           question_topics(
@@ -340,9 +496,13 @@ async function fetchPublishedQuestionRows() {
               name,
               short_description,
               status,
-              categories(
+              subcategories(
                 slug,
-                name
+                name,
+                categories(
+                  slug,
+                  name
+                )
               )
             )
           )
@@ -362,7 +522,7 @@ async function fetchPublishedTopicRows() {
     const { data, error } = await supabase
       .from("topics")
       .select(
-        "id, slug, name, short_description, overview_markdown, sort_order",
+        "id, slug, name, short_description, overview_markdown, sort_order, subcategory_id",
       )
       .eq("status", "published")
       .order("sort_order", { ascending: true })
@@ -377,7 +537,7 @@ async function fetchTopicEdges(fromTopicId: string) {
   return withContentClient<TopicEdgeRow[]>([], async (supabase) => {
     const { data, error } = await supabase
       .from("topic_edges")
-      .select("to_topic_id, sort_order")
+      .select("to_topic_id, relation_type, sort_order")
       .eq("from_topic_id", fromTopicId)
       .order("sort_order", { ascending: true });
 
@@ -443,23 +603,13 @@ async function resolveQuestionSummaryBySlug(slug: string) {
     category: question.category,
     categories: question.categories,
     categorySlugs: question.categorySlugs,
-    difficulty: question.difficulty,
     summary: question.summary,
-    tags: question.tags,
-    estimatedMinutes: question.estimatedMinutes,
     topicSlugs: question.topicSlugs,
   };
 }
 
-export function isQuestionDifficulty(
-  value: string | null | undefined,
-): value is QuestionDifficulty {
-  return QUESTION_DIFFICULTIES.includes(value as QuestionDifficulty);
-}
-
 export async function listQuestions(filters: QuestionFilters = {}) {
   const category = normalize(filters.category ?? "");
-  const difficulty = filters.difficulty;
   const search = filters.search ?? "";
 
   const summaries = (await fetchPublishedQuestionRows()).map(
@@ -470,18 +620,14 @@ export async function listQuestions(filters: QuestionFilters = {}) {
     const categoryMatch = category
       ? question.categorySlugs.includes(category)
       : true;
-    const difficultyMatch = difficulty
-      ? question.difficulty === difficulty
-      : true;
     const searchMatch = matchesQuestionSearch(question, search);
 
-    return categoryMatch && difficultyMatch && searchMatch;
+    return categoryMatch && searchMatch;
   });
 }
 
 export async function listQuestionFilterOptions() {
   const categoryMap = new Map<string, { label: string; count: number }>();
-  const difficultyMap = new Map<QuestionDifficulty, number>();
   const summaries = (await fetchPublishedQuestionRows()).map(
     mapQuestionSummary,
   );
@@ -497,11 +643,6 @@ export async function listQuestionFilterOptions() {
         categoryMap.set(slug, { label, count: 1 });
       }
     });
-
-    difficultyMap.set(
-      question.difficulty,
-      (difficultyMap.get(question.difficulty) ?? 0) + 1,
-    );
   }
 
   const categories: FilterOption[] = Array.from(categoryMap.entries())
@@ -512,13 +653,7 @@ export async function listQuestionFilterOptions() {
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
 
-  const difficulties: FilterOption[] = QUESTION_DIFFICULTIES.map((value) => ({
-    label: value[0].toUpperCase() + value.slice(1),
-    value,
-    count: difficultyMap.get(value) ?? 0,
-  }));
-
-  return { categories, difficulties };
+  return { categories };
 }
 
 export async function listFeaturedQuestions(limit = 3) {
@@ -556,10 +691,7 @@ export async function getQuestionBySlug(slug: string) {
             id,
             slug,
             title,
-            difficulty,
             summary,
-            tags,
-            estimated_minutes,
             created_at,
             published_at,
             question_topics(
@@ -570,9 +702,13 @@ export async function getQuestionBySlug(slug: string) {
                 name,
                 short_description,
                 status,
-                categories(
+                subcategories(
                   slug,
-                  name
+                  name,
+                  categories(
+                    slug,
+                    name
+                  )
                 )
               )
             )
@@ -655,29 +791,82 @@ export async function getTopicBySlug(
     listQuestions({}),
   ]);
 
-  const relatedTopics = edges
-    .sort(
-      (a, b) =>
-        (a.sort_order ?? Number.MAX_SAFE_INTEGER) -
-        (b.sort_order ?? Number.MAX_SAFE_INTEGER),
-    )
-    .map((edge) => topicSummaryById.get(edge.to_topic_id))
-    .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
-
   const relatedQuestionsForTopic = relatedQuestions.filter((question) =>
     question.topicSlugs.includes(slug),
   );
+
+  const sortedEdges = [...edges].sort((left, right) => {
+    const sortOrderDiff =
+      (left.sort_order ?? Number.MAX_SAFE_INTEGER) -
+      (right.sort_order ?? Number.MAX_SAFE_INTEGER);
+
+    if (sortOrderDiff !== 0) {
+      return sortOrderDiff;
+    }
+
+    return left.relation_type.localeCompare(right.relation_type);
+  });
+
+  const prerequisiteTopicIdsFromEdges = dedupeKeepOrder(
+    sortedEdges
+      .filter((edge) => edge.relation_type === "prerequisite")
+      .map((edge) => edge.to_topic_id),
+  );
+
+  const relatedTopicIdsFromEdges = dedupeKeepOrder(
+    sortedEdges
+      .filter((edge) => edge.relation_type !== "prerequisite")
+      .map((edge) => edge.to_topic_id),
+  );
+
+  const fallbackPrerequisiteTopicIds = deriveFallbackPrerequisiteTopicIds(
+    currentTopic,
+    topicRows,
+  );
+  const prerequisiteTopicIds = dedupeKeepOrder([
+    ...prerequisiteTopicIdsFromEdges,
+    ...fallbackPrerequisiteTopicIds,
+  ])
+    .filter((topicId) => topicId !== currentTopic.id)
+    .slice(0, 3);
+
+  const prerequisiteTopicIdSet = new Set(prerequisiteTopicIds);
+
+  const fallbackRelatedTopicIds = deriveFallbackRelatedTopicIds(
+    currentTopic,
+    topicRows,
+    relatedQuestionsForTopic,
+  );
+  const relatedTopicIds = dedupeKeepOrder([
+    ...relatedTopicIdsFromEdges,
+    ...fallbackRelatedTopicIds,
+  ])
+    .filter((topicId) => topicId !== currentTopic.id)
+    .filter((topicId) => !prerequisiteTopicIdSet.has(topicId))
+    .slice(0, 4);
+
+  const prerequisiteTopics = prerequisiteTopicIds
+    .map((topicId) => topicSummaryById.get(topicId))
+    .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
+
+  const relatedTopics = relatedTopicIds
+    .map((topicId) => topicSummaryById.get(topicId))
+    .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
 
   const currentTopicSummary = topicSummaryById.get(currentTopic.id);
   if (!currentTopicSummary) {
     return undefined;
   }
 
+  const cleanedOverviewMarkdown = stripGeneratedTopicSections(
+    currentTopic.overview_markdown?.trim() || "",
+  );
+
   return {
     ...currentTopicSummary,
     overviewMarkdown:
-      currentTopic.overview_markdown?.trim() ||
-      "Topic overview content is being prepared.",
+      cleanedOverviewMarkdown || "Topic overview content is being prepared.",
+    prerequisiteTopics,
     relatedQuestions: relatedQuestionsForTopic,
     relatedTopics,
   };
@@ -703,14 +892,6 @@ export async function listTopicsForQuestion(
     .filter((topic): topic is InterviewTopicSummary => Boolean(topic));
 }
 
-export async function listRabbitHoleTopics(
-  question: string | InterviewQuestion | InterviewQuestionSummary,
-  limit = 3,
-) {
-  const topics = await listTopicsForQuestion(question);
-  return topics.slice(0, limit);
-}
-
 export async function listRelatedQuestionsForQuestion(
   question: string | InterviewQuestion | InterviewQuestionSummary,
   limit = 8,
@@ -731,7 +912,8 @@ export async function listRelatedQuestionsForQuestion(
   const allQuestions = await listQuestions({});
   const candidates = allQuestions.filter(
     (candidate) =>
-      candidate.id !== currentQuestion.id && candidate.slug !== currentQuestion.slug,
+      candidate.id !== currentQuestion.id &&
+      candidate.slug !== currentQuestion.slug,
   );
 
   const ranked = candidates
@@ -744,15 +926,8 @@ export async function listRelatedQuestionsForQuestion(
         candidate.categorySlugs,
         currentQuestion.categorySlugs,
       );
-      const sharedTags = countOverlap(candidate.tags, currentQuestion.tags);
-      const difficultyMatch =
-        candidate.difficulty === currentQuestion.difficulty ? 1 : 0;
 
-      const score =
-        sharedTopics * 100 +
-        sharedCategories * 30 +
-        sharedTags * 10 +
-        difficultyMatch * 3;
+      const score = sharedTopics * 100 + sharedCategories * 30;
 
       return {
         candidate,
@@ -763,17 +938,6 @@ export async function listRelatedQuestionsForQuestion(
     .sort((a, b) => {
       if (b.score !== a.score) {
         return b.score - a.score;
-      }
-
-      const minutesDistanceA = Math.abs(
-        a.candidate.estimatedMinutes - currentQuestion.estimatedMinutes,
-      );
-      const minutesDistanceB = Math.abs(
-        b.candidate.estimatedMinutes - currentQuestion.estimatedMinutes,
-      );
-
-      if (minutesDistanceA !== minutesDistanceB) {
-        return minutesDistanceA - minutesDistanceB;
       }
 
       return a.candidate.title.localeCompare(b.candidate.title);

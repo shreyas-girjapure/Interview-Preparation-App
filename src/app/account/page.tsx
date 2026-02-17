@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { type ExperienceLevel } from "@/lib/account/experience-level";
 import { FeaturesForm } from "@/app/account/features-form";
 import { PreferencesForm } from "@/app/account/preferences-form";
 
@@ -41,7 +42,7 @@ export default async function AccountPage() {
       .maybeSingle<{
         focus_areas: string[] | null;
         target_role: string | null;
-        experience_level: string | null;
+        experience_level: ExperienceLevel | null;
         daily_goal_minutes: number | null;
         wrap_code_blocks_on_mobile: boolean | null;
       }>();
@@ -52,14 +53,12 @@ export default async function AccountPage() {
   if (isMissingWrapCodeBlocksColumnError(preferencesWithFeatureError)) {
     const { data: fallbackPreferences, error: fallbackError } = await supabase
       .from("user_preferences")
-      .select(
-        "focus_areas, target_role, experience_level, daily_goal_minutes",
-      )
+      .select("focus_areas, target_role, experience_level, daily_goal_minutes")
       .eq("user_id", user.id)
       .maybeSingle<{
         focus_areas: string[] | null;
         target_role: string | null;
-        experience_level: string | null;
+        experience_level: ExperienceLevel | null;
         daily_goal_minutes: number | null;
       }>();
 

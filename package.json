@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "prepare": "node scripts/setup-git-hooks.mjs",
     "prebuild": "node scripts/prevent-main-branch-deploy.mjs",
     "build": "next build",
     "start": "next start",
@@ -12,12 +13,7 @@
     "format:write": "prettier --write .",
     "test": "vitest run",
     "ci": "npm run lint && npm run format && npm run test && npm run build",
-    "db:migrate:local": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target local",
-    "db:reset:local": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target local -ResetLocal",
-    "db:migrate:dev:dry": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target dev -DryRun",
-    "db:migrate:dev": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target dev",
-    "db:migrate:prod:dry": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target prod -DryRun",
-    "db:migrate:prod": "powershell -ExecutionPolicy Bypass -File scripts/supabase-migrate.ps1 -Target prod -ConfirmProd",
+    "templates:validate": "node scripts/validate-content-templates.mjs",
     "db:smoke:guardrail": "node scripts/smoke-published-question-topic-guardrail.mjs",
     "db:smoke:guardrail:dev": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref stxikhpofortkerjeuhf",
     "db:smoke:guardrail:prod": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref xglbjcouoyjegryxorqo"

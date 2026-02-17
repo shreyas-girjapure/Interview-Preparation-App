@@ -62,6 +62,16 @@ export function RelatedQuestionsTwoRowCarousel({
     return null;
   }
 
+  if (questions.length <= 4) {
+    return (
+      <div className="grid gap-3 md:grid-cols-2">
+        {questions.map((question) => (
+          <QuestionCard key={question.id} question={question} />
+        ))}
+      </div>
+    );
+  }
+
   const pairs = toQuestionPairs(questions);
 
   return (
@@ -81,7 +91,9 @@ export function RelatedQuestionsTwoRowCarousel({
             >
               <div className="flex h-full flex-col gap-3">
                 <QuestionCard question={topQuestion} />
-                {bottomQuestion ? <QuestionCard question={bottomQuestion} /> : null}
+                {bottomQuestion ? (
+                  <QuestionCard question={bottomQuestion} />
+                ) : null}
               </div>
             </CarouselItem>
           ))}
