@@ -99,21 +99,6 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
         <Separator className="mx-auto my-10 max-w-[95ch]" />
 
         <section className="mx-auto w-full max-w-[95ch] space-y-4">
-          <h2 className="font-serif text-2xl tracking-tight">Related topics</h2>
-          {topic.relatedTopics.length === 0 ? (
-            <div className="rounded-xl border border-border/80 bg-card/70 p-4">
-              <p className="text-sm text-muted-foreground">
-                No related topics inferred yet.
-              </p>
-            </div>
-          ) : (
-            <RelatedTopicsCarousel topics={topic.relatedTopics} />
-          )}
-        </section>
-
-        <Separator className="mx-auto my-10 max-w-[95ch]" />
-
-        <section className="mx-auto w-full max-w-[95ch] space-y-4">
           <h2 className="font-serif text-2xl tracking-tight">
             Related questions
           </h2>

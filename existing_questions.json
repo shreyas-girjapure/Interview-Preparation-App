@@ -1,0 +1,14 @@
+[
+  {
+    "slug": "apex-triggers-bulkification-review-mid",
+    "title": "Review this Apex trigger and identify the issues that would cause failures in production"
+  },
+  {
+    "slug": "apex-triggers-context-variables-junior",
+    "title": "Explain the trigger context variables in Apex and when you would use each one"
+  },
+  {
+    "slug": "apex-triggers-framework-design-senior",
+    "title": "Design a trigger framework for an org with 20+ custom objects that supports per-object toggle and recursion control"
+  }
+]

@@ -1,0 +1,6 @@
+[
+  { "slug": "apex-fundamentals", "name": "Apex Fundamentals" },
+  { "slug": "apex-triggers", "name": "Apex Triggers" },
+  { "slug": "trigger-frameworks", "name": "Trigger Frameworks" },
+  { "slug": "apex-testing", "name": "Apex Testing" }
+]

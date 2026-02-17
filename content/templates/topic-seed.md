@@ -7,7 +7,6 @@ Generate structured topic data for the database. Each topic needs a `short_descr
 - `{TOPIC_NAME}` - Topic name (e.g., "Apex Triggers")
 - `{TOPIC_SLUG}` - URL slug (e.g., "apex-triggers")
 - `{SUBCATEGORY}` - Parent subcategory (e.g., "Apex Programming")
-- `{SENIORITY_RANGE}` - Target range (e.g., "junior to senior")
 - `{SHORT_DESCRIPTION}` - Existing one-line description from seed plan
 
 ## Prompt
@@ -17,7 +16,6 @@ You are a Salesforce expert creating content for an interview preparation platfo
 
 **Topic:** {TOPIC_NAME}
 **Subcategory:** {SUBCATEGORY}
-**Seniority Range:** {SENIORITY_RANGE}
 **Short Description:** {SHORT_DESCRIPTION}
 
 Write the `overview_markdown` using EXACTLY this structure:

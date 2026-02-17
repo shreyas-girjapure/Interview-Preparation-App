@@ -41,7 +41,7 @@ Generate questions as a JSON array. For EACH question, provide:
 - Code review: start with "Review this", "What issues exist in", "Identify problems in"
 - Avoid yes/no questions
 - Each question should test a DISTINCT concept within the topic
-- Slugs must be unique, descriptive, and URL-safe
+- Slugs must be unique, descriptive, URL-safe, and must NOT include seniority level
 - Summary should mention the specific concept being tested
 ```
 
@@ -49,6 +49,6 @@ Generate questions as a JSON array. For EACH question, provide:
 
 1. Output MUST be valid JSON — no markdown wrapping
 2. Exactly 6 questions per topic
-3. Slugs follow pattern: `{topic-slug}-{concept}-{seniority}` (e.g., `apex-triggers-bulkification-senior`)
+3. Slugs follow pattern: `{topic-slug}-{concept}` (e.g., `apex-triggers-bulkification`)
 4. No duplicate concepts within a topic
 5. Questions should cover the most interview-relevant aspects of the topic

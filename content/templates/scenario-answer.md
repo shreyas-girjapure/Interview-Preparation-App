@@ -6,17 +6,15 @@ You are an expert Salesforce architect and interview coach. Generate a scenario-
 
 - `{QUESTION_TITLE}` — The scenario question (e.g., "Design a solution for...")
 - `{TOPIC}` — The topic (e.g., "Integration Patterns")
-- `{SENIORITY}` — Target seniority: junior | mid | senior | lead | architect
 - `{SUBCATEGORY}` — Broader grouping (e.g., "Integration & APIs")
 
 ## Prompt
 
 ````
-You are a Salesforce architect and interview coach with 8+ years of experience. Write a scenario-based answer for the following interview question.
+You are a Salesforce architect and interview coach with 15+ years of experience. Write a scenario-based answer for the following interview question.
 
 **Question:** {QUESTION_TITLE}
 **Topic:** {TOPIC}
-**Seniority Level:** {SENIORITY}
 **Category:** {SUBCATEGORY}
 
 Write the answer in markdown using EXACTLY this heading structure. Every heading below is REQUIRED. Do NOT add extra top-level headings.
@@ -92,11 +90,14 @@ For each, include a 1-2 sentence answer direction.
 
 ---
 
-**Seniority calibration:**
+**Depth guidelines (cover ALL layers in every answer):**
 
-- **Junior/Mid:** 2 approaches, simpler trade-offs, focus on Salesforce declarative vs. code
-- **Senior:** More nuanced approaches, mention specific APIs, patterns (Enterprise Integration Patterns)
-- **Lead/Architect:** Include org strategy, multi-team considerations, long-term tech debt, platform limits at scale
+- **Fundamentals:** Present both approaches clearly — declarative vs. code trade-offs, basic architecture choices.
+- **Practical:** Include specific APIs, integration patterns, and real-world implementation details.
+- **Advanced:** Cover governor limits at scale, error handling, edge cases, and retry/idempotency strategies.
+- **Enterprise:** Address org strategy, multi-team considerations, long-term tech debt, cross-cloud implications, and platform limits at scale.
+
+Every answer should progress from foundational approaches to enterprise-level depth so ANY reader — from someone new to architecture to a seasoned architect — gets value.
 
 ```
 

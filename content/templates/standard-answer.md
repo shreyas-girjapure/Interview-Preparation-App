@@ -1,22 +1,20 @@
 # Standard Answer Template
 
-You are an expert Salesforce developer and interview coach with 8+ years of experience. Generate a comprehensive interview answer following this EXACT structure.
+You are an expert Salesforce developer and interview coach with 15+ years of experience. Generate a comprehensive interview answer following this EXACT structure.
 
 ## Input Variables
 
 - `{QUESTION_TITLE}` — The interview question
 - `{TOPIC}` — The topic this question belongs to (e.g., "Apex Triggers")
-- `{SENIORITY}` — Target seniority level: junior | mid | senior | lead | architect
 - `{SUBCATEGORY}` — The broader grouping (e.g., "Apex Programming")
 
 ## Prompt
 
 ````
-You are a Salesforce interview coach with 8+ years of hands-on experience. Write a detailed, expert-level answer for the following interview question.
+You are a Salesforce interview coach with 15+ years of hands-on experience. Write a detailed, expert-level answer for the following interview question.
 
 **Question:** {QUESTION_TITLE}
 **Topic:** {TOPIC}
-**Seniority Level:** {SENIORITY}
 **Category:** {SUBCATEGORY}
 
 Write the answer in markdown using EXACTLY this heading structure. Do NOT skip any section. Do NOT add extra top-level headings.
@@ -31,11 +29,13 @@ Write the answer in markdown using EXACTLY this heading structure. Do NOT skip a
 
 ## Detailed Explanation
 
-Write 2-4 paragraphs explaining the concept in depth. Cover:
-- What it is and why it matters
-- How it works under the hood (appropriate to the seniority level)
-- When to use it vs. alternatives
+Write 2-4 paragraphs explaining the concept in depth. Cover ALL of the following so the answer is useful for every level of experience:
+- What it is and why it matters (fundamentals first)
+- How it works under the hood — internals, execution order, platform behavior
+- When to use it vs. alternatives — practical trade-offs
 - Real-world context from production Salesforce orgs
+- Edge cases, governor-limit implications, and performance considerations
+- Architecture and scalability perspective where relevant
 
 ## Example
 
@@ -58,19 +58,20 @@ Explain what the example demonstrates and any important details.
 
 ## Common Mistakes
 
-- 2 to 4 common mistakes developers make
+- 3 to 5 common mistakes developers make, ranging from beginner pitfalls to advanced gotchas
 - For each: what the mistake is, why it happens, and the correct approach
-- Focus on mistakes relevant to the {SENIORITY} level
+- Cover the full spectrum: basic misunderstandings, mid-level bad habits, and senior-level oversights
 
 ---
 
-**Seniority calibration guidelines:**
+**Depth guidelines (cover ALL layers in every answer):**
 
-- **Junior:** Focus on fundamentals, syntax, basic use cases. Keep examples simple.
-- **Mid:** Include practical trade-offs, real-world patterns, moderate complexity.
-- **Senior:** Cover edge cases, performance implications, architecture decisions, governor limits.
-- **Lead:** Add team-level considerations, code review perspectives, org-wide impact.
-- **Architect:** Multi-cloud thinking, enterprise patterns, scalability, long-term maintainability.
+- **Fundamentals:** Explain the concept clearly — syntax, basic use cases, why it exists.
+- **Practical:** Include real-world patterns, trade-offs, and moderate complexity.
+- **Advanced:** Cover edge cases, performance implications, governor limits, architecture decisions.
+- **Enterprise:** Address team-level considerations, org-wide impact, scalability, and long-term maintainability.
+
+Every answer should progress from fundamentals to enterprise-level depth so ANY reader — from someone learning the concept to a seasoned architect — gets value.
 
 ```
 
