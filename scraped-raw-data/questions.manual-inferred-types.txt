@@ -1,0 +1,348 @@
+1. "You have a recursive trigger on a custom object, and under certain data loads, you're seeing Maximum trigger depth exceeded errors only intermittently. You've already added recursion guards. How do you identify the hidden recursive path and debug it without altering the data model or disabling triggers?" - scenario
+2. "A custom Apex REST service starts throwing Regex too complicated errors after a recent deployment, but no regex patterns were modified. How would you trace the root cause and debug potential hidden regex compilation issues in large Apex classes?" - scenario
+3. "An Apex class uses Type.forName() and Type.newInstance() for dynamic instantiation. In production, the instantiation randomly fails with System.TypeException: Invalid type. The class exists and compiles. How would you debug this behavior?" - scenario
+4. "You're debugging a Too many queueable jobs added to the queue error, but your logic only adds 1 chain per job. There are multiple integrations running in parallel, and the issue doesn't reproduce in sandbox. How would you debug and guard against hidden job fan-outs?" - scenario
+5. "You have a method that runs perfectly in an anonymous window but fails in a Lightning component with a System.SObjectException: Field is not writeable error on a custom field. The field is accessible via FLS. What hidden cause might be triggering this, and how do you debug it?" - scenario
+6. "How do you ensure atomicity and rollback capabilities when DML operations on related objects occur asynchronously across batch execute boundaries?" - standard
+7. "How would you implement a transactional, idempotent batch job that integrates with multiple external systems via chained callouts, ensuring rollback, deduplication, and exactly once delivery semantics across batch retries and platform restarts?" - scenario
+8. "How do you guarantee data consistency and transactional integrity when performing cross object DML operations that span multiple batch execute transactions, especially under partial failures and asynchronous reprocessing scenarios?" - scenario
+9. "How would you propose to process hierarchical, interdependent records (e.g., Account Opportunity CustomObject__c) across shared data volumes exceeding heap and query limits, and how would you avoid lock contention and race conditions?" - scenario
+10. "How can you maintain referential integrity and avoid orphaned records during partial batch failures and retries in complex object hierarchies?" - standard
+11. "How can you tackle a governor limit resilient chain of Queueables that conditionally branches logic and persists context across transactions?" - standard
+12. "How do you build a platform native retry mesh that tracks job lineage, avoids duplicates, and obeys platform governor rules?" - standard
+13. "How would you coordinate a multi pattern async convergence without external schedulers or platform events out of order issues?" - scenario
+14. "How do you control job explosion, enforce execution priority, and apply load throttling across async layers where each Queueable spawns child jobs dynamically based on runtime data?" - standard
+15. "How do you enforce distributed rollback coordination across isolated async contexts without exceeding platform limits or duplicating work?" - standard
+16. "Since Apex can't directly receive webhooks, how can you route external webhook data to an LWC in real time?" - standard
+17. "How can an LWC concurrently handle both Platform Events and PushTopic events with separate logic for each?" - standard
+18. "How would you design an LWC that processes CDC events for millions of records without hitting limits?" - scenario
+19. "How can you add retry logic in an LWC to handle temporary API failures without sending too many requests?" - standard
+20. "How do you handle out-of-order CDC events in LWC when multiple field updates on a record arrive nearly simultaneously?" - standard
+21. "Parent uses import(\"c/childComp\") for lazy load. Child uses @wire(getRecord) with @api recordId. Sometimes data doesn't load. Why?" - code_review
+22. "LWC uses buildCustomEvent() with bubbling/composition, but parent in another package can't catch it. What's the blocker?" - code_review
+23. "LWC injects third-party widget in renderedCallback() via direct shadow DOM edits. Other components break. What's the anti-pattern?" - code_review
+24. "LWC uses lightning-record-edit-form with dynamic recordId and objectApiName. Fast switching causes fields to fail. What's wrong?" - code_review
+25. "In a nested LWC dashboard, inline edits in one chart don't reflect in others without a full reload. How would you redesign cross component data sync without relying on event flooding?" - scenario
+26. "You built a reusable datatable with @wire and onSave, but teams report inconsistent inline edit behavior. What design changes ensure clean separation of data, edit lifecycle, and refresh logic for true reusability?" - scenario
+27. "Your component uses @track for data mutations after edit, but updates don't reflect. What's the risk of directly mutating tracked arrays in LWC?" - standard
+28. "Multiple LWCs show the same data source. After update in one, others don't sync. How do you implement shared reactive state across components?" - standard
+29. "You're combining getRecord with imperative updates. After saving, changes don't show unless you reload. What's the reactive safe fix?" - code_review
+30. "When multiple LWCs subscribe to the same Lightning Message Channel, how do you prevent message causing performance degradation?" - standard
+31. "What are the implications of caching wire service data in LWCs for highly dynamic datasets?" - standard
+32. "How to manage component lifecycle issues when an LWC is destroyed before async Apex call completes?" - standard
+33. "How to implement multi-language support for dynamic field labels in LWCs?" - standard
+34. "How to handle partial page refreshes in LWCs embedded in Aura components?" - standard
+35. "You're syncing Contacts across 3 external systems via Platform Events. How will you ensure event deduplication and reliable delivery without breaching limits?" - scenario
+36. "Contact events are arriving before related Account data. How do you handle this ordering issue with PushTopics?" - scenario
+37. "Your CDC setup handles 500K+ events daily. Some events are delayed or dropped. How do you scale and ensure reliable processing?" - scenario
+38. "Intermittent timeout errors are impacting API reliability. How do you build fault tolerance into the design?" - standard
+39. "Given GraphQL is in pilot, how would you design a performant data fetching layer in Salesforce using GraphQL and handle governor limits?" - scenario
+40. "You need to sync 5 million product records between orgs. Do you use CDC, Bulk API, or both and why?" - scenario
+41. "What are the key lifecycle events in a WebSocket connection, and how can they be handled?" - standard
+42. "Can you explain how lazy loading images or data can affect accessibility?" - standard
+43. "What are the security implications of exposing sensitive data in headers?" - standard
+44. "How do you manage state effectively across components in a Lightning Web Component (LWC) app?" - standard
+45. "How do you integrate custom validation messages that are both accessible and localized ?" - standard
+46. "What's the best way to secure the inbound Slack interaction before processing it in Salesforce?" - standard
+47. "Can you open a Slack modal from a button click in Slack itself, and sync the input back to Salesforce?" - scenario
+48. "How would you ensure message delivery to Slack is reliable even if the Salesforce transaction rolls back?" - scenario
+49. "How would you handle different Slack modals dynamically based on the Salesforce object type triggering the event?" - scenario
+50. "How do you prevent duplicate Slack messages if the same platform event is replayed?" - scenario
+51. "An LWC fetches data from 3 async sources: Apex, a Platform Event, and a third party API . How will you manage consistent state in the UI ?" - scenario
+52. "You're building a secure LWC page that uses Apex to fetch sensitive data. The client is worried about exposure. How can you resolve this ?" - scenario
+53. "Your LWC makes a call to Apex, but the response takes 3 seconds and blocks UI interaction. How can you fix this ?" - scenario
+54. "You need to load different versions of the same third-party library for two components on the same page. How to do it ?" - scenario
+55. "You're combining Lightning Data Service and custom Apex calls in the same LWC. How to maintain consistency in such case ?" - scenario
+56. "After launching a Flow from LWC, how do you handle the onstatuschange event to show a success toast?" - standard
+57. "How do you refresh LWC data after the embedded Flow updates a record?" - standard
+58. "How can you start an embedded Flow in LWC only when a custom button is clicked and not on render?" - standard
+59. "You need to trigger a Flow from LWC only after multiple async Apex calls complete. How would you do this ?" - scenario
+60. "How would you handle governor limits and DML constraints if a Flow (launched from LWC) deals with bulk updates?" - scenario
+61. "How would you initiate a Stripe payment from an LWC component?" - scenario
+62. "How do you handle Stripe webhooks in a Salesforce integrated payment flow?" - scenario
+63. "Can you walk through a use case where a user purchases a product using Stripe via LWC?" - scenario
+64. "How would you track payment success or failure in Salesforce after Stripe redirects the user?" - scenario
+65. "What security measures should be taken when handling Stripe payment info in LWC?" - standard
+66. "What role do @wire adapters play in the Provider Pattern architecture in LWC?" - standard
+67. "How can you decouple business logic from UI in a Factory + Provider Pattern setup?" - standard
+68. "In a Factory Pattern, how do you maintain state consistency across dynamically instantiated components ?" - standard
+69. "What are the limitations of using @wire in a factory generated component tree ?" - standard
+70. "Describe a mechanism to dynamically bind different wire adapters at runtime in an LWC ?" - standard
+71. "How can you leverage browser storage (like sessionStorage or IndexedDB) to implement persistent caching in LWC?" - standard
+72. "How does @wire caching differ from imperative call caching?" - standard
+73. "Can you use sessionStorage or localStorage for LWC caching?" - standard
+74. "How would you implement a hybrid cache combining in-memory, sessionStorage, and LDS in LWC?" - scenario
+75. "How can Platform Events or CDC help manage stale cache in LWC?" - standard
+76. "How would you securely handle DocuSign OAuth tokens in a Salesforce LWC initiated integration?" - scenario
+77. "How would you track the status of a DocuSign envelope and ensure Salesforce records are updated once the document is signed?" - scenario
+78. "If multiple recipients must sign in a defined order, how would you design the envelope and route the signing flow through OmniScript and DocuSign?" - scenario
+79. "How would you handle errors returned from the DocuSign API (e.g., invalid recipient, template not found) in OmniScript or LWC?" - scenario
+80. "How do you securely send data from your LWC to an iframe on a different domain without exposing sensitive data?" - standard
+81. "If messages sent from your LWC to a partner iframe are silently failing, what 3 checks will you perform first?" - standard
+82. "How can an LWC embedded in a Visualforce page (different domain) reliably listen to parent page events?" - standard
+83. "What security measures would you enforce to prevent cross-site attacks when using postMessage in LWC?" - standard
+84. "How would you communicate between an LWC and a third party page inside an iframe?" - scenario
+85. "How can you fix the issue if Named Credentials not refreshing tokens ?" - scenario
+86. "How can you debug if External system returns 401 Unauthorized to Salesforce callout even with correct Named Credential ?" - scenario
+87. "Governor limits breached mid transaction , What might be the Root cause ?" - scenario
+88. "Apex callouts using Named Credentials throw INVALID_SESSION_ID how would you resolve?" - scenario
+89. "Why might a Named Credential with refresh token flow fail after 90 days with Google APIs?" - scenario
+90. "LWC sets boolean property, but it reads as undefined. Why?" - code_review
+91. "The Child emits event with bubbling/composed, but parent doesn't receive it. Why?" - code_review
+92. "There is a scenario where CustomEvent is dispatched, but event.target is null , how can you fix it ?" - scenario
+93. "Even LMS message is published but subscriber gets undefined. What might be the issue here?" - code_review
+94. "Custom event payload arrives as [object Object]. What is the issue here ?" - code_review
+95. "Custom Setting values are returning null inconsistently. What's going wrong ?" - code_review
+96. "Apex logic is skipping expected validation rule errors. Why this is happening and how can you fix this ?" - code_review
+97. "Apex run time varies drastically for the same data volume. What's causing the fluctuation ?" - scenario
+98. "You're hitting Too many callouts: 100 error. What's the resolution?" - scenario
+99. "A SOQL query returns significantly more records in production than sandbox . What's the Fix ?" - scenario
+100. "I have to delete 300,000 obsolete records from a custom object. I don't want to use Batch Apex, and I can't use Bulk API because of org policy. How do I do this using regular Apex code?\" - Air Asia asked this to one of my student?" - scenario
+101. "What would happen if you use OFFSET in SOQL for pagination beyond 2,000 records? - Asked in a recent Interview?" - standard
+102. "What if you use @wire (getPicklistValues) but forget to include the correct RecordTypeId ? - Repeatedly asked in Interviews?" - code_review
+103. "A nightly process inserts 200,000 leads via integration. A before insert trigger enriches them with Account data, but the integration often fails with \"Too many SOQL queries.\" How do you make the enrichment bulk-safe without dropping the logic?" - scenario
+104. "What would happen if you performed a LIMIT 2000 SOQL query and tried to paginate on the client side using that result?" - standard
+105. "What happens if you call refreshApex() but don't keep a reference to the wired result object?" - standard
+106. ". What happens if you put a large console.log() inside renderedCallback() without any condition?" - code_review
+107. "What happens if your LWC component has an infinite loop of property updates between parent and child via @api?" - code_review
+108. "How do you ensure an Apex class can run in both synchronous and asynchronous contexts?" - standard
+109. "What happens if you try to send 20,000 emails in a single transaction using Messaging.sendEmail()?" - standard
+110. "What happens if you call System.debug() with a very large string (e.g., 10 MB) in a production org?" - standard
+111. "How do you handle retries in Salesforce when an external system is temporarily unavailable?" - standard
+112. "How do you secure outbound callouts without exposing credentials in Apex code?" - standard
+113. "How do you enforce API rate limits in integrations?" - standard
+114. "What happens if you use JSON.stringify() on a proxy object returned from a @wire?" - standard
+115. "What happens if your LWC imports a Custom Label that is later deleted from the org?" - standard
+116. "What happens if you wire a method to an Apex class that performs heavy SOQL in connectedCallback() and also call it imperatively on button click without caching?" - standard
+117. "What happens if you enqueue a Queueable job from inside another Queueable job without implementing System.isQueueable() checks?" - standard
+118. "What happens if you call Schema.describeSObjects() for 1,000+ objects in a single transaction?" - standard
+119. "How do you handle bulk DML failures when one record fails but others should still be committed?" - standard
+120. "What happens if the external API you are calling sends a 302 redirect and your callout does not handle it?" - standard
+121. "How do you avoid callout timeouts when sending large payloads to an external system?" - standard
+122. "What happens if an integration API returns mixed success and error results for a bulk request?" - standard
+123. "What happens if an API returns a 429 (Too Many Requests) status but doesn't include a Retry After header?" - standard
+124. "How would you validate file types and sizes before uploading in LWC?" - scenario
+125. "How would you provide a file preview (e.g., PDF viewer, image thumbnail) to the user?" - scenario
+126. "How would you handle large file uploads to Salesforce, ensuring performance and reliability?" - scenario
+127. "How would you subscribe to and handle Salesforce Platform Events in LWC?" - scenario
+128. "How would you ensure that multiple components consuming the same event remain in sync?" - scenario
+129. "How would you handle scenarios where the user's session disconnects from the event stream?" - scenario
+130. "How would you retrieve and display the current approval status and pending approvers in LWC?" - scenario
+131. "How would you implement custom logic for approve/reject actions while still respecting Salesforce approval rules?" - scenario
+132. "How would you provide real time feedback to the user after an approval/rejection action (e.g., toast, UI refresh)?" - scenario
+133. "If you dispatch a CustomEvent from a child but forget to set bubbles:true, composed:true, will the parent component catch it?" - standard
+134. "How would you handle a scenario where a parent passes a very large JSON object to a child LWC multiple times?" - scenario
+135. "What happens if you use for:each without specifying a unique key attribute while rendering a list?" - standard
+136. "In a future method, what happens if you exceed SOQL query limits while fetching related records?" - standard
+137. "If two users update the same record at the exact same time via Apex, how does Salesforce handle it ?" - standard
+138. "If you keep appending strings inside a loop without using StringBuilder, what happens when heap size is exceeded?" - standard
+139. "If Salesforce receives a malformed JSON payload from an external REST API, how will JSON.deserialize behave?" - standard
+140. "If Salesforce is making a callout to a system that takes 2 minutes to respond, but the Salesforce timeout is 120 seconds, what happens?" - standard
+141. "What happens if an outbound message fails because the external endpoint is down?" - standard
+142. "How do you send large JSON payloads efficiently from Salesforce to an external API ?" - scenario
+143. "What happens if two components on the same page import the same Custom Permission but one is deleted from the org?" - standard
+144. "What happens if you dispatch a custom event from a child LWC but the parent listens with the wrong case in the event name?" - standard
+145. "How does Promise.all() behave in LWC if one of the wired Apex calls fails with an unhandled rejection?" - standard
+146. "What happens if you call a @future method inside a batch finish() method and the batch fails halfway?" - standard
+147. "How does Apex handle Database.saveResult if you perform an insert with partial failures and don't check the isSuccess() flag?" - standard
+148. "What happens if you enqueue a Batchable job inside a Queueable and the batch internally schedules another Schedulable?" - standard
+149. "What happens if a trigger throws an unhandled exception in an after insert context?" - standard
+150. "What happens if two triggers on the same object update the same field differently in before update context?" - standard
+151. "What happens if you schedule 100 batch jobs in one transaction from a trigger?" - standard
+152. "What happens if you exceed the daily API request limit in Salesforce?" - standard
+153. "How can Named Credentials help simplify authentication in integrations?" - standard
+154. "What happens if an external API you call returns a 500 Internal Server Error?" - standard
+155. "How do you manage partial failures when an API sends 100 records to Salesforce but only 90 succeed?" - scenario
+156. "How would you design an LWC that can easily handle slow API responses (e.g., showing spinners, async retries, or fallback data)?" - scenario
+157. "How would you design an LWC that prevents duplicate API calls when a user clicks a button multiple times quickly?" - scenario
+158. "Your LWC calls an API that returns 20,000 records. Rendering them directly freezes the browser. How would you handle this scenario?" - scenario
+159. "What happens if you use @track incorrectly on a non primitive field and mutate it directly without reassignment?" - standard
+160. "If a parent LWC uses @api property to pass data but forgets to bind it, how does the child behave?" - standard
+161. "How does LWC handle multiple wired methods calling the same Apex class simultaneously?" - standard
+162. "What happens if you call a Queueable inside another Queueable repeatedly in a loop?" - standard
+163. "If you use Database.insert(records, false) with partial failures, how do failed records impact governor limits?" - standard
+164. "What happens if you call System.debug(Limits.getQueries()) inside a recursive trigger?" - standard
+165. "What happens if a before trigger updates the same record field that an after trigger also tries to modify?" - standard
+166. "If multiple triggers exist on the same object, in what order do they execute?" - standard
+167. "What happens if you call System.enqueueJob() inside a trigger for every record in bulk insert?" - standard
+168. "What happens if an HTTP callout exceeds the 120-second timeout in Apex?" - standard
+169. "If the external system's TLS certificate expires, how does Salesforce integration behave?" - scenario
+170. "How does Salesforce handle large JSON responses (10MB+) in an HTTP callout?" - standard
+171. "Your LWC fetches 15MB JSON data from an external API. The response takes 10+ seconds and sometimes times out. How would you optimize both backend and frontend handling? - Recently Asked in KPMG?" - scenario
+172. "How would you design a search component in LWC that avoids unnecessary server calls while the user is typing?" - scenario
+173. "You have a callout from Apex that sometimes exceeds the 120 second timeout due to slow external API response. How would you design a reliable, retry safe solution? - Recently asked in EY?" - scenario
+174. "How LWC makes a call to an Apex method that queries 200k records. The UI freezes for (8-10 seconds) before rendering. How would you design both Apex and LWC to improve performance? - Recently Asked in an Interview?" - scenario
+175. "Your LWC sales dashboard crunches 200k+ Account and Opportunity records but executives face (8-10 second) UI freezes and tab crashes on load. The dashboard needs to display aggregated insights, top performers, and drill downs all with a smooth, responsive experience. How would you fix it?" - scenario
+176. "Your Apex call returns 2MB JSON data that must be sorted, filtered, and grouped before rendering. How would you design the Apex component ? - Recently Asked in an Interview?" - scenario
+177. "You need to call an external API that accepts only 100 requests per minute, but your org may trigger thousands. How do you throttle or batch these calls efficiently? - An Interview Question That Caught My Attention Recently?" - scenario
+178. "You're building a dashboard LWC that aggregates data from 5 different objects. How would you structure Apex and caching to improve performance?" - scenario
+179. "How would you design an LWC that prevents multiple identical API calls made within a short time window even if triggered from different components? - A Common Interview Scenario That Confuses Many Devs?" - scenario
+180. "How would you design the Apex callout to the external API while ensuring the transaction is not delayed or blocked?" - scenario
+181. "How would you handle failed validations or API timeouts gracefully in the UI ?" - scenario
+182. "How would you secure API credentials and manage authentication in Salesforce?" - standard
+183. "How would you design this bidirectional sync to ensure data consistency and avoid duplicates?" - scenario
+184. "How would you handle callout limits if multiple orders are created simultaneously?" - scenario
+185. "How would you design the retry mechanism for failed callouts or ERP unavailability?" - scenario
+186. "based on total Opportunity revenue, using only one aggregation query ?" - standard
+187. "Your query on OpportunityLineItem is running through 8 million records , how would you improve its performance using custom indexes?" - scenario
+188. "You must perform cross object filtering (Account Case Product__c) in one SOQL like query . How will you do it in Apex ?" - scenario
+189. "You're processing customer payments through a REST API (like Stripe or Razorpay). How do you ensure that if the payment succeeds externally but fails to update in Salesforce, you don't double charge the user?" - scenario
+190. "How would you track failed transactions and reprocess them later without duplicating successful ones?" - scenario
+191. "How would you design an Apex REST endpoint to receive and validate these securely ?" - scenario
+192. "How would you implement Platform Events or Streaming API in LWC to keep data in sync?" - scenario
+193. "How would you design your LWC without breaking in production?" - scenario
+194. "How would you efficiently share state between multiple LWCs without using the parent component ?" - standard
+195. "How can you validate a signed request in Apex to ensure the payload hasn't been tampered with?" - standard
+196. "What are common causes of \"invalid signature\" errors during JWT authentication and how would you debug them?" - standard
+197. "You have to send confirmation emails to 1M Contacts after a data migration , how would you design this without hitting limits?" - scenario
+198. "How do you handle duplicate webhook requests in Apex to avoid processing the same request twice ?" - scenario
+199. "Your Apex REST API receives thousands of records per request , how do you handle partial failures and ensure no data loss?" - scenario
+200. "Salesforce must send data to an external API that goes down intermittently , how would you ensure delivery once it's back online?" - scenario
+201. "The external API's SSL certificate rotates every 3 months , how do you handle this automatically in Salesforce?" - scenario
+202. "You need to integrate with a third party that only supports OAuth 2.0 authorization code flow , how can Salesforce authenticate without manual user consent?" - scenario
+203. "Your external service uses JWT based authentication , how would you generate and refresh tokens securely from Apex?" - scenario
+204. "How would you design an LWC that cancels an ongoing API call if the user changes a filter before the first response arrives? - A tricky interview question?" - scenario
+205. "How would you design an LWC that merges multiple API calls from different components into one batched Apex callout? - The One Interview Topic You Can't Afford to Miss?" - scenario
+206. "What happens if you use @api on a getter but forget the corresponding setter?" - standard
+207. "What failure occurs when an LWC tries to render a list using a non unique key in for:each?" - standard
+208. "What happens if two child LWCs mutate the same reactive object received from a parent simultaneously?" - standard
+209. "What happens if you try JSON.deserialize a payload that contains extra fields not present in your Apex class?" - standard
+210. "What happens if too many chained Queueables cause the \"Maximum stack depth\" error?" - standard
+211. "If batch finish() method throws an unhandled exception, what happens to the job status?" - standard
+212. "What happens if a trigger tries to update a field that has a workflow field update on the same field?" - standard
+213. "How does Salesforce behave if two triggers both re query records inside the same transaction?" - standard
+214. "If a trigger calls a Queueable that updates the same object, how does it impact transaction boundaries?" - standard
+215. "How does Salesforce handle a callout where the HTTP response contains malformed JSON?" - standard
+216. "What happens if Named Credentials rotate their OAuth token in the middle of a running batch job?" - standard
+217. "How does Salesforce behave if the external system returns a paginated dataset without a next page URL?" - standard
+218. "A trigger on Case uses callouts to an external system. In bulk operations (100 records), callouts fail. You cannot move logic to a Flow or Platform Event. How do you solve this? - Air Asia asked this in a Recent Technical Round?" - scenario
+219. "Your Apex returns a JSON payload of 1 MB and the browser takes 3-5 seconds to parse it. How do you restructure the response to minimize parsing overhead? - The One Technical Concept You Must Know Before Your Interview?" - scenario
+220. "Design an LWC that loads 200+ fields but renders only the visible viewport fields (virtual scrolling) to avoid lag?" - scenario
+221. "An Apex trigger calls an external service to validate addresses. In a bulk update of 200 records, only 10% validation is needed. The rest are duplicates or unchanged. How do you reduce callout volume using Apex patterns? - A Crucial concept IBM asked last Week to filter good candidates?" - scenario
+222. "The Payment API sometimes completes the charge, but your Apex callout hits a timeout. How do you make sure so the user is never double charged? - Recently asked in a Visa Sponsored Technical round?" - scenario
+223. "Your Apex callout times out at 120 seconds, but the payment provider still completes the charge. A retry would double charge the customer. How do you design the integration so the payment is processed only once even if the response is lost?" - scenario
+224. "An LWC renders correctly in Lightning App Builder but fails inside a Flow Screen. Why?" - code_review
+225. "An LWC shows stale data after record update, even though refreshApex() is called. What could still prevent fresh data?" - code_review
+226. "A child component emits a CustomEvent, but the parent never receives it. The event name looks correct. What is the issue ?" - code_review
+227. "An Apex class successfully deserializes JSON, but some fields are always null even though they exist in the payload. What could be wrong?" - code_review
+228. "A Queueable job is enqueued from another Queueable repeatedly under a conditional loop. Why can this fail in production but pass in sandbox?" - code_review
+229. "What happens if an Apex transaction exceeds CPU time after DML but before commit?" - standard
+230. "A Queueable enqueues another Queueable conditionally. Why can this work in tests but fail intermittently in production?" - code_review
+231. "A trigger updates a record, which fires another trigger on the same object. No recursion guard exists, yet it doesn't go into infinite loop. Why?" - code_review
+232. "A Batch Apex job finishes with status \"Completed\", but some batch chunks never processed. How is this possible?" - code_review
+233. "What happens if a callout timeout occurs after the external system has already processed the request?" - standard
+234. "A callout succeeds (HTTP 200) but the integration still fails functionally. What non obvious checks should you perform?" - code_review
+235. "An external API returns partial data with no error code. How should Apex defensively handle this scenario?" - scenario
+236. "What happens if refreshApex() is called but the wired method parameters haven't changed?" - standard
+237. "How does LWC reactivity behave when a nested property of a @track object is mutated?" - standard
+238. "Why are callouts after DML restricted in synchronous Apex?" - standard
+239. "Is invoking a future method from Batch Apex considered unsafe or Safe ?" - standard
+240. "How is a custom event handled if it is dispatched before the component is connected to the DOM?" - standard
+241. "Why does updating a field in a before update trigger sometimes fail to persist after commit?" - standard
+242. "What happens if a Queueable enqueues another Queueable during test execution?" - standard
+243. "What happens if the external API changes response schema without versioning?" - standard
+244. "How can Trigger.oldMap contain values that were never visible to users?" - code_review
+245. "Why do static variables fail to prevent recursion in Batch Apex invoked triggers?" - standard
+246. "Why can an Apex getter return different values in the same transaction?" - standard
+247. "How can Trigger.oldMap contain values that never existed in the database?" - code_review
+248. "Why do static variables reset between batch execute chunks?" - standard
+249. "Why can Test.stopTest() execute jobs in a different order than production?" - standard
+250. "Why does Apex with with sharing still expose records in some async contexts?" - standard
+251. "What breaks if the API responds with HTTP 200 but returns a logical error in the body?" - standard
+252. "Why does JSON deserialization fail even when field names match?" - standard
+253. "Why might be the reason that a callout succeed in sandbox but fail in production?" - scenario
+254. "Why do record visibility rules behave differently in reports vs Apex?" - standard
+255. "What happens if a with sharing class calls a without sharing helper class?" - standard
+256. "Why can a trigger fire twice for a single user action without recursion?" - standard
+257. "Why does a formula field value differ when accessed from Apex vs reported in a Flow?" - standard
+258. "Why does without sharing not bypass object level security in all contexts?" - standard
+259. "C reports show records that Apex cannot access?" - standard
+260. "Why can duplicate rules behave differently in Apex vs Data Loader?" - standard
+261. "What happens when a with sharing class invokes a without sharing Queueable?" - standard
+262. "Why does mutating a nested property of a @track object not trigger re-rendering?" - standard
+263. "Why does Trigger.old sometimes reflect values that were never committed?" - standard
+264. "Why does an API integration succeed when called manually but fail when invoked from a trigger?" - scenario
+265. "Why does @api data arrive after connectedCallback()?" - standard
+266. "What happens if a CustomEvent is dispatched before the parent is connected to the DOM?" - standard
+267. "What breaks if an external API returns HTTP 204 with a non-empty body?" - standard
+268. "Why does an LWC re render without any tracked property change?" - standard
+269. "Why does Test.startTest() reset limits but not static memory in certain cases?" - standard
+270. "Trigger.oldMap contains a field value that was never committed to the database. How is this possible?" - code_review
+271. "Why can a Batch Apex finish() method see data that execute() never processed?" - standard
+272. "Why does Trigger.new sometimes contain records that fail validation later?" - standard
+273. "What happens if refreshApex() is called inside a renderedCallback repeatedly?" - standard
+274. "Why do Named Credentials work for REST but fail for SOAP endpoints?" - standard
+275. "Why does a callout from a trigger work in sandbox but fail in production?" - scenario
+276. "Why should DOM access be avoided in connectedCallback()?" - standard
+277. "What happens if a child fires an event but the parent isn't rendered yet?" - standard
+278. "What happens if a record is deleted while an LWC is still wired to it?" - standard
+279. "Why can a SOQL query return different results inside the same transaction?" - standard
+280. "What happens if an external API returns HTTP 200 but with a business level error in the payload?" - standard
+281. "An LWC makes an imperative Apex call triggered by user actions. Users double click rapidly and duplicate requests hit the server. How would you design the component to prevent this without blocking the UI? - Recently asked in a Visa Sponsored round?" - scenario
+282. "Salesforce needs to send a massive JSON payload, but heap size and callout limits are screaming. How would you solve this? - Recently asked in an Interview?" - scenario
+283. "What happens if a child dispatches an event before the parent is rendered?" - standard
+284. "How is a component affected when it re renders inside a for:each loop?" - standard
+285. "How does Salesforce handle callout responses that arrive after a timeout?" - standard
+286. "Why can the same SOQL query return different results within one transaction?" - standard
+287. "What happens if a future method is invoked from another async context?" - standard
+288. "Why/Why not are callouts not allowed after partial DML operations?" - standard
+289. "What happens if a Batch Apex job is aborted while an execute() is in progress?" - standard
+290. "Why does a before insert trigger not have record IDs but after insert does?" - standard
+291. "You have an LWC with a tracked object. If the component reassigns the same reference to that object, how will the UI behave?" - standard
+292. "An external API changes its response format without notice. How should your callout handling adapt?" - scenario
+293. "What happens if a trigger on a Platform Event performs DML?" - standard
+294. "What happens if finish() enqueues another Batch or Queueable job?" - standard
+295. "Tell me about a time you handled a production issue under pressure. How did you manage it?" - standard
+296. "How do you explain technical solutions to non technical clients?" - standard
+297. "Imagine a client has unrealistic expectations on delivery timelines how would you handle it?" - standard
+298. "Describe a situation where you worked with multiple teams having conflicting priorities. How did you manage deadlines?" - standard
+299. "What is connectedCallback()?" - standard
+300. "What are decorators in LWC?" - standard
+301. "What is the return type of start method ?" - standard
+302. "But can you debug why CPU time suddenly spikes in production after a release?" - scenario
+303. "Or why a seemingly harmless Flow brought the org to its knees?" - scenario
+304. "How do you design triggers and Flows so they don't conflict with each other?" - standard
+305. "A trigger works in sandbox but fails in production. How do you debug it?" - scenario
+306. "What happens if a future method throws an exception?" - standard
+307. "Your org hits CPU time limit intermittently. How do you identify the root cause?" - scenario
+308. "What happens if a governor limit is hit inside a try block , will catch execute?" - standard
+309. "A deployment fails due to test failures in unrelated areas. What do you do?" - scenario
+310. "What's your strategy to avoid recursive triggers and automation loops?" - standard
+311. "An external integration suddenly starts timing out. How do you troubleshoot it?" - scenario
+312. "What happens if an LWC throws an error during the render phase?" - standard
+313. "Why can two LWCs calling the same Apex method get different results at the same time?" - standard
+314. "Why should integration logic avoid being placed directly inside triggers?" - standard
+315. "How can a trigger pass all tests but still fail at scale in production?" - scenario
+316. "What happens if Salesforce times out but the external system completes the operation?" - scenario
+317. "What happens if a trigger causes a mixed DML operation indirectly?" - scenario
+318. "Can a Rollback undo DML done by a future or Queueable job?" - standard
+319. "What happens if the API version changes but Salesforce code is not updated?" - scenario
+320. "What happens when two flows and a trigger update the same field differently?" - scenario
+321. "What happens if two Batch Apex jobs update the same records concurrently?" - scenario
+322. "Describe a situation where a production issue was caused by your own change. How did you handle accountability?" - scenario
+323. "How do you handle a teammate who repeatedly breaks production but is technically strong?" - scenario
+324. "Describe a situation where requirements changed mid sprint. How did you adapt without derailing delivery?" - scenario
+325. "What happens if governor limit is hit inside a try block , will catch execute ?" - standard
+326. "How do you handle callouts in batch or queueable safely ?" - standard
+327. "Trigger logic depends on field change , how will you make sure it runs only when field changes ?" - standard
+328. "How do you handle scenarios where multiple batch jobs need to run in sequence?" - scenario
+329. "If Platform events gets processed twice , how would you fix it to prevent duplicates ?" - scenario
+330. "What happens if the start() method returns a very large QueryLocator?" - standard
+331. "What does a Promise actually return?" - standard
+332. "Why are callouts not allowed after DML in the same transaction?" - standard
+333. "What happens if an LWC wired method returns data successfully, but the component still renders an error?" - standard
+334. "Why can a trigger pass all tests but fail in production at scale?" - standard
+335. "Why can two integrations updating the same record at the same time see different oldMap values?" - standard
+336. "Why can Batch Apex process partial data successfully?" - standard
+337. "We had a production issue caused by a recent deployment. What steps will you take to identify the root cause and stabilize the system?" - scenario
+338. "If there is a team member who is technically strong but has caused instability in production. How did you handle this situation?" - scenario
+339. "If you need to explain a production failure to non technical stakeholders. What would be your next steps ?" - scenario
+340. "Why can mixed DML errors occur even when DML is separated logically?" - standard
+341. "What is the difference between CRUD, FLS, and Sharing?" - standard
+342. "Why does @wire cache behave differently between user sessions?" - standard
+343. "Why does an integration work in synchronous Apex but fail in Queueable?" - scenario
+344. "Why can a child component re render even when parent data didn't change?" - standard
+345. "What is a future method limitation? Rewrite the logic using Queueable?" - standard
+346. "Why can an LWC re render even when no tracked property changes?" - standard
+347. "What happens if a CustomEvent is dispatched before the parent is connected?" - standard
+348. "A Batch Apex job processes 1M records but skips some records without exception. How would you investigate?" - scenario
