@@ -81,6 +81,15 @@ type SupabasePublicServerClient = ReturnType<
   typeof createSupabasePublicServerClient
 >;
 
+function isDynamicServerUsageError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    (error as { digest?: string }).digest === "DYNAMIC_SERVER_USAGE"
+  );
+}
+
 function safeEstimateMinutes(totalItems: number) {
   return Math.max(10, totalItems * 8);
 }
@@ -216,6 +225,10 @@ async function listUserPlaylistProgress(playlistIds: string[]) {
 
     return progressData ?? [];
   } catch (error) {
+    if (isDynamicServerUsageError(error)) {
+      return [];
+    }
+
     console.warn("Unable to fetch authenticated playlist progress", error);
     return [];
   }

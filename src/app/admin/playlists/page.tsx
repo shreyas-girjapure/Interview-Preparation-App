@@ -10,6 +10,8 @@ import { Separator } from "@/components/ui/separator";
 import { hasAdminAreaAccess, isAppRole } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 const createPlaylistSchema = z.object({
@@ -36,13 +38,24 @@ type AdminActionResult = {
   message: string;
 };
 
+function isDynamicServerUsageError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    (error as { digest?: string }).digest === "DYNAMIC_SERVER_USAGE"
+  );
+}
+
 async function requireAdminAccess() {
   let supabase;
 
   try {
     supabase = await createSupabaseServerClient();
   } catch (error) {
-    console.warn("Admin playlists unavailable without Supabase env", error);
+    if (!isDynamicServerUsageError(error)) {
+      console.warn("Admin playlists unavailable without Supabase env", error);
+    }
     redirect("/unauthorized?reason=admin");
   }
 

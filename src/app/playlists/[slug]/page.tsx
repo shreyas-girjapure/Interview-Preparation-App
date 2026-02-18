@@ -5,22 +5,13 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import {
-  getPlaylistBySlug,
-  listPlaylistSlugs,
-} from "@/lib/interview/playlists";
+import { getPlaylistBySlug } from "@/lib/interview/playlists";
+
+export const dynamic = "force-dynamic";
 
 type Params = Promise<{
   slug: string;
 }>;
-
-export async function generateStaticParams() {
-  const slugs = await listPlaylistSlugs();
-
-  return slugs.map((slug) => ({
-    slug,
-  }));
-}
 
 export async function generateMetadata({
   params,

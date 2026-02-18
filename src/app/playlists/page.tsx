@@ -5,6 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { listPlaylistDashboardItems } from "@/lib/interview/playlists";
 
+export const dynamic = "force-dynamic";
+
 function emptyStateCards() {
   return [
     {
