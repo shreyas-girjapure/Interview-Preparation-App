@@ -27,6 +27,9 @@ export default async function Home() {
             related concepts.
           </p>
           <div className="flex flex-wrap gap-3 pt-1">
+            <Button asChild variant="secondary">
+              <Link href="/playlists">Browse playlists</Link>
+            </Button>
             <Button asChild>
               <Link href="/topics">Browse topics</Link>
             </Button>

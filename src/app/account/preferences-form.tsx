@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
@@ -116,6 +117,7 @@ export function PreferencesForm({
     if (dailyGoalResult.error) {
       setSaveState("error");
       setErrorMessage(dailyGoalResult.error);
+      toast.error(dailyGoalResult.error);
       return;
     }
 
@@ -144,18 +146,22 @@ export function PreferencesForm({
 
       if (!response.ok) {
         setSaveState("error");
-        setErrorMessage(body?.error || "Unable to save preferences right now.");
+        const message = body?.error || "Unable to save preferences right now.";
+        setErrorMessage(message);
+        toast.error(message);
         return;
       }
     } catch {
       setSaveState("error");
-      setErrorMessage(
-        "Unable to save preferences right now. Check your connection and try again.",
-      );
+      const message =
+        "Unable to save preferences right now. Check your connection and try again.";
+      setErrorMessage(message);
+      toast.error(message);
       return;
     }
 
     setSaveState("saved");
+    toast.success("Preferences saved.");
     router.refresh();
   }
 

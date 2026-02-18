@@ -2,6 +2,7 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -62,22 +63,27 @@ export function FeaturesForm({
 
       if (!response.ok) {
         setSaveState("error");
-        setErrorMessage(body?.error || "Unable to save features right now.");
+        const message = body?.error || "Unable to save features right now.";
+        setErrorMessage(message);
+        toast.error(message);
         return;
       }
 
       if (body?.warning) {
         setWarningMessage(body.warning);
+        toast.warning(body.warning);
       }
     } catch {
       setSaveState("error");
-      setErrorMessage(
-        "Unable to save features right now. Check your connection and try again.",
-      );
+      const message =
+        "Unable to save features right now. Check your connection and try again.";
+      setErrorMessage(message);
+      toast.error(message);
       return;
     }
 
     setSaveState("saved");
+    toast.success("Features saved.");
     router.refresh();
   }
 
