@@ -149,26 +149,42 @@
   }
 }
 
-.interview-prose :where(h1, h2, h3, h4) {
+.interview-prose :where(h1, h2, h3, h4, h5, h6) {
   font-family: var(--font-reading), serif;
+  font-weight: 400;
   color: color-mix(in oklch, var(--foreground) 97%, black);
   letter-spacing: -0.012em;
   line-height: 1.18;
 }
 
+.interview-prose :where(h1) {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+
 .interview-prose :where(h2) {
-  margin-top: 2.1rem;
-  margin-bottom: 0.85rem;
+  margin-top: 1.45rem;
+  margin-bottom: 0.58rem;
+}
+
+.interview-prose :where(h3, h4, h5, h6) {
+  margin-top: 0.98rem;
+  margin-bottom: 0.45rem;
 }
 
 .interview-prose :where(p, li, blockquote, figcaption, th, td) {
   font-family: var(--font-ui), sans-serif;
+  font-weight: 400;
   line-height: 1.74;
   color: color-mix(in oklch, var(--foreground) 90%, black);
 }
 
+.interview-prose :where(p) {
+  margin: 0.58rem 0;
+}
+
 .interview-prose :where(ul, ol) {
-  margin: 0.9rem 0 1.2rem;
+  margin: 0.62rem 0 0.82rem;
   padding-left: 1.25rem;
 }
 
@@ -181,15 +197,19 @@
   color: color-mix(in oklch, var(--foreground) 38%, white);
 }
 
-.interview-prose :where(strong) {
+.interview-prose :where(strong, b) {
   font-family: var(--font-ui), sans-serif;
-  font-weight: 650;
-  color: color-mix(in oklch, var(--foreground) 95%, black);
+  font-weight: 500;
+  color: inherit;
+}
+
+.interview-prose :where(h1, h2, h3, h4, h5, h6) :where(strong, b) {
+  font-weight: inherit;
 }
 
 .interview-prose :where(a) {
   color: color-mix(in oklch, var(--primary) 88%, black);
-  font-weight: 600;
+  font-weight: 400;
   text-decoration-thickness: 1.5px;
   text-underline-offset: 3px;
 }
@@ -208,7 +228,7 @@
   font-family: var(--font-code), monospace;
   font-size: 0.84em;
   line-height: 1.25;
-  font-weight: 500;
+  font-weight: 400;
   border-radius: 0.45rem;
   border: 0;
   background: oklch(0.18 0.01 80);
@@ -228,7 +248,7 @@
   font-family: var(--font-code), monospace;
   font-size: 0.84em;
   line-height: 1.25;
-  font-weight: 500;
+  font-weight: 400;
   border-radius: 0.45rem;
   border: 1px solid oklch(0.86 0.008 88);
   background: oklch(0.93 0.005 95);
@@ -237,7 +257,7 @@
 }
 
 :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure]) {
-  margin: 1.75rem 0;
+  margin: 0.88rem 0;
   overflow: hidden;
   border-radius: 0.9rem;
   border: 1px solid color-mix(in oklch, var(--foreground) 18%, transparent);
