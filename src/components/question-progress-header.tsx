@@ -48,11 +48,9 @@ export function QuestionProgressHeader({
       }),
     });
 
-    const body = (await response.json().catch(() => null)) as
-      | {
-          error?: string;
-        }
-      | null;
+    const body = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
 
     if (!response.ok) {
       throw new Error(body?.error || "Unable to save question progress.");

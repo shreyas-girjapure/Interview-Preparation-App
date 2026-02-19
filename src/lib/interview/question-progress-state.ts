@@ -1,4 +1,8 @@
-export const QUESTION_PROGRESS_STATES = ["unread", "read", "review_later"] as const;
+export const QUESTION_PROGRESS_STATES = [
+  "unread",
+  "read",
+  "review_later",
+] as const;
 
 export type QuestionProgressState = (typeof QUESTION_PROGRESS_STATES)[number];
 

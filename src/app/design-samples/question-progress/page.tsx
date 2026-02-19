@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
-import { Bookmark, Check, Clock3, Ellipsis, RotateCcw, Undo2 } from "lucide-react";
+import {
+  Bookmark,
+  Check,
+  Clock3,
+  Ellipsis,
+  RotateCcw,
+  Undo2,
+} from "lucide-react";
 
 import { QuestionProgressSampleOnePreview } from "@/components/design-samples/question-progress-sample-one-preview";
 import { MarkdownContent } from "@/components/markdown-content";
@@ -223,7 +230,9 @@ function SampleSix({ question }: { question: DemoQuestion }) {
         <p className="text-xs tracking-wide text-muted-foreground uppercase">
           Completion
         </p>
-        <p className="mt-1 text-sm font-medium">{question.completionPercent}%</p>
+        <p className="mt-1 text-sm font-medium">
+          {question.completionPercent}%
+        </p>
       </div>
       <div className="mt-3 flex flex-wrap gap-2">
         <Button size="sm" variant="outline">
@@ -312,7 +321,8 @@ const SAMPLES: TrackingSample[] = [
   {
     id: "4",
     name: "List Row Quick Actions",
-    summary: "Fast catalog-level actions using read toggle and revisit shortcut.",
+    summary:
+      "Fast catalog-level actions using read toggle and revisit shortcut.",
     group: "Theme-aligned",
     render: (question) => <SampleFour question={question} />,
   },
@@ -381,8 +391,8 @@ export default async function QuestionProgressDesignSamplesPage() {
             Read / Revisit Tracking Patterns
           </h1>
           <p className="max-w-4xl text-sm text-muted-foreground">
-            Reply with sample number(s), and I will apply your chosen pattern
-            in question detail and question list pages.
+            Reply with sample number(s), and I will apply your chosen pattern in
+            question detail and question list pages.
           </p>
         </header>
 

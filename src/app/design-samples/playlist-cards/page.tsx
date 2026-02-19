@@ -481,7 +481,8 @@ const SAMPLES: PlaylistCardSample[] = [
   {
     id: "1",
     name: "Soft Outline Stats",
-    summary: "Closest to current style with stat tiles and restrained contrast.",
+    summary:
+      "Closest to current style with stat tiles and restrained contrast.",
     group: "Theme-aligned",
     renderCard: (playlist) => <CardOne playlist={playlist} />,
   },
@@ -523,14 +524,16 @@ const SAMPLES: PlaylistCardSample[] = [
   {
     id: "7",
     name: "Split Metric Panels",
-    summary: "Balanced layout with equal-weight stat blocks before description.",
+    summary:
+      "Balanced layout with equal-weight stat blocks before description.",
     group: "Exploratory",
     renderCard: (playlist) => <CardSeven playlist={playlist} />,
   },
   {
     id: "8",
     name: "Dense Product Tile",
-    summary: "Compact top row and metadata chips for denser information display.",
+    summary:
+      "Compact top row and metadata chips for denser information display.",
     group: "Exploratory",
     renderCard: (playlist) => <CardEight playlist={playlist} />,
   },
@@ -579,7 +582,8 @@ const SAMPLES: PlaylistCardSample[] = [
   {
     id: "15",
     name: "List Metrics",
-    summary: "Uses definition-list rows to present questions and topics cleanly.",
+    summary:
+      "Uses definition-list rows to present questions and topics cleanly.",
     group: "Exploratory",
     renderCard: (playlist) => <CardFifteen playlist={playlist} />,
   },

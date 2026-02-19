@@ -60,12 +60,15 @@ export default async function QuestionDetailsPage({
     notFound();
   }
 
-  const [{ isAuthenticated, statesByQuestionId }, linkedTopics, relatedQuestions] =
-    await Promise.all([
-      listViewerQuestionProgressStates([question.id]),
-      listTopicsForQuestion(question),
-      listRelatedQuestionsForQuestion(question, 12),
-    ]);
+  const [
+    { isAuthenticated, statesByQuestionId },
+    linkedTopics,
+    relatedQuestions,
+  ] = await Promise.all([
+    listViewerQuestionProgressStates([question.id]),
+    listTopicsForQuestion(question),
+    listRelatedQuestionsForQuestion(question, 12),
+  ]);
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">

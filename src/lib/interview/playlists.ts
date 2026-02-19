@@ -274,12 +274,12 @@ async function listUserReadQuestionIds(questionIds: string[]) {
 
     const { data: questionProgressData, error: questionProgressError } =
       await supabase
-      .from("user_question_progress")
-      .select("question_id")
-      .eq("user_id", user.id)
-      .eq("is_read", true)
-      .in("question_id", questionIds)
-      .returns<UserQuestionReadRow[]>();
+        .from("user_question_progress")
+        .select("question_id")
+        .eq("user_id", user.id)
+        .eq("is_read", true)
+        .in("question_id", questionIds)
+        .returns<UserQuestionReadRow[]>();
 
     if (questionProgressError) {
       console.warn(

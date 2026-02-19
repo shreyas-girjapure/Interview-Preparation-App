@@ -50,7 +50,11 @@ export function QuestionProgressSampleOnePreview({
 
   function toggleReadState() {
     if (state === "read") {
-      updateState("unread", "Marked as unread", "Question moved back to unread.");
+      updateState(
+        "unread",
+        "Marked as unread",
+        "Question moved back to unread.",
+      );
       return;
     }
 
