@@ -9,9 +9,11 @@ export type PlaylistDashboardItem = {
   id: string;
   slug: string;
   title: string;
+  description: string;
   playlistType: PlaylistType;
   accessLevel: PlaylistAccess;
   totalItems: number;
+  uniqueTopicCount: number;
   estimatedMinutes: number;
   nextUp: string;
   itemsRead: number;
@@ -42,21 +44,20 @@ export type PlaylistDetails = {
   questions: PlaylistQuestionItem[];
 };
 
-type PlaylistQuestionRelation =
-  | {
-      id: string | null;
-      slug: string | null;
-      title: string | null;
-      summary: string | null;
-      status: string | null;
-    }
-  | Array<{
-      id: string | null;
-      slug: string | null;
-      title: string | null;
-      summary: string | null;
-      status: string | null;
-    }>;
+type QuestionTopicRelation =
+  | { topic_id: string | null }
+  | Array<{ topic_id: string | null }>;
+
+type PlaylistQuestionRow = {
+  id: string | null;
+  slug: string | null;
+  title: string | null;
+  summary: string | null;
+  status: string | null;
+  question_topics: QuestionTopicRelation | null;
+};
+
+type PlaylistQuestionRelation = PlaylistQuestionRow | PlaylistQuestionRow[];
 
 type PlaylistRow = {
   id: string;
@@ -72,9 +73,8 @@ type PlaylistRow = {
   }> | null;
 };
 
-type UserProgressRow = {
-  playlist_id: string;
-  items_read: number;
+type UserQuestionReadRow = {
+  question_id: string;
 };
 
 type SupabasePublicServerClient = ReturnType<
@@ -118,6 +118,26 @@ function toCompletionPercent(itemsRead: number, totalItems: number) {
   return Math.min(100, Math.round((itemsRead / totalItems) * 100));
 }
 
+function countReadQuestions(
+  questions: PlaylistQuestionItem[],
+  readQuestionIds: Set<string>,
+) {
+  return questions.reduce(
+    (count, question) => count + (readQuestionIds.has(question.id) ? 1 : 0),
+    0,
+  );
+}
+
+function resolveNextQuestion(
+  questions: PlaylistQuestionItem[],
+  readQuestionIds: Set<string>,
+) {
+  return (
+    questions.find((question) => !readQuestionIds.has(question.id)) ??
+    questions[questions.length - 1]
+  );
+}
+
 function mapPlaylistQuestions(playlist: PlaylistRow) {
   const orderedItems = [...(playlist.playlist_items ?? [])].sort(
     (a, b) =>
@@ -149,35 +169,76 @@ function mapPlaylistQuestions(playlist: PlaylistRow) {
     .filter((question): question is PlaylistQuestionItem => Boolean(question));
 }
 
-function mapPlaylists(rows: PlaylistRow[], progressRows: UserProgressRow[]) {
-  const progressByPlaylist = new Map(
-    progressRows.map((row) => [row.playlist_id, row.items_read]),
-  );
+function mapPlaylistUniqueTopicCount(playlist: PlaylistRow) {
+  const topicIds = new Set<string>();
 
+  for (const item of playlist.playlist_items ?? []) {
+    const question = pickSingle(item.questions);
+
+    if (
+      !question?.id ||
+      !question.slug ||
+      !question.title ||
+      question.status !== "published"
+    ) {
+      continue;
+    }
+
+    const topicRelations = Array.isArray(question.question_topics)
+      ? question.question_topics
+      : question.question_topics
+        ? [question.question_topics]
+        : [];
+
+    for (const topicRelation of topicRelations) {
+      const topicId = topicRelation.topic_id?.trim();
+
+      if (topicId) {
+        topicIds.add(topicId);
+      }
+    }
+  }
+
+  return topicIds.size;
+}
+
+function mapPlaylists(rows: PlaylistRow[], readQuestionIds: Set<string>) {
   return rows.map<PlaylistDashboardItem>((playlist) => {
     const questions = mapPlaylistQuestions(playlist);
     const totalItems = questions.length;
     const itemsRead = clampItemsRead(
-      progressByPlaylist.get(playlist.id) ?? 0,
+      countReadQuestions(questions, readQuestionIds),
       totalItems,
     );
-
-    const nextQuestion =
-      questions[Math.min(itemsRead, Math.max(totalItems - 1, 0))];
+    const nextQuestion = resolveNextQuestion(questions, readQuestionIds);
 
     return {
       id: playlist.id,
       slug: playlist.slug,
       title: playlist.title,
+      description: normalizePlaylistSummary(playlist.description),
       playlistType: playlist.playlist_type,
       accessLevel: playlist.access_level,
       totalItems,
+      uniqueTopicCount: mapPlaylistUniqueTopicCount(playlist),
       estimatedMinutes: safeEstimateMinutes(totalItems),
       nextUp: normalizeItemText(nextQuestion?.title || nextQuestion?.summary),
       itemsRead,
       completionPercent: toCompletionPercent(itemsRead, totalItems),
     };
   });
+}
+
+function listQuestionIdsForPlaylists(playlists: PlaylistRow[]) {
+  const questionIds = new Set<string>();
+
+  for (const playlist of playlists) {
+    for (const question of mapPlaylistQuestions(playlist)) {
+      questionIds.add(question.id);
+    }
+  }
+
+  return [...questionIds];
 }
 
 async function withPublicPlaylistClient<T>(
@@ -196,9 +257,9 @@ async function withPublicPlaylistClient<T>(
   }
 }
 
-async function listUserPlaylistProgress(playlistIds: string[]) {
-  if (!playlistIds.length) {
-    return [];
+async function listUserReadQuestionIds(questionIds: string[]) {
+  if (!questionIds.length) {
+    return new Set<string>();
   }
 
   try {
@@ -208,29 +269,34 @@ async function listUserPlaylistProgress(playlistIds: string[]) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return [];
+      return new Set<string>();
     }
 
-    const { data: progressData, error: progressError } = await supabase
-      .from("user_playlist_progress")
-      .select("playlist_id, items_read")
+    const { data: questionProgressData, error: questionProgressError } =
+      await supabase
+      .from("user_question_progress")
+      .select("question_id")
       .eq("user_id", user.id)
-      .in("playlist_id", playlistIds)
-      .returns<UserProgressRow[]>();
+      .eq("is_read", true)
+      .in("question_id", questionIds)
+      .returns<UserQuestionReadRow[]>();
 
-    if (progressError) {
-      console.warn("Failed to fetch user playlist progress", progressError);
-      return [];
+    if (questionProgressError) {
+      console.warn(
+        "Failed to fetch user question progress for playlists",
+        questionProgressError,
+      );
+      return new Set<string>();
     }
 
-    return progressData ?? [];
+    return new Set((questionProgressData ?? []).map((row) => row.question_id));
   } catch (error) {
     if (isDynamicServerUsageError(error)) {
-      return [];
+      return new Set<string>();
     }
 
-    console.warn("Unable to fetch authenticated playlist progress", error);
-    return [];
+    console.warn("Unable to fetch question progress for playlists", error);
+    return new Set<string>();
   }
 }
 
@@ -261,7 +327,7 @@ export async function listPlaylistDashboardItems() {
       const { data, error } = await publicSupabase
         .from("playlists")
         .select(
-          "id, slug, title, description, playlist_type, access_level, sort_order, playlist_items(id, sort_order, questions(id, slug, title, summary, status))",
+          "id, slug, title, description, playlist_type, access_level, sort_order, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
         )
         .eq("status", "published")
         .order("sort_order", { ascending: true })
@@ -282,10 +348,15 @@ export async function listPlaylistDashboardItems() {
     return [];
   }
 
-  const progressRows = await listUserPlaylistProgress(
-    playlists.map((playlist) => playlist.id),
+  const readQuestionIds = await listUserReadQuestionIds(
+    listQuestionIdsForPlaylists(playlists),
   );
-  return mapPlaylists(playlists, progressRows);
+  return mapPlaylists(playlists, readQuestionIds);
+}
+
+export async function listFeaturedPlaylists(limit = 3) {
+  const playlists = await listPlaylistDashboardItems();
+  return playlists.slice(0, Math.max(0, limit));
 }
 
 export async function getPlaylistBySlug(slug: string) {
@@ -300,7 +371,7 @@ export async function getPlaylistBySlug(slug: string) {
       const { data, error } = await publicSupabase
         .from("playlists")
         .select(
-          "id, slug, title, description, playlist_type, access_level, playlist_items(id, sort_order, questions(id, slug, title, summary, status))",
+          "id, slug, title, description, playlist_type, access_level, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
         )
         .eq("status", "published")
         .eq("slug", normalizedSlug)
@@ -321,13 +392,14 @@ export async function getPlaylistBySlug(slug: string) {
 
   const questions = mapPlaylistQuestions(playlist);
   const totalItems = questions.length;
-  const progressRows = await listUserPlaylistProgress([playlist.id]);
+  const readQuestionIds = await listUserReadQuestionIds(
+    questions.map((question) => question.id),
+  );
   const itemsRead = clampItemsRead(
-    progressRows[0]?.items_read ?? 0,
+    countReadQuestions(questions, readQuestionIds),
     totalItems,
   );
-  const nextQuestion =
-    questions[Math.min(itemsRead, Math.max(totalItems - 1, 0))];
+  const nextQuestion = resolveNextQuestion(questions, readQuestionIds);
 
   return {
     id: playlist.id,

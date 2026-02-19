@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PlaylistCard } from "@/components/playlist-card";
 import { Separator } from "@/components/ui/separator";
 import { listPlaylistDashboardItems } from "@/lib/interview/playlists";
 
@@ -13,12 +14,12 @@ function emptyStateCards() {
       id: "empty-role",
       slug: "",
       title: "Role-based sprint",
+      description:
+        "No published playlists yet. Admins can create and publish playlists.",
       playlistType: "role",
       accessLevel: "free",
       totalItems: 0,
-      estimatedMinutes: 0,
-      nextUp:
-        "No published playlists yet. Admins can create and publish playlists.",
+      uniqueTopicCount: 0,
       itemsRead: 0,
       completionPercent: 0,
     },
@@ -26,97 +27,16 @@ function emptyStateCards() {
       id: "empty-company",
       slug: "",
       title: "Company loop",
+      description:
+        "No published playlists yet. Admins can create and publish playlists.",
       playlistType: "company",
       accessLevel: "preview",
       totalItems: 0,
-      estimatedMinutes: 0,
-      nextUp:
-        "No published playlists yet. Admins can create and publish playlists.",
+      uniqueTopicCount: 0,
       itemsRead: 0,
       completionPercent: 0,
     },
   ] as const;
-}
-
-function PlaylistCard({
-  playlist,
-}: {
-  playlist: {
-    id: string;
-    slug: string;
-    title: string;
-    playlistType: string;
-    accessLevel: string;
-    itemsRead: number;
-    totalItems: number;
-    completionPercent: number;
-    nextUp: string;
-    estimatedMinutes: number;
-  };
-}) {
-  const cardBody = (
-    <>
-      <div className="mb-3 flex flex-wrap gap-2">
-        <Badge variant="outline" className="capitalize">
-          {playlist.playlistType}
-        </Badge>
-        <Badge variant="outline" className="capitalize">
-          {playlist.accessLevel}
-        </Badge>
-      </div>
-
-      <h3 className="font-serif text-lg leading-snug">{playlist.title}</h3>
-
-      <p className="mt-2 text-sm text-muted-foreground">
-        {playlist.itemsRead}/{playlist.totalItems} completed |{" "}
-        {playlist.completionPercent}%
-      </p>
-
-      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-muted">
-        <div
-          className="h-full rounded-full bg-foreground/80"
-          style={{ width: `${playlist.completionPercent}%` }}
-        />
-      </div>
-
-      <dl className="mt-4 space-y-2 text-sm">
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 p-2">
-          <dt className="text-muted-foreground">Next up</dt>
-          <dd className="max-w-[64%] text-right font-medium leading-5">
-            {playlist.nextUp}
-          </dd>
-        </div>
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 p-2">
-          <dt className="text-muted-foreground">Estimated time</dt>
-          <dd className="font-medium">~{playlist.estimatedMinutes} mins</dd>
-        </div>
-        <div className="flex items-center justify-between gap-4 rounded-lg border border-border/60 p-2">
-          <dt className="text-muted-foreground">Total items</dt>
-          <dd className="font-medium">{playlist.totalItems}</dd>
-        </div>
-      </dl>
-    </>
-  );
-
-  if (!playlist.slug) {
-    return (
-      <div className="h-full rounded-2xl border border-border/70 bg-card/70 p-5 shadow-[0_1px_0_0_rgba(0,0,0,0.03)]">
-        {cardBody}
-      </div>
-    );
-  }
-
-  return (
-    <Link
-      href={`/playlists/${playlist.slug}`}
-      className="group block h-full rounded-2xl border border-border/70 bg-card/70 p-5 shadow-[0_1px_0_0_rgba(0,0,0,0.03)] transition hover:-translate-y-0.5 hover:border-foreground/25 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-    >
-      {cardBody}
-      <p className="mt-4 text-sm font-medium text-foreground/80 group-hover:underline">
-        Open playlist
-      </p>
-    </Link>
-  );
 }
 
 export default async function PlaylistsDashboardConceptPage() {
@@ -154,7 +74,11 @@ export default async function PlaylistsDashboardConceptPage() {
           <ul className="grid gap-4 md:grid-cols-3">
             {cards.map((playlist) => (
               <li key={playlist.id}>
-                <PlaylistCard playlist={playlist} />
+                <PlaylistCard
+                  playlist={playlist}
+                  variant="dashboard"
+                  showProgress
+                />
               </li>
             ))}
           </ul>

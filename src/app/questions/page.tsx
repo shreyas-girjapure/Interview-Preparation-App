@@ -1,8 +1,10 @@
 import Link from "next/link";
 
+import { QuestionProgressHeader } from "@/components/question-progress-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
 import {
   listQuestionFilterOptions,
   listQuestions,
@@ -16,6 +18,7 @@ type SearchParams = Promise<{
 }>;
 
 const QUESTIONS_PAGE_SIZE = 10;
+export const dynamic = "force-dynamic";
 
 function getSingleValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -93,6 +96,10 @@ export default async function QuestionsPage({
     QUESTIONS_PAGE_SIZE,
   );
   const visiblePages = getVisiblePages(pagination.page, pagination.totalPages);
+  const { isAuthenticated, statesByQuestionId } =
+    await listViewerQuestionProgressStates(
+      pagination.items.map((question) => question.id),
+    );
 
   const currentQuery = new URLSearchParams();
   if (selectedCategory) currentQuery.set("category", selectedCategory);
@@ -206,19 +213,18 @@ export default async function QuestionsPage({
                     key={question.id}
                     className="rounded-xl border border-border/80 bg-card/70 p-5"
                   >
-                    <div className="mb-3 flex flex-wrap items-center gap-2">
-                      {(question.categories.length
-                        ? question.categories
-                        : [question.category]
-                      ).map((category) => (
-                        <Badge
-                          key={`${question.id}-${category}`}
-                          variant="outline"
-                        >
-                          {category}
-                        </Badge>
-                      ))}
-                    </div>
+                    <QuestionProgressHeader
+                      questionId={question.id}
+                      categories={
+                        question.categories.length
+                          ? question.categories
+                          : [question.category]
+                      }
+                      initialState={statesByQuestionId[question.id] ?? "unread"}
+                      isAuthenticated={isAuthenticated}
+                      showActions={false}
+                      className="mb-3"
+                    />
                     <h2 className="font-serif text-2xl leading-tight">
                       <Link
                         href={`/questions/${question.slug}`}

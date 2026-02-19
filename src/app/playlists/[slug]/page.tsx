@@ -45,10 +45,6 @@ export default async function PlaylistDetailsPage({
     notFound();
   }
 
-  const nextQuestionIndex = playlist.totalItems
-    ? Math.min(playlist.itemsRead, playlist.totalItems - 1)
-    : -1;
-
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
       <article className="mx-auto w-full max-w-6xl px-6 py-14 md:px-10 md:py-20">
@@ -67,7 +63,7 @@ export default async function PlaylistDetailsPage({
               {playlist.accessLevel}
             </Badge>
             <Badge variant="outline">
-              {playlist.itemsRead}/{playlist.totalItems} completed
+              {playlist.completionPercent}% completed
             </Badge>
           </div>
           <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
@@ -76,45 +72,6 @@ export default async function PlaylistDetailsPage({
           <p className="text-base leading-8 text-foreground/70 md:text-lg">
             {playlist.description}
           </p>
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Progress
-              </p>
-              <p className="mt-1 font-medium">{playlist.completionPercent}%</p>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Estimated time
-              </p>
-              <p className="mt-1 font-medium">
-                ~{playlist.estimatedMinutes} mins
-              </p>
-            </div>
-            <div className="rounded-xl border border-border/70 bg-card/70 p-3">
-              <p className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
-                Next up
-              </p>
-              <p className="mt-1 line-clamp-2 font-medium">{playlist.nextUp}</p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            {playlist.nextQuestionSlug ? (
-              <Button asChild>
-                <Link href={`/questions/${playlist.nextQuestionSlug}`}>
-                  Continue with next question
-                </Link>
-              </Button>
-            ) : (
-              <Button asChild>
-                <Link href="/questions">Browse questions</Link>
-              </Button>
-            )}
-            <Button asChild variant="outline">
-              <Link href="/questions">Open full catalog</Link>
-            </Button>
-          </div>
         </header>
 
         <Separator className="mx-auto my-9 max-w-[95ch]" />
@@ -138,9 +95,6 @@ export default async function PlaylistDetailsPage({
                 >
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <Badge variant="outline">#{index + 1}</Badge>
-                    {index === nextQuestionIndex ? (
-                      <Badge variant="secondary">Next up</Badge>
-                    ) : null}
                   </div>
                   <h3 className="font-serif text-xl leading-tight">
                     <Link

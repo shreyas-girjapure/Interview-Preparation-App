@@ -30,7 +30,7 @@ function QuestionCard({ question }: { question: InterviewQuestionSummary }) {
     : [question.category];
 
   return (
-    <article className="rounded-xl border border-border/80 bg-card/70 p-4">
+    <article className="flex h-[220px] flex-col rounded-xl border border-border/80 bg-card/70 p-4">
       <div className="mb-2 flex flex-wrap items-center gap-2">
         {categories.slice(0, 2).map((category) => (
           <Badge key={`${question.id}-${category}`} variant="outline">
@@ -46,7 +46,7 @@ function QuestionCard({ question }: { question: InterviewQuestionSummary }) {
           {question.title}
         </Link>
       </h3>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
+      <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
         {question.summary}
       </p>
     </article>
@@ -93,7 +93,12 @@ export function RelatedQuestionsTwoRowCarousel({
                 <QuestionCard question={topQuestion} />
                 {bottomQuestion ? (
                   <QuestionCard question={bottomQuestion} />
-                ) : null}
+                ) : (
+                  <div
+                    aria-hidden
+                    className="h-[220px] rounded-xl border border-transparent"
+                  />
+                )}
               </div>
             </CarouselItem>
           ))}

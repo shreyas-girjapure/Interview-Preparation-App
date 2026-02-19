@@ -3,16 +3,19 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MarkdownContent } from "@/components/markdown-content";
+import { QuestionProgressHeader } from "@/components/question-progress-header";
 import { RelatedQuestionsTwoRowCarousel } from "@/components/related-questions-two-row-carousel";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
 import {
   getQuestionBySlug,
   listRelatedQuestionsForQuestion,
   listQuestionSlugs,
   listTopicsForQuestion,
 } from "@/lib/interview/questions";
+
+export const dynamic = "force-dynamic";
 
 type Params = Promise<{
   slug: string;
@@ -57,10 +60,12 @@ export default async function QuestionDetailsPage({
     notFound();
   }
 
-  const [linkedTopics, relatedQuestions] = await Promise.all([
-    listTopicsForQuestion(question),
-    listRelatedQuestionsForQuestion(question, 12),
-  ]);
+  const [{ isAuthenticated, statesByQuestionId }, linkedTopics, relatedQuestions] =
+    await Promise.all([
+      listViewerQuestionProgressStates([question.id]),
+      listTopicsForQuestion(question),
+      listRelatedQuestionsForQuestion(question, 12),
+    ]);
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
@@ -72,16 +77,16 @@ export default async function QuestionDetailsPage({
         </div>
 
         <header className="mx-auto w-full max-w-[95ch] space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            {(question.categories.length
-              ? question.categories
-              : [question.category]
-            ).map((category) => (
-              <Badge key={`${question.id}-${category}`} variant="outline">
-                {category}
-              </Badge>
-            ))}
-          </div>
+          <QuestionProgressHeader
+            questionId={question.id}
+            categories={
+              question.categories.length
+                ? question.categories
+                : [question.category]
+            }
+            initialState={statesByQuestionId[question.id] ?? "unread"}
+            isAuthenticated={isAuthenticated}
+          />
           <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
             {question.title}
           </h1>

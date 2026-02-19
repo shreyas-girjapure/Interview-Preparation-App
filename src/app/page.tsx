@@ -1,12 +1,14 @@
 import Link from "next/link";
 
+import { FeaturedContentRail } from "@/components/featured-content-rail";
+import { FeaturedQuestionCard } from "@/components/featured-question-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { listFeaturedQuestions } from "@/lib/interview/questions";
 
 export default async function Home() {
-  const featuredQuestions = await listFeaturedQuestions(3);
+  const featuredQuestions = await listFeaturedQuestions(8);
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
@@ -45,36 +47,23 @@ export default async function Home() {
           <h2 className="font-serif text-3xl tracking-tight">
             Featured Questions
           </h2>
-          <ul className="grid gap-4 md:grid-cols-3">
-            {featuredQuestions.map((question) => (
-              <li
-                key={question.id}
-                className="rounded-xl border border-border/80 bg-card/70 p-4"
-              >
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  {(question.categories.length
-                    ? question.categories
-                    : [question.category]
-                  ).map((category) => (
-                    <Badge key={`${question.id}-${category}`} variant="outline">
-                      {category}
-                    </Badge>
-                  ))}
-                </div>
-                <h3 className="font-serif text-xl leading-snug">
-                  <Link
-                    href={`/questions/${question.slug}`}
-                    className="underline-offset-4 hover:underline"
-                  >
-                    {question.title}
-                  </Link>
-                </h3>
-                <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  {question.summary}
-                </p>
-              </li>
-            ))}
-          </ul>
+
+          {featuredQuestions.length ? (
+            <FeaturedContentRail
+              mode="carousel"
+              gridClassName="md:grid-cols-3"
+              carouselItemClassName="basis-[280px] md:basis-[320px] lg:basis-[360px]"
+            >
+              {featuredQuestions.map((question) => (
+                <FeaturedQuestionCard key={question.id} question={question} />
+              ))}
+            </FeaturedContentRail>
+          ) : (
+            <div className="rounded-xl border border-border/80 bg-card/70 p-4 text-sm text-muted-foreground">
+              Featured questions will appear here once published content is
+              available.
+            </div>
+          )}
         </section>
       </section>
     </main>
