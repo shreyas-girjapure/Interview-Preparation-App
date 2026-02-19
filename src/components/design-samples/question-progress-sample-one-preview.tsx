@@ -27,6 +27,10 @@ export function QuestionProgressSampleOnePreview({
   categories: string[];
 }) {
   const [state, setState] = useState<ProgressState>("unread");
+  const readActive = state === "read";
+  const revisitActive = state === "review_later";
+  const actionButtonBaseClass =
+    "h-8 justify-center rounded-lg border px-2.5 text-sm font-medium shadow-none transition-colors whitespace-nowrap";
 
   function updateState(
     nextState: ProgressState,
@@ -91,22 +95,32 @@ export function QuestionProgressSampleOnePreview({
         </Badge>
       </div>
 
-      <div className="flex flex-wrap gap-2 md:justify-end">
+      <div className="flex flex-wrap items-center gap-1.5 md:justify-end">
         <Button
           size="sm"
-          variant={state === "read" ? "default" : "outline"}
+          variant="outline"
+          className={
+            readActive
+              ? `${actionButtonBaseClass} border-border/70 bg-muted/55 text-foreground hover:bg-muted/75`
+              : `${actionButtonBaseClass} border-border/70 bg-background/80 text-foreground/85 hover:bg-accent/65`
+          }
           onClick={toggleReadState}
         >
           <Check className="mr-1.5 size-4" />
-          {state === "read" ? "Mark unread" : "Mark as read"}
+          {readActive ? "Mark unread" : "Mark as read"}
         </Button>
         <Button
           size="sm"
-          variant={state === "review_later" ? "default" : "outline"}
+          variant="outline"
+          className={
+            revisitActive
+              ? `${actionButtonBaseClass} border-border/70 bg-muted/55 text-foreground hover:bg-muted/75`
+              : `${actionButtonBaseClass} border-border/70 bg-background/80 text-foreground/85 hover:bg-accent/65`
+          }
           onClick={toggleRevisitState}
         >
           <RotateCcw className="mr-1.5 size-4" />
-          {state === "review_later" ? "Remove revisit" : "Revisit later"}
+          {revisitActive ? "Remove revisit" : "Revisit later"}
         </Button>
       </div>
     </div>

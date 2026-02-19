@@ -136,21 +136,24 @@
 }
 
 .interview-prose {
-  font-family: var(--font-reading), serif;
-  color: color-mix(in oklch, var(--foreground) 88%, black);
+  font-family: var(--font-ui), sans-serif;
+  color: color-mix(in oklch, var(--foreground) 94%, black);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
   text-wrap: pretty;
 }
 
 @media (min-width: 768px) {
   .interview-prose {
-    font-size: 1.07rem;
+    font-size: 1.03rem;
   }
 }
 
 .interview-prose :where(h1, h2, h3, h4) {
   font-family: var(--font-reading), serif;
-  color: color-mix(in oklch, var(--foreground) 96%, black);
-  letter-spacing: -0.01em;
+  color: color-mix(in oklch, var(--foreground) 97%, black);
+  letter-spacing: -0.012em;
+  line-height: 1.18;
 }
 
 .interview-prose :where(h2) {
@@ -158,9 +161,10 @@
   margin-bottom: 0.85rem;
 }
 
-.interview-prose :where(p, li) {
-  line-height: 1.72;
-  color: color-mix(in oklch, var(--foreground) 82%, black);
+.interview-prose :where(p, li, blockquote, figcaption, th, td) {
+  font-family: var(--font-ui), sans-serif;
+  line-height: 1.74;
+  color: color-mix(in oklch, var(--foreground) 90%, black);
 }
 
 .interview-prose :where(ul, ol) {
@@ -169,7 +173,18 @@
 }
 
 .interview-prose :where(li) {
-  margin: 0.28rem 0;
+  margin: 0.34rem 0;
+  padding-left: 0.12rem;
+}
+
+.interview-prose :where(ul > li, ol > li)::marker {
+  color: color-mix(in oklch, var(--foreground) 38%, white);
+}
+
+.interview-prose :where(strong) {
+  font-family: var(--font-ui), sans-serif;
+  font-weight: 650;
+  color: color-mix(in oklch, var(--foreground) 95%, black);
 }
 
 .interview-prose :where(a) {
@@ -267,6 +282,21 @@
 }
 
 @media (max-width: 767px) {
+  .mobile-wrap-code
+    :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
+    pre {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+    overflow-x: hidden;
+  }
+
+  .mobile-wrap-code
+    :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
+    code {
+    white-space: inherit;
+  }
+
   .feature-wrap-code-mobile
     :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
     pre {

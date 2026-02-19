@@ -19,18 +19,6 @@ const SYNC_TABLES = [
   "answers",
   "question_topics",
   "topic_edges",
-];
-
-const VERIFY_TABLES = [
-  "users",
-  "user_preferences",
-  "categories",
-  "subcategories",
-  "topics",
-  "questions",
-  "question_topics",
-  "topic_edges",
-  "answers",
   "content_revisions",
   "question_attempts",
   "user_question_progress",
@@ -39,6 +27,8 @@ const VERIFY_TABLES = [
   "playlist_items",
   "user_playlist_progress",
 ];
+
+const VERIFY_TABLES = [...SYNC_TABLES];
 
 function parseEnvFile(filePath) {
   if (!fs.existsSync(filePath)) {
@@ -415,9 +405,16 @@ async function syncPublicData({ sourceClient, targetClient }) {
   );
 
   const deleteOrder = [
+    { table: "user_playlist_progress", requiredColumn: "playlist_id" },
+    { table: "playlist_items", requiredColumn: "playlist_id" },
+    { table: "question_attempts", requiredColumn: "id" },
+    { table: "user_question_progress", requiredColumn: "question_id" },
+    { table: "user_topic_progress", requiredColumn: "topic_id" },
     { table: "question_topics", requiredColumn: "question_id" },
     { table: "topic_edges", requiredColumn: "from_topic_id" },
     { table: "answers", requiredColumn: "id" },
+    { table: "content_revisions", requiredColumn: "id" },
+    { table: "playlists", requiredColumn: "id" },
     { table: "questions", requiredColumn: "id" },
     { table: "topics", requiredColumn: "id" },
     { table: "subcategories", requiredColumn: "id" },
@@ -468,6 +465,41 @@ async function syncPublicData({ sourceClient, targetClient }) {
     "topic_edges",
     sourceRowsByTable.get("topic_edges") ?? [],
   );
+  await insertRows(
+    targetClient,
+    "playlists",
+    sourceRowsByTable.get("playlists") ?? [],
+  );
+  await insertRows(
+    targetClient,
+    "playlist_items",
+    sourceRowsByTable.get("playlist_items") ?? [],
+  );
+  await insertRows(
+    targetClient,
+    "user_question_progress",
+    sourceRowsByTable.get("user_question_progress") ?? [],
+  );
+  await insertRows(
+    targetClient,
+    "user_topic_progress",
+    sourceRowsByTable.get("user_topic_progress") ?? [],
+  );
+  await insertRows(
+    targetClient,
+    "question_attempts",
+    sourceRowsByTable.get("question_attempts") ?? [],
+  );
+  await insertRows(
+    targetClient,
+    "content_revisions",
+    sourceRowsByTable.get("content_revisions") ?? [],
+  );
+  await insertRows(
+    targetClient,
+    "user_playlist_progress",
+    sourceRowsByTable.get("user_playlist_progress") ?? [],
+  );
 
   await upsertRows(targetClient, "questions", sourceQuestions, "id");
   console.log(
@@ -515,6 +547,15 @@ async function main() {
     envPath: targetEnvPath,
     fallbackAccessToken: sourceEnv.accessToken,
   });
+
+  if (
+    sourceEnv.projectRef === targetEnv.projectRef ||
+    sourceEnv.url === targetEnv.url
+  ) {
+    throw new Error(
+      `Source and target resolve to the same project (${sourceEnv.projectRef}). Refusing to run destructive sync.`,
+    );
+  }
 
   const sourceServiceRoleKey = getServiceRoleKey(
     sourceEnv.projectRef,

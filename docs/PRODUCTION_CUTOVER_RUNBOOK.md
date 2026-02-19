@@ -1,6 +1,6 @@
 # Production Cutover Runbook
 
-Last updated: 2026-02-18
+Last updated: 2026-02-19
 
 ## Goal
 
@@ -20,6 +20,10 @@ Ship code from `dev` to `main` and make production DB data match dev DB data in 
 4. Production reset reseeded data:
    - migration seed files inserted baseline content
    - data then diverged from dev until explicit sync
+5. Sync verification mismatches after successful copy:
+   - `user_question_progress`, `playlists`, and `playlist_items` were verified
+     but not included in sync scope
+   - parity check failed even though core content copy succeeded
 
 ## Improvements Added
 
@@ -29,12 +33,17 @@ Ship code from `dev` to `main` and make production DB data match dev DB data in 
    - `npm run db:verify:dev-prod`
    - `npm run db:sync:dev-prod`
    - `npm run db:sync:dev-prod:reset`
+   - `npm run db:cutover:dev-prod`
 3. Guardrail-safe sync logic:
    - downgrade target questions to `draft`
    - delete/insert in FK-safe order
    - insert questions as `draft`, then restore original statuses
 4. Built-in verification:
    - compares dev vs prod row counts for key public tables
+5. Sync scope now matches verify scope:
+   - progress, playlist, revision, and attempts tables are copied too
+6. Safety check against destructive self-sync:
+   - script exits if source and target resolve to the same project
 
 ## Prerequisites
 
@@ -53,18 +62,21 @@ Ship code from `dev` to `main` and make production DB data match dev DB data in 
    - `git checkout main`
    - `git merge --no-ff dev -m "release: promote dev to main"`
    - `git push origin main`
-2. Pre-check DB parity:
-   - `npm run db:verify:dev-prod`
+2. Ensure production schema is up to date:
+   - `npx supabase migration list --linked`
+   - `npx supabase db push --linked --yes`
 3. If parity is not required to preserve existing prod activity:
    - `npm run db:sync:dev-prod:reset`
 4. If schema is already aligned and you only want row-level replacement:
    - `npm run db:sync:dev-prod`
 5. Final guardrail check:
    - `npm run db:smoke:guardrail:prod`
+6. Optional explicit parity confirmation:
+   - `npm run db:verify:dev-prod`
 
 ## Table Scope for Sync
 
-Script syncs these public tables:
+Script syncs and verifies these public tables:
 
 - `users`
 - `user_preferences`
@@ -75,9 +87,6 @@ Script syncs these public tables:
 - `answers`
 - `question_topics`
 - `topic_edges`
-
-Script verifies these too:
-
 - `content_revisions`
 - `question_attempts`
 - `user_question_progress`

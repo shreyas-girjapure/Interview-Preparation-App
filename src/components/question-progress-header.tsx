@@ -1,11 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Check, RotateCcw } from "lucide-react";
 import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   type QuestionProgressState,
@@ -136,11 +134,11 @@ export function QuestionProgressHeader({
   return (
     <div
       className={cn(
-        "flex flex-col gap-3 md:flex-row md:items-center md:justify-between",
+        "flex flex-wrap items-center gap-2.5 md:gap-3 md:justify-between",
         className,
       )}
     >
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         {categories.map((category) => (
           <Badge key={`${questionId}-${category}`} variant="outline">
             {category}
@@ -152,29 +150,45 @@ export function QuestionProgressHeader({
       </div>
 
       {showActions ? (
-        <div className="flex flex-wrap gap-2 md:justify-end">
-          <Button
-            size="sm"
-            variant={readActive ? "default" : "outline"}
-            disabled={isSaving}
-            onClick={() => {
-              void updateState(readActive ? "unread" : "read");
-            }}
-          >
-            <Check className="mr-1.5 size-4" />
-            {readActive ? "Mark unread" : "Mark as read"}
-          </Button>
-          <Button
-            size="sm"
-            variant={revisitActive ? "default" : "outline"}
-            disabled={isSaving}
-            onClick={() => {
-              void updateState(revisitActive ? "unread" : "review_later");
-            }}
-          >
-            <RotateCcw className="mr-1.5 size-4" />
-            {revisitActive ? "Remove revisit" : "Revisit later"}
-          </Button>
+        <div className="ml-auto shrink-0 md:justify-end">
+          <div className="grid grid-cols-2 rounded-full border border-border/70 bg-background/80 p-0.5 sm:p-1">
+            <button
+              type="button"
+              disabled={isSaving}
+              aria-pressed={readActive}
+              aria-label={readActive ? "Mark as unread" : "Mark as read"}
+              onClick={() => {
+                void updateState(readActive ? "unread" : "read");
+              }}
+              className={cn(
+                "inline-flex h-6 min-w-[3.65rem] items-center justify-center rounded-full px-2 text-[0.7rem] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 sm:h-7 sm:min-w-[4.85rem] sm:px-3 sm:text-xs",
+                readActive
+                  ? "bg-muted text-foreground"
+                  : "text-foreground/72 hover:bg-accent/55 hover:text-foreground",
+              )}
+            >
+              Read
+            </button>
+            <button
+              type="button"
+              disabled={isSaving}
+              aria-pressed={revisitActive}
+              aria-label={
+                revisitActive ? "Remove revisit status" : "Mark to revisit"
+              }
+              onClick={() => {
+                void updateState(revisitActive ? "unread" : "review_later");
+              }}
+              className={cn(
+                "inline-flex h-6 min-w-[3.65rem] items-center justify-center rounded-full px-2 text-[0.7rem] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 sm:h-7 sm:min-w-[4.85rem] sm:px-3 sm:text-xs",
+                revisitActive
+                  ? "bg-muted text-foreground"
+                  : "text-foreground/72 hover:bg-accent/55 hover:text-foreground",
+              )}
+            >
+              Revisit
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

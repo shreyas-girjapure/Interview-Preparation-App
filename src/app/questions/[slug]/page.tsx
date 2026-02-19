@@ -116,7 +116,7 @@ export default async function QuestionDetailsPage({
 
         <MarkdownContent
           source={question.answerMarkdown}
-          className="mx-auto w-full max-w-[95ch]"
+          className="mobile-wrap-code mx-auto w-full max-w-[95ch]"
         />
 
         {relatedQuestions.length ? (

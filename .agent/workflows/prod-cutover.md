@@ -32,26 +32,39 @@ git merge --no-ff dev -m "release: promote dev to main"
 git push origin main
 ```
 
-3. Verify dev/prod DB parity:
+3. Ensure linked prod schema is current:
+
+```bash
+npx supabase migration list --linked
+npx supabase db push --linked --yes
+```
+
+4. Verify dev/prod DB parity:
 
 ```bash
 npm run db:verify:dev-prod
 ```
 
-4. If parity is required, sync prod data from dev:
+5. If parity is required, sync prod data from dev:
 
 ```bash
 # schema reset + migration replay + data sync
 npm run db:sync:dev-prod:reset
 ```
 
-5. Run production guardrail smoke:
+6. If schema is aligned and only row-level replacement is needed:
+
+```bash
+npm run db:sync:dev-prod
+```
+
+7. Run production guardrail smoke:
 
 ```bash
 npm run db:smoke:guardrail:prod
 ```
 
-6. Re-check parity:
+8. Re-check parity:
 
 ```bash
 npm run db:verify:dev-prod

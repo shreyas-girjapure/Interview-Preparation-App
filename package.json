@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:lan": "next dev --hostname 0.0.0.0 --port 3000",
     "prepare": "node scripts/setup-git-hooks.mjs",
     "prebuild": "node scripts/prevent-main-branch-deploy.mjs",
     "build": "next build",
@@ -19,7 +20,8 @@
     "db:smoke:guardrail:prod": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref xglbjcouoyjegryxorqo",
     "db:verify:dev-prod": "node scripts/sync-dev-to-prod-public-data.mjs --verify-only",
     "db:sync:dev-prod": "node scripts/sync-dev-to-prod-public-data.mjs",
-    "db:sync:dev-prod:reset": "node scripts/sync-dev-to-prod-public-data.mjs --reset-target"
+    "db:sync:dev-prod:reset": "node scripts/sync-dev-to-prod-public-data.mjs --reset-target",
+    "db:cutover:dev-prod": "npm run db:sync:dev-prod && npm run db:smoke:guardrail:prod && npm run db:verify:dev-prod"
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
