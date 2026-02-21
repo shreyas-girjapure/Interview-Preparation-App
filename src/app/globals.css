@@ -479,7 +479,7 @@
   }
 
   50% {
-    transform: translateY(1.5px);
+    transform: translateY(4px);
   }
 }
 
@@ -514,6 +514,6 @@
   }
 
   50% {
-    transform: translateY(1px);
+    transform: translateY(3px);
   }
 }
