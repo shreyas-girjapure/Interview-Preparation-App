@@ -83,7 +83,7 @@ export default async function QuestionDetailsPage({
             <Link href="/questions">Back to catalog</Link>
           </Button>
 
-          <header className="space-y-5">
+          <header className="page-copy-enter space-y-5">
             <QuestionProgressHeader
               questionId={question.id}
               categories={

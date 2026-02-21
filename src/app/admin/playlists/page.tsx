@@ -272,7 +272,7 @@ export default async function AdminPlaylistsPage() {
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
       <section className="mx-auto w-full max-w-7xl space-y-6 px-6 py-10 md:px-10 md:py-12">
-        <header className="space-y-4">
+        <header className="page-copy-enter space-y-4">
           <Badge variant="secondary" className="rounded-full px-3 py-1">
             Admin - Playlist Composer
           </Badge>

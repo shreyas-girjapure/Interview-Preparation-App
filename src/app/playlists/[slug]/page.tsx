@@ -58,7 +58,7 @@ export default async function PlaylistDetailsPage({
             <Link href="/playlists">Back to playlists</Link>
           </Button>
 
-          <header className="space-y-5">
+          <header className="page-copy-enter space-y-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="capitalize">
                 {playlist.playlistType}

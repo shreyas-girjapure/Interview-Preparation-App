@@ -29,10 +29,12 @@ export function PlaylistCard({
   playlist,
   variant = "featured",
   showProgress = true,
+  staggerIndex,
 }: {
   playlist: PlaylistCardItem;
   variant?: PlaylistCardVariant;
   showProgress?: boolean;
+  staggerIndex?: number;
 }) {
   const itemsRead = playlist.itemsRead ?? 0;
   const completionPercent = playlist.completionPercent ?? 0;
@@ -86,15 +88,30 @@ export function PlaylistCard({
 
   const wrapperClassName = cn(
     "block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    staggerIndex !== undefined &&
+      "animate-in fade-in slide-in-from-bottom-4 fill-mode-both",
     VARIANT_STYLES[variant],
   );
 
+  const animationStyle =
+    staggerIndex !== undefined
+      ? { animationDelay: `${staggerIndex * 100}ms` }
+      : undefined;
+
   if (!playlist.slug) {
-    return <article className={wrapperClassName}>{cardBody}</article>;
+    return (
+      <article className={wrapperClassName} style={animationStyle}>
+        {cardBody}
+      </article>
+    );
   }
 
   return (
-    <Link href={`/playlists/${playlist.slug}`} className={wrapperClassName}>
+    <Link
+      href={`/playlists/${playlist.slug}`}
+      className={wrapperClassName}
+      style={animationStyle}
+    >
       {cardBody}
     </Link>
   );
