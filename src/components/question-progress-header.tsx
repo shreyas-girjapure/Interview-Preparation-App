@@ -151,7 +151,7 @@ export function QuestionProgressHeader({
 
       {showActions ? (
         <div className="ml-auto shrink-0 md:justify-end">
-          <div className="grid grid-cols-2 rounded-full border border-border/70 bg-background/80 p-0.5 sm:p-1">
+          <div className="grid grid-cols-2 rounded-full border border-border/40 bg-background p-1 shadow-sm">
             <button
               type="button"
               disabled={isSaving}
@@ -161,15 +161,15 @@ export function QuestionProgressHeader({
                 void updateState(readActive ? "unread" : "read");
               }}
               className={cn(
-                "relative z-10 inline-flex h-6 min-w-[3.65rem] items-center justify-center rounded-full px-2 text-[0.7rem] font-semibold transition-colors duration-300 disabled:pointer-events-none disabled:opacity-50 sm:h-7 sm:min-w-[4.85rem] sm:px-3 sm:text-xs",
+                "relative z-10 inline-flex h-7 min-w-[4rem] items-center justify-center rounded-full px-3 text-[13px] font-medium transition-all duration-300 disabled:pointer-events-none disabled:opacity-50 sm:h-8 sm:min-w-[5.5rem] sm:px-4 sm:text-sm",
                 readActive
                   ? "text-foreground"
-                  : "text-foreground/72 hover:text-foreground",
+                  : "text-muted-foreground hover:text-foreground/80",
               )}
             >
               Read
               {readActive && (
-                <div className="absolute inset-0 -z-10 rounded-full bg-muted shadow-sm animate-in zoom-in-95 duration-200" />
+                <div className="absolute inset-0 -z-10 rounded-full bg-[oklch(0.97_0.01_95)] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-black/5 animate-in zoom-in-95 duration-200" />
               )}
             </button>
             <button
@@ -183,15 +183,15 @@ export function QuestionProgressHeader({
                 void updateState(revisitActive ? "unread" : "review_later");
               }}
               className={cn(
-                "relative z-10 inline-flex h-6 min-w-[3.65rem] items-center justify-center rounded-full px-2 text-[0.7rem] font-semibold transition-colors duration-300 disabled:pointer-events-none disabled:opacity-50 sm:h-7 sm:min-w-[4.85rem] sm:px-3 sm:text-xs",
+                "relative z-10 inline-flex h-7 min-w-[4rem] items-center justify-center rounded-full px-3 text-[13px] font-medium transition-all duration-300 disabled:pointer-events-none disabled:opacity-50 sm:h-8 sm:min-w-[5.5rem] sm:px-4 sm:text-sm",
                 revisitActive
                   ? "text-foreground"
-                  : "text-foreground/72 hover:text-foreground",
+                  : "text-muted-foreground hover:text-foreground/80",
               )}
             >
               Revisit
               {revisitActive && (
-                <div className="absolute inset-0 -z-10 rounded-full bg-muted shadow-sm animate-in zoom-in-95 duration-200" />
+                <div className="absolute inset-0 -z-10 rounded-full bg-[oklch(0.97_0.01_95)] shadow-[0_1px_3px_rgba(0,0,0,0.05)] border border-black/5 animate-in zoom-in-95 duration-200" />
               )}
             </button>
           </div>

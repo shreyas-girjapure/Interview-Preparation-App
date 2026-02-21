@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowUpRight, Tag } from "lucide-react";
 
 import { MarkdownContent } from "@/components/markdown-content";
 import { QuestionProgressHeader } from "@/components/question-progress-header";
@@ -72,18 +73,9 @@ export default async function QuestionDetailsPage({
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <article className="mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-14">
+      <article className="mx-auto w-full max-w-6xl px-6 pt-6 pb-8 md:px-10 md:pt-10 md:pb-12">
         <div className="mx-auto w-full max-w-[95ch]">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="mb-5 h-auto px-0"
-          >
-            <Link href="/questions">Back to catalog</Link>
-          </Button>
-
-          <header className="page-copy-enter space-y-5">
+          <header className="page-copy-enter space-y-3 mt-2">
             <QuestionProgressHeader
               questionId={question.id}
               categories={
@@ -93,6 +85,7 @@ export default async function QuestionDetailsPage({
               }
               initialState={statesByQuestionId[question.id] ?? "unread"}
               isAuthenticated={isAuthenticated}
+              showActions={false}
             />
             <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
               {question.title}
@@ -100,28 +93,29 @@ export default async function QuestionDetailsPage({
             <p className="text-base leading-8 text-foreground/70 md:text-lg">
               {question.summary}
             </p>
-            {linkedTopics.length ? (
-              <div className="pt-2">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Linked topics
-                </p>
-                <div className="flex flex-wrap gap-2">
+            {linkedTopics.length > 0 && (
+              <div className="pt-2 flex flex-col sm:flex-row justify-end gap-4">
+                <div className="flex flex-wrap items-center sm:justify-end gap-x-6 gap-y-3">
+                  <h3 className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/60 flex items-center gap-1.5 shrink-0">
+                    <Tag className="w-3.5 h-3.5" />
+                    Related Topics
+                  </h3>
                   {linkedTopics.map((topic) => (
-                    <Button
+                    <Link
                       key={topic.slug}
-                      asChild
-                      variant="outline"
-                      size="sm"
+                      href={`/topics/${topic.slug}`}
+                      className="group flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 sm:no-underline sm:hover:underline"
                     >
-                      <Link href={`/topics/${topic.slug}`}>{topic.name}</Link>
-                    </Button>
+                      {topic.name}
+                      <ArrowUpRight className="ml-1 w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                    </Link>
                   ))}
                 </div>
               </div>
-            ) : null}
+            )}
           </header>
 
-          <Separator className="my-7" />
+          <Separator className="my-5" />
 
           <MarkdownContent
             source={question.answerMarkdown}
@@ -130,7 +124,7 @@ export default async function QuestionDetailsPage({
 
           {relatedQuestions.length ? (
             <>
-              <Separator className="my-8" />
+              <Separator className="my-6" />
               <section className="space-y-4">
                 <h2 className="font-serif text-2xl tracking-tight">
                   Related Questions
