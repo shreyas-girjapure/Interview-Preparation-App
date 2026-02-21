@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ChevronRight, Sparkles } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 
 import { QuestionCard } from "@/components/question-card";
 import { Badge } from "@/components/ui/badge";

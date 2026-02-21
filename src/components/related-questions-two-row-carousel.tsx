@@ -1,7 +1,5 @@
 "use client";
 
-import Link from "next/link";
-
 import {
   Carousel,
   CarouselContent,
@@ -9,7 +7,6 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Badge } from "@/components/ui/badge";
 import { QuestionCard } from "@/components/question-card";
 import type { InterviewQuestionSummary } from "@/lib/interview/questions";
 
