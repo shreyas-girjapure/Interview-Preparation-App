@@ -66,7 +66,7 @@ export default async function Home() {
                     Hand-Picked Curations
                   </h2>
                   <p className="text-sm md:text-base text-muted-foreground mt-1">
-                    Our editor's choice for this week's practice.
+                    Our editor&apos;s choice for this week&apos;s practice.
                   </p>
                 </div>
                 <Button asChild variant="ghost" className="hidden md:flex">

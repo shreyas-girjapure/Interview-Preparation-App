@@ -27,11 +27,13 @@ export default async function FeaturedLayoutSamples() {
           <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20 border-transparent">
             Concept 1
           </Badge>
-          <h2 className="mb-8 font-serif text-3xl">The "Bento Box" Grid</h2>
+          <h2 className="mb-8 font-serif text-3xl">
+            The &quot;Bento Box&quot; Grid
+          </h2>
           <p className="mb-8 max-w-3xl text-muted-foreground">
-            Breaks visual monotony by making the first item a large "Hero" card
-            spanning two columns, while the next two stack as supporting squares
-            on the right.
+            Breaks visual monotony by making the first item a large
+            &quot;Hero&quot; card spanning two columns, while the next two stack
+            as supporting squares on the right.
           </p>
 
           <div className="rounded-3xl border border-border/80 bg-[oklch(0.985_0.004_95)] p-8 md:p-12">
@@ -100,7 +102,9 @@ export default async function FeaturedLayoutSamples() {
           <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20 border-transparent">
             Concept 2
           </Badge>
-          <h2 className="mb-8 font-serif text-3xl">The "Dark Mode Pop"</h2>
+          <h2 className="mb-8 font-serif text-3xl">
+            The &quot;Dark Mode Pop&quot;
+          </h2>
           <p className="mb-8 max-w-3xl text-muted-foreground">
             Wraps the section in a deep slate background. Cards use
             high-contrast translucent glassy styles with neon hover states to
@@ -163,7 +167,9 @@ export default async function FeaturedLayoutSamples() {
           <Badge className="mb-4 bg-primary/10 text-primary hover:bg-primary/20 border-transparent">
             Concept 3
           </Badge>
-          <h2 className="mb-8 font-serif text-3xl">The "Split Horizon"</h2>
+          <h2 className="mb-8 font-serif text-3xl">
+            The &quot;Split Horizon&quot;
+          </h2>
           <p className="mb-8 max-w-3xl text-muted-foreground">
             A clean, corporate layout that splits the screen 30/70. A sticky
             sidebar title locks in place while the user scrolls through the

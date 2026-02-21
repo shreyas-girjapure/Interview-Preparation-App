@@ -1,4 +1,7 @@
-import { listFeaturedQuestions } from "@/lib/interview/questions";
+import {
+  listFeaturedQuestions,
+  type InterviewQuestionSummary,
+} from "@/lib/interview/questions";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 import {
@@ -17,7 +20,11 @@ import { AnimatedText } from "@/components/ui/animated-text";
 
 // A helper for consistently displaying the Bento Grid below each Hero variation
 // so we don't have to repeat the 100 lines of Bento Grid code 4 times.
-function BentoGridSection({ featuredQuestions }: { featuredQuestions: any[] }) {
+function BentoGridSection({
+  featuredQuestions,
+}: {
+  featuredQuestions: InterviewQuestionSummary[];
+}) {
   if (!featuredQuestions || featuredQuestions.length === 0) return null;
   return (
     <div className="rounded-3xl border border-border/80 bg-[oklch(0.985_0.004_95)]/80 p-8 md:p-12 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-700 ease-out fill-mode-both">
@@ -25,7 +32,7 @@ function BentoGridSection({ featuredQuestions }: { featuredQuestions: any[] }) {
         <div>
           <h2 className="font-serif text-3xl">Hand-Picked Curations</h2>
           <p className="text-muted-foreground mt-1">
-            Our editor's choice for this week's practice.
+            Our editor&apos;s choice for this week&apos;s practice.
           </p>
         </div>
         <Button asChild variant="ghost" className="hidden md:flex">
@@ -378,7 +385,7 @@ export default async function HomepageLayoutSamples() {
                   <Trophy className="w-6 h-6" />
                 </div>
                 <h3 className="font-serif text-2xl font-bold mb-2">
-                  Editor's Picks
+                  Editor&apos;s Picks
                 </h3>
                 <p className="text-muted-foreground text-sm">
                   Scroll down to see the most critical scenarios asked in

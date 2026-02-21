@@ -15,9 +15,10 @@ export default function ExtendedHoverEffectsSamplePage() {
           Extended Interaction Design Samples
         </h1>
         <p className="text-muted-foreground text-lg">
-          These samples combine your chosen Card ("Neon Focus") and Button
-          ("Lift") styles, along with new suggestions like staggered page
-          entries, input focus states, micro-interactions, and tab sliding.
+          These samples combine your chosen Card (&quot;Neon Focus&quot;) and
+          Button (&quot;Lift&quot;) styles, along with new suggestions like
+          staggered page entries, input focus states, micro-interactions, and
+          tab sliding.
         </p>
       </div>
 
@@ -26,8 +27,8 @@ export default function ExtendedHoverEffectsSamplePage() {
           1. Staggered Page Entry (Cards)
         </h2>
         <p className="text-muted-foreground">
-          Chosen "Neon Focus" Cards animating in one by one. This happens
-          automatically on page load.
+          Chosen &quot;Neon Focus&quot; Cards animating in one by one. This
+          happens automatically on page load.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3].map((i) => (
@@ -51,11 +52,11 @@ export default function ExtendedHoverEffectsSamplePage() {
 
       <div className="space-y-8 border-b pb-12">
         <h2 className="text-2xl font-semibold">
-          2. "Lift" Buttons & Micro-interactions
+          2. &quot;Lift&quot; Buttons & Micro-interactions
         </h2>
         <p className="text-muted-foreground">
-          Your chosen "Lift Button" style alongside icons that respond playfully
-          to clicks and hover.
+          Your chosen &quot;Lift Button&quot; style alongside icons that respond
+          playfully to clicks and hover.
         </p>
         <div className="flex flex-wrap gap-6 items-center">
           <button className="px-6 py-2.5 rounded-full bg-primary text-primary-foreground font-semibold transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/30 active:translate-y-0 active:scale-95">
@@ -145,7 +146,7 @@ export default function ExtendedHoverEffectsSamplePage() {
       <div className="space-y-8 pb-12">
         <h2 className="text-2xl font-semibold">6. Smooth Progress/Meter</h2>
         <p className="text-muted-foreground">
-          Progress bar transitions width smoothly, utilizing Tailwind's
+          Progress bar transitions width smoothly, utilizing Tailwind&apos;s
           transition classes.
         </p>
         <div className="max-w-md w-full">
