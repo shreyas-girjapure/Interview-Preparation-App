@@ -8,35 +8,9 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 
-type RelatedTopicCard = {
-  slug: string;
-  name: string;
-  shortDescription: string;
-};
+import { TopicCard, type TopicCardData } from "@/components/topic-card";
 
-function TopicCard({ topic }: { topic: RelatedTopicCard }) {
-  return (
-    <div className="h-full rounded-2xl border border-border/80 bg-card/70 p-5">
-      <h3 className="font-serif text-xl leading-tight">
-        <Link
-          href={`/topics/${topic.slug}`}
-          className="underline-offset-4 hover:underline"
-        >
-          {topic.name}
-        </Link>
-      </h3>
-      <p className="mt-2 text-sm leading-6 text-muted-foreground">
-        {topic.shortDescription}
-      </p>
-    </div>
-  );
-}
-
-export function RelatedTopicsCarousel({
-  topics,
-}: {
-  topics: RelatedTopicCard[];
-}) {
+export function RelatedTopicsCarousel({ topics }: { topics: TopicCardData[] }) {
   if (!topics.length) {
     return null;
   }
@@ -60,7 +34,7 @@ export function RelatedTopicsCarousel({
         }}
         className="w-full"
       >
-        <CarouselContent>
+        <CarouselContent className="py-2">
           {topics.map((topic) => (
             <CarouselItem key={topic.slug} className="basis-[260px]">
               <TopicCard topic={topic} />

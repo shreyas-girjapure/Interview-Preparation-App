@@ -68,7 +68,7 @@ export function FeaturedContentRail({
         }}
         className="w-full"
       >
-        <CarouselContent className="py-2">
+        <CarouselContent className="py-4">
           {items.map((item, index) => (
             <CarouselItem
               key={keyFromNode(item, index)}

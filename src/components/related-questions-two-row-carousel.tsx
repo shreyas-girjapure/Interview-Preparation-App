@@ -10,6 +10,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { Badge } from "@/components/ui/badge";
+import { QuestionCard } from "@/components/question-card";
 import type { InterviewQuestionSummary } from "@/lib/interview/questions";
 
 type QuestionPair = [InterviewQuestionSummary, InterviewQuestionSummary?];
@@ -22,35 +23,6 @@ function toQuestionPairs(questions: InterviewQuestionSummary[]) {
   }
 
   return pairs;
-}
-
-function QuestionCard({ question }: { question: InterviewQuestionSummary }) {
-  const categories = question.categories.length
-    ? question.categories
-    : [question.category];
-
-  return (
-    <article className="flex h-[220px] flex-col rounded-xl border border-border/80 bg-card/70 p-4">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
-        {categories.slice(0, 2).map((category) => (
-          <Badge key={`${question.id}-${category}`} variant="outline">
-            {category}
-          </Badge>
-        ))}
-      </div>
-      <h3 className="font-serif text-lg leading-tight">
-        <Link
-          href={`/questions/${question.slug}`}
-          className="underline-offset-4 hover:underline"
-        >
-          {question.title}
-        </Link>
-      </h3>
-      <p className="mt-2 line-clamp-3 text-sm leading-6 text-muted-foreground">
-        {question.summary}
-      </p>
-    </article>
-  );
 }
 
 export function RelatedQuestionsTwoRowCarousel({
@@ -83,16 +55,19 @@ export function RelatedQuestionsTwoRowCarousel({
         }}
         className="w-full"
       >
-        <CarouselContent>
+        <CarouselContent className="py-2">
           {pairs.map(([topQuestion, bottomQuestion]) => (
             <CarouselItem
               key={topQuestion.id}
               className="basis-[300px] md:basis-[340px] lg:basis-[360px]"
             >
               <div className="flex h-full flex-col gap-3">
-                <QuestionCard question={topQuestion} />
+                <QuestionCard question={topQuestion} className="h-[220px]" />
                 {bottomQuestion ? (
-                  <QuestionCard question={bottomQuestion} />
+                  <QuestionCard
+                    question={bottomQuestion}
+                    className="h-[220px]"
+                  />
                 ) : (
                   <div
                     aria-hidden

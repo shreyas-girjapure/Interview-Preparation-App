@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { TopicCard } from "@/components/topic-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -126,28 +127,14 @@ export default async function TopicsPage({
           ) : (
             <>
               <ul className="grid gap-4 md:grid-cols-2">
-                {pagination.items.map((topic) => (
-                  <li
-                    key={topic.slug}
-                    className="rounded-xl border border-border/80 bg-card/70 p-5"
-                  >
-                    <div className="mb-3 flex items-center gap-2">
-                      <Badge variant="outline">
-                        {topic.questionCount} question
-                        {topic.questionCount === 1 ? "" : "s"}
-                      </Badge>
-                    </div>
-                    <h2 className="font-serif text-2xl leading-tight">
-                      <Link
-                        href={`/topics/${topic.slug}`}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {topic.name}
-                      </Link>
-                    </h2>
-                    <p className="mt-2 text-base leading-7 text-muted-foreground">
-                      {topic.shortDescription}
-                    </p>
+                {pagination.items.map((topic, index) => (
+                  <li key={topic.slug} className="block">
+                    <TopicCard
+                      topic={topic}
+                      staggerIndex={index}
+                      showQuestionCount={true}
+                      layout="list"
+                    />
                   </li>
                 ))}
               </ul>

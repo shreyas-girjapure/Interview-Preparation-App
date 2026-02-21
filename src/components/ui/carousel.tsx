@@ -149,8 +149,8 @@ function CarouselContent({ className, ...props }: React.ComponentProps<"div">) {
       ref={carouselRef}
       className={cn(
         orientation === "horizontal"
-          ? "overflow-x-hidden overflow-y-visible"
-          : "overflow-y-hidden overflow-x-visible",
+          ? "overflow-x-clip overflow-y-visible"
+          : "overflow-y-clip overflow-x-visible",
       )}
     >
       <div

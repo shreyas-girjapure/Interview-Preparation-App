@@ -161,13 +161,16 @@ export function QuestionProgressHeader({
                 void updateState(readActive ? "unread" : "read");
               }}
               className={cn(
-                "inline-flex h-6 min-w-[3.65rem] items-center justify-center rounded-full px-2 text-[0.7rem] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 sm:h-7 sm:min-w-[4.85rem] sm:px-3 sm:text-xs",
+                "relative z-10 inline-flex h-6 min-w-[3.65rem] items-center justify-center rounded-full px-2 text-[0.7rem] font-semibold transition-colors duration-300 disabled:pointer-events-none disabled:opacity-50 sm:h-7 sm:min-w-[4.85rem] sm:px-3 sm:text-xs",
                 readActive
-                  ? "bg-muted text-foreground"
-                  : "text-foreground/72 hover:bg-accent/55 hover:text-foreground",
+                  ? "text-foreground"
+                  : "text-foreground/72 hover:text-foreground",
               )}
             >
               Read
+              {readActive && (
+                <div className="absolute inset-0 -z-10 rounded-full bg-muted shadow-sm animate-in zoom-in-95 duration-200" />
+              )}
             </button>
             <button
               type="button"
@@ -180,13 +183,16 @@ export function QuestionProgressHeader({
                 void updateState(revisitActive ? "unread" : "review_later");
               }}
               className={cn(
-                "inline-flex h-6 min-w-[3.65rem] items-center justify-center rounded-full px-2 text-[0.7rem] font-semibold transition-colors disabled:pointer-events-none disabled:opacity-50 sm:h-7 sm:min-w-[4.85rem] sm:px-3 sm:text-xs",
+                "relative z-10 inline-flex h-6 min-w-[3.65rem] items-center justify-center rounded-full px-2 text-[0.7rem] font-semibold transition-colors duration-300 disabled:pointer-events-none disabled:opacity-50 sm:h-7 sm:min-w-[4.85rem] sm:px-3 sm:text-xs",
                 revisitActive
-                  ? "bg-muted text-foreground"
-                  : "text-foreground/72 hover:bg-accent/55 hover:text-foreground",
+                  ? "text-foreground"
+                  : "text-foreground/72 hover:text-foreground",
               )}
             >
               Revisit
+              {revisitActive && (
+                <div className="absolute inset-0 -z-10 rounded-full bg-muted shadow-sm animate-in zoom-in-95 duration-200" />
+              )}
             </button>
           </div>
         </div>

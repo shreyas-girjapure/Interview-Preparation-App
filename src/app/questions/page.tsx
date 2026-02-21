@@ -10,6 +10,7 @@ import {
   listQuestions,
 } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
+import { QuestionCard } from "@/components/question-card";
 
 type SearchParams = Promise<{
   category?: string | string[];
@@ -208,34 +209,18 @@ export default async function QuestionsPage({
           ) : (
             <>
               <ul className="space-y-4">
-                {pagination.items.map((question) => (
-                  <li
-                    key={question.id}
-                    className="rounded-xl border border-border/80 bg-card/70 p-5"
-                  >
-                    <QuestionProgressHeader
-                      questionId={question.id}
-                      categories={
-                        question.categories.length
-                          ? question.categories
-                          : [question.category]
+                {pagination.items.map((question, index) => (
+                  <li key={question.id} className="block">
+                    <QuestionCard
+                      question={question}
+                      staggerIndex={index}
+                      showProgress={true}
+                      layout="list"
+                      progressState={
+                        statesByQuestionId[question.id] ?? "unread"
                       }
-                      initialState={statesByQuestionId[question.id] ?? "unread"}
                       isAuthenticated={isAuthenticated}
-                      showActions={false}
-                      className="mb-3"
                     />
-                    <h2 className="font-serif text-2xl leading-tight">
-                      <Link
-                        href={`/questions/${question.slug}`}
-                        className="underline-offset-4 hover:underline"
-                      >
-                        {question.title}
-                      </Link>
-                    </h2>
-                    <p className="mt-2 text-base leading-7 text-muted-foreground">
-                      {question.summary}
-                    </p>
                   </li>
                 ))}
               </ul>

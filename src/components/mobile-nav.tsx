@@ -39,7 +39,7 @@ export function MobileNav({
           variant="outline"
           size="icon-sm"
           aria-label="Open navigation menu"
-          className="border-border/70"
+          className="border-border/70 active:scale-90 transition-transform"
         >
           <Menu className="size-4" />
         </Button>
