@@ -85,8 +85,8 @@ export default async function QuestionsPage({
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-10 md:py-12">
-        <header className="page-copy-enter space-y-4">
+      <div className="mx-auto w-full max-w-7xl px-6 py-6 md:px-10 md:py-8">
+        <header className="page-copy-enter space-y-3">
           <Badge
             variant="secondary"
             className="rounded-full px-3 py-1 text-xs tracking-wide uppercase"
@@ -104,8 +104,8 @@ export default async function QuestionsPage({
 
         <Separator className="my-6" />
 
-        <section className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+        <section className="pt-2">
+          <p className="text-sm text-muted-foreground mb-5">
             Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
             question{pagination.total === 1 ? "" : "s"}
           </p>

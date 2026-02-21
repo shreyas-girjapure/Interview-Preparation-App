@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
@@ -26,7 +27,7 @@ export function TopicCard({
 }: TopicCardProps) {
   const baseClasses = cn(
     "relative h-full flex flex-col rounded-2xl border border-border/80 transition-all duration-300 ease-out will-change-transform shadow-sm shadow-transparent hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 active:translate-y-0 active:scale-95 active:shadow-none hover:z-10",
-    layout === "list" ? "bg-card/70 p-5" : "bg-card/70 p-5",
+    layout === "list" ? "bg-card/70 p-5" : "bg-card/70 p-4",
   );
 
   const staggerClasses =
@@ -44,17 +45,18 @@ export function TopicCard({
 
   return (
     <div
-      className={cn(baseClasses, staggerClasses, className)}
+      className={cn(baseClasses, staggerClasses, className, "group")}
       style={
         staggerIndex !== undefined
           ? { animationDelay: `${staggerIndex * 100}ms` }
           : undefined
       }
     >
+      <ArrowUpRight className="absolute pointer-events-none top-4 right-4 sm:top-5 sm:right-5 w-4 h-4 text-muted-foreground/30 transition-transform group-hover:text-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
       {showQuestionCount && topic.questionCount !== undefined && (
         <div
           className={cn(
-            "flex items-center gap-2",
+            "flex items-center gap-2 pr-8",
             layout === "list" ? "mb-3" : "mb-2",
           )}
         >
@@ -66,14 +68,14 @@ export function TopicCard({
       )}
       <HeadingTag
         className={cn(
-          "font-serif",
+          "font-serif pr-8",
           headingSize,
           layout === "list" ? "leading-snug" : "leading-tight",
         )}
       >
         <Link
           href={`/topics/${topic.slug}`}
-          className="underline-offset-4 hover:underline"
+          className="after:absolute after:inset-0"
           prefetch={false}
         >
           {topic.name}

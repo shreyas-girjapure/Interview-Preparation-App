@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { QuestionProgressHeader } from "@/components/question-progress-header";
 import type { InterviewQuestionSummary } from "@/lib/interview/questions";
@@ -55,13 +56,21 @@ export function QuestionCard({
 
   return (
     <article
-      className={cn(baseClasses, staggerClasses, className)}
+      className={cn(baseClasses, staggerClasses, className, "group")}
       style={
         staggerIndex !== undefined
           ? { animationDelay: `${staggerIndex * 100}ms` }
           : undefined
       }
     >
+      <ArrowUpRight
+        className={cn(
+          "absolute pointer-events-none text-muted-foreground/30 transition-transform group-hover:text-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5",
+          layout === "list"
+            ? "top-5 right-5 w-4 h-4"
+            : "top-4 right-4 w-3.5 h-3.5",
+        )}
+      />
       {showProgress && progressState ? (
         <QuestionProgressHeader
           questionId={question.id}
@@ -74,7 +83,7 @@ export function QuestionCard({
       ) : (
         <div
           className={cn(
-            "flex flex-wrap items-center gap-2",
+            "flex flex-wrap items-center gap-2 pr-8",
             layout === "list" || featured ? "mb-3" : "mb-2",
           )}
         >
@@ -95,7 +104,7 @@ export function QuestionCard({
       >
         <Link
           href={`/questions/${question.slug}`}
-          className="underline-offset-4 hover:underline"
+          className="after:absolute after:inset-0"
           prefetch={false}
         >
           {question.title}

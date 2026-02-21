@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -41,7 +42,8 @@ export function PlaylistCard({
 
   const cardBody = (
     <>
-      <div className="mb-3 flex flex-wrap gap-2">
+      <ArrowUpRight className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 w-4 h-4 pointer-events-none text-muted-foreground/30 transition-transform group-hover:text-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+      <div className="mb-3 flex flex-wrap gap-2 pr-8">
         <Badge variant="outline" className="capitalize">
           {playlist.playlistType}
         </Badge>
@@ -50,7 +52,7 @@ export function PlaylistCard({
         </Badge>
       </div>
 
-      <h3 className="font-serif text-2xl leading-tight tracking-tight">
+      <h3 className="font-serif text-2xl leading-tight tracking-tight pr-8">
         {playlist.title}
       </h3>
 
@@ -87,7 +89,7 @@ export function PlaylistCard({
   );
 
   const wrapperClassName = cn(
-    "block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    "relative block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
     staggerIndex !== undefined &&
       "animate-in fade-in slide-in-from-bottom-4 fill-mode-both",
     VARIANT_STYLES[variant],
@@ -109,7 +111,7 @@ export function PlaylistCard({
   return (
     <Link
       href={`/playlists/${playlist.slug}`}
-      className={wrapperClassName}
+      className={cn("group", wrapperClassName)}
       style={animationStyle}
     >
       {cardBody}
