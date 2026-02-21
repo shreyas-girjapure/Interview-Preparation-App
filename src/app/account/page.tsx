@@ -86,7 +86,7 @@ export default async function AccountPage() {
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <section className="mx-auto w-full max-w-3xl px-6 py-14 md:py-20">
+      <section className="mx-auto w-full max-w-3xl px-6 py-10 md:py-14">
         <header className="space-y-4">
           <Badge
             variant="secondary"
@@ -99,7 +99,7 @@ export default async function AccountPage() {
           </h1>
         </header>
 
-        <Separator className="my-8" />
+        <Separator className="my-6" />
 
         <div className="space-y-4 rounded-xl border border-border/80 bg-card/70 p-6">
           <div className="space-y-1">

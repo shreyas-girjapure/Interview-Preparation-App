@@ -72,64 +72,74 @@ export default async function QuestionDetailsPage({
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <article className="mx-auto w-full max-w-6xl px-6 py-14 md:px-10 md:py-20">
+      <article className="mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-14">
         <div className="mx-auto w-full max-w-[95ch]">
-          <Button asChild variant="ghost" size="sm" className="mb-5 -ml-2">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="mb-5 h-auto px-0"
+          >
             <Link href="/questions">Back to catalog</Link>
           </Button>
-        </div>
 
-        <header className="mx-auto w-full max-w-[95ch] space-y-5">
-          <QuestionProgressHeader
-            questionId={question.id}
-            categories={
-              question.categories.length
-                ? question.categories
-                : [question.category]
-            }
-            initialState={statesByQuestionId[question.id] ?? "unread"}
-            isAuthenticated={isAuthenticated}
-          />
-          <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
-            {question.title}
-          </h1>
-          <p className="text-base leading-8 text-foreground/70 md:text-lg">
-            {question.summary}
-          </p>
-          {linkedTopics.length ? (
-            <div className="pt-2">
-              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Linked topics
-              </p>
-              <div className="flex flex-wrap gap-2">
-                {linkedTopics.map((topic) => (
-                  <Button key={topic.slug} asChild variant="outline" size="sm">
-                    <Link href={`/topics/${topic.slug}`}>{topic.name}</Link>
-                  </Button>
-                ))}
+          <header className="space-y-5">
+            <QuestionProgressHeader
+              questionId={question.id}
+              categories={
+                question.categories.length
+                  ? question.categories
+                  : [question.category]
+              }
+              initialState={statesByQuestionId[question.id] ?? "unread"}
+              isAuthenticated={isAuthenticated}
+            />
+            <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
+              {question.title}
+            </h1>
+            <p className="text-base leading-8 text-foreground/70 md:text-lg">
+              {question.summary}
+            </p>
+            {linkedTopics.length ? (
+              <div className="pt-2">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Linked topics
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {linkedTopics.map((topic) => (
+                    <Button
+                      key={topic.slug}
+                      asChild
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Link href={`/topics/${topic.slug}`}>{topic.name}</Link>
+                    </Button>
+                  ))}
+                </div>
               </div>
-            </div>
+            ) : null}
+          </header>
+
+          <Separator className="my-7" />
+
+          <MarkdownContent
+            source={question.answerMarkdown}
+            className="mobile-wrap-code w-full"
+          />
+
+          {relatedQuestions.length ? (
+            <>
+              <Separator className="my-8" />
+              <section className="space-y-4">
+                <h2 className="font-serif text-2xl tracking-tight">
+                  Related Questions
+                </h2>
+                <RelatedQuestionsTwoRowCarousel questions={relatedQuestions} />
+              </section>
+            </>
           ) : null}
-        </header>
-
-        <Separator className="mx-auto my-9 max-w-[95ch]" />
-
-        <MarkdownContent
-          source={question.answerMarkdown}
-          className="mobile-wrap-code mx-auto w-full max-w-[95ch]"
-        />
-
-        {relatedQuestions.length ? (
-          <>
-            <Separator className="mx-auto my-10 max-w-[95ch]" />
-            <section className="mx-auto w-full max-w-[95ch] space-y-4">
-              <h2 className="font-serif text-2xl tracking-tight">
-                Related Questions
-              </h2>
-              <RelatedQuestionsTwoRowCarousel questions={relatedQuestions} />
-            </section>
-          </>
-        ) : null}
+        </div>
       </article>
     </main>
   );

@@ -8,7 +8,6 @@ import { listTopics } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 
 type SearchParams = Promise<{
-  search?: string | string[];
   page?: string | string[];
 }>;
 
@@ -59,18 +58,16 @@ export default async function TopicsPage({
   searchParams: SearchParams;
 }) {
   const rawParams = await searchParams;
-  const search = getSingleValue(rawParams.search)?.trim() ?? "";
   const requestedPage = parsePositiveInt(getSingleValue(rawParams.page), 1);
-  const topics = await listTopics({ search });
+  const topics = await listTopics();
   const pagination = paginateItems(topics, requestedPage, TOPICS_PAGE_SIZE);
   const visiblePages = getVisiblePages(pagination.page, pagination.totalPages);
 
   const currentQuery = new URLSearchParams();
-  if (search) currentQuery.set("search", search);
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <div className="mx-auto w-full max-w-7xl px-6 py-12 md:px-10 md:py-16">
+      <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-10 md:py-12">
         <header className="space-y-4">
           <Badge
             variant="secondary"
@@ -87,32 +84,9 @@ export default async function TopicsPage({
           </p>
         </header>
 
-        <Separator className="my-8" />
+        <Separator className="my-6" />
 
         <section className="space-y-6">
-          <form className="flex flex-col gap-3 rounded-xl border border-border/80 bg-card/70 p-4 md:flex-row md:items-center">
-            <label htmlFor="search" className="text-sm font-medium">
-              Search topics
-            </label>
-            <input
-              id="search"
-              name="search"
-              defaultValue={search}
-              placeholder="e.g. event loop, caching, reconciliation"
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring md:max-w-md"
-            />
-            <Button type="submit" size="sm" className="md:ml-auto">
-              Apply
-            </Button>
-            {search ? (
-              <Button asChild variant="outline" size="sm">
-                <Link href="/topics" scroll={false}>
-                  Clear
-                </Link>
-              </Button>
-            ) : null}
-          </form>
-
           <p className="text-sm text-muted-foreground">
             Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
             topic{pagination.total === 1 ? "" : "s"}
@@ -121,7 +95,7 @@ export default async function TopicsPage({
           {pagination.total === 0 ? (
             <div className="rounded-xl border border-border/80 bg-card/70 p-6">
               <p className="text-muted-foreground">
-                No topics match this search. Try a broader term.
+                No topics are available yet.
               </p>
             </div>
           ) : (

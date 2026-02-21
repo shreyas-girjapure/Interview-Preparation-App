@@ -51,53 +51,55 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <article className="mx-auto w-full max-w-6xl px-6 py-14 md:px-10 md:py-20">
+      <article className="mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-14">
         <div className="mx-auto w-full max-w-[95ch]">
-          <Button asChild variant="ghost" size="sm" className="mb-5 -ml-2">
+          <Button
+            asChild
+            variant="ghost"
+            size="sm"
+            className="mb-5 h-auto px-0"
+          >
             <Link href="/topics">Back to topics</Link>
           </Button>
-        </div>
 
-        <header className="mx-auto w-full max-w-[95ch] space-y-5">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">
-              {topic.questionCount} related question
-              {topic.questionCount === 1 ? "" : "s"}
-            </Badge>
-          </div>
-          <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
-            {topic.name}
-          </h1>
-          <p className="text-base leading-8 text-foreground/70 md:text-lg">
-            {topic.shortDescription}
-          </p>
-        </header>
-
-        <Separator className="mx-auto my-9 max-w-[95ch]" />
-
-        <MarkdownContent
-          source={topic.overviewMarkdown}
-          className="mx-auto w-full max-w-[95ch]"
-        />
-
-        <Separator className="mx-auto my-10 max-w-[95ch]" />
-
-        <section className="mx-auto w-full max-w-[95ch] space-y-4">
-          <h2 className="font-serif text-2xl tracking-tight">
-            Related questions
-          </h2>
-          {topic.relatedQuestions.length === 0 ? (
-            <div className="rounded-xl border border-border/80 bg-card/70 p-4">
-              <p className="text-sm text-muted-foreground">
-                No questions are linked to this topic yet.
-              </p>
+          <header className="space-y-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary">
+                {topic.questionCount} related question
+                {topic.questionCount === 1 ? "" : "s"}
+              </Badge>
             </div>
-          ) : (
-            <RelatedQuestionsTwoRowCarousel
-              questions={topic.relatedQuestions}
-            />
-          )}
-        </section>
+            <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
+              {topic.name}
+            </h1>
+            <p className="text-base leading-8 text-foreground/70 md:text-lg">
+              {topic.shortDescription}
+            </p>
+          </header>
+
+          <Separator className="my-7" />
+
+          <MarkdownContent source={topic.overviewMarkdown} className="w-full" />
+
+          <Separator className="my-8" />
+
+          <section className="space-y-4">
+            <h2 className="font-serif text-2xl tracking-tight">
+              Related questions
+            </h2>
+            {topic.relatedQuestions.length === 0 ? (
+              <div className="rounded-xl border border-border/80 bg-card/70 p-4">
+                <p className="text-sm text-muted-foreground">
+                  No questions are linked to this topic yet.
+                </p>
+              </div>
+            ) : (
+              <RelatedQuestionsTwoRowCarousel
+                questions={topic.relatedQuestions}
+              />
+            )}
+          </section>
+        </div>
       </article>
     </main>
   );

@@ -51,7 +51,7 @@ export default async function LoginPage({
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <section className="mx-auto w-full max-w-lg px-6 py-16 md:py-24">
+      <section className="mx-auto w-full max-w-lg px-6 py-12 md:py-14">
         <div className="mb-8 text-center">
           <h1 className="font-serif text-4xl tracking-tight md:text-5xl">
             Welcome back.

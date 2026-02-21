@@ -15,13 +15,13 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-background">
-      <section className="relative overflow-hidden w-full pb-32 pt-14 md:pt-24">
+      <section className="relative w-full overflow-hidden pt-12 pb-16 md:pt-20 md:pb-20">
         {/* Subtle Background Texture */}
         <div className="absolute inset-0 z-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px] opacity-40 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 md:px-6">
           {/* Hero Section */}
-          <div className="text-center mb-12 md:mb-24 flex flex-col items-center">
+          <div className="mb-8 flex flex-col items-center text-center md:mb-14">
             <h1 className="max-w-4xl font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12] sm:leading-[1.1] tracking-tight text-foreground mb-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both [text-wrap:balance]">
               Prepare for interviews with{" "}
               <AnimatedText

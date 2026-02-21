@@ -23,7 +23,7 @@ export default async function AuthErrorPage({
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <section className="mx-auto w-full max-w-3xl px-6 py-14 md:py-20">
+      <section className="mx-auto w-full max-w-3xl px-6 py-10 md:py-14">
         <div className="space-y-5 rounded-xl border border-border/80 bg-card/70 p-6">
           <Badge variant="destructive">Authentication Error</Badge>
           <h1 className="font-serif text-4xl tracking-tight">Sign-in failed</h1>

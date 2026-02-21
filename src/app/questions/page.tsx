@@ -4,16 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
-import {
-  listQuestionFilterOptions,
-  listQuestions,
-} from "@/lib/interview/questions";
+import { listQuestions } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 import { QuestionCard } from "@/components/question-card";
 
 type SearchParams = Promise<{
-  category?: string | string[];
-  search?: string | string[];
   page?: string | string[];
 }>;
 
@@ -27,17 +22,10 @@ function getSingleValue(value: string | string[] | undefined) {
 function getHref(
   current: URLSearchParams,
   updates: {
-    category?: string | null;
     page?: number | null;
   },
 ) {
   const next = new URLSearchParams(current.toString());
-
-  if (updates.category === null) {
-    next.delete("category");
-  } else if (updates.category !== undefined) {
-    next.set("category", updates.category);
-  }
 
   if (updates.page === null) {
     next.delete("page");
@@ -78,17 +66,9 @@ export default async function QuestionsPage({
 }) {
   const rawParams = await searchParams;
 
-  const selectedCategory = getSingleValue(rawParams.category)?.toLowerCase();
-  const search = getSingleValue(rawParams.search)?.trim() ?? "";
   const requestedPage = parsePositiveInt(getSingleValue(rawParams.page), 1);
 
-  const [{ categories }, questions] = await Promise.all([
-    listQuestionFilterOptions(),
-    listQuestions({
-      category: selectedCategory,
-      search,
-    }),
-  ]);
+  const questions = await listQuestions();
 
   const pagination = paginateItems(
     questions,
@@ -102,12 +82,10 @@ export default async function QuestionsPage({
     );
 
   const currentQuery = new URLSearchParams();
-  if (selectedCategory) currentQuery.set("category", selectedCategory);
-  if (search) currentQuery.set("search", search);
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <div className="mx-auto w-full max-w-7xl px-6 py-12 md:px-10 md:py-16">
+      <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-10 md:py-12">
         <header className="space-y-4">
           <Badge
             variant="secondary"
@@ -119,79 +97,12 @@ export default async function QuestionsPage({
             Practice with focused interview questions
           </h1>
           <p className="max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
-            Filter by category, then open any question to read a complete
-            interview-style answer with code where relevant.
+            Open any question to read a complete interview-style answer with
+            code where relevant.
           </p>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/topics">Prefer topic-first? Browse topics</Link>
-          </Button>
         </header>
 
-        <Separator className="my-8" />
-
-        <section className="space-y-6">
-          <form className="flex flex-col gap-3 rounded-xl border border-border/80 bg-card/70 p-4 md:flex-row md:items-center">
-            <label htmlFor="search" className="text-sm font-medium">
-              Search
-            </label>
-            <input
-              id="search"
-              name="search"
-              defaultValue={search}
-              placeholder="e.g. event loop, caching, SQL"
-              className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring md:max-w-md"
-            />
-            {selectedCategory ? (
-              <input type="hidden" name="category" value={selectedCategory} />
-            ) : null}
-            <Button type="submit" size="sm" className="md:ml-auto">
-              Apply
-            </Button>
-          </form>
-
-          <div className="space-y-3">
-            <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Categories
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                asChild
-                size="sm"
-                variant={selectedCategory ? "outline" : "default"}
-              >
-                <Link
-                  href={getHref(currentQuery, { category: null, page: null })}
-                  scroll={false}
-                >
-                  All categories
-                </Link>
-              </Button>
-              {categories.map((category) => {
-                const active = selectedCategory === category.value;
-                return (
-                  <Button
-                    key={category.value}
-                    asChild
-                    size="sm"
-                    variant={active ? "default" : "outline"}
-                  >
-                    <Link
-                      href={getHref(currentQuery, {
-                        category: category.value,
-                        page: null,
-                      })}
-                      scroll={false}
-                    >
-                      {category.label} ({category.count})
-                    </Link>
-                  </Button>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <Separator className="my-8" />
+        <Separator className="my-6" />
 
         <section className="space-y-4">
           <p className="text-sm text-muted-foreground">
@@ -201,8 +112,7 @@ export default async function QuestionsPage({
           {pagination.total === 0 ? (
             <div className="rounded-xl border border-border/80 bg-card/70 p-6">
               <p className="text-muted-foreground">
-                No questions match the current filters. Try clearing one filter
-                or broadening your search.
+                No questions are available yet.
               </p>
             </div>
           ) : (
