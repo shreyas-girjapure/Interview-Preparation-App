@@ -31,7 +31,7 @@ export function QuestionCard({
     : [question.category];
 
   const baseClasses = cn(
-    "relative flex flex-col h-full rounded-xl border border-border/80 transition-all duration-300 ease-out will-change-transform shadow-sm shadow-transparent hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 active:translate-y-0 active:scale-95 active:shadow-none hover:z-10",
+    "relative flex flex-col h-full rounded-xl border border-border/80 transition-all duration-300 ease-out will-change-transform shadow-sm shadow-transparent hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 active:translate-y-0 active:scale-95 active:shadow-none hover:z-10",
     layout === "list" ? "bg-card/70 p-5" : "bg-card/70 p-4",
   );
 

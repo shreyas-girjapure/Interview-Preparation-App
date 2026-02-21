@@ -25,7 +25,7 @@ export function TopicCard({
   showQuestionCount = false,
 }: TopicCardProps) {
   const baseClasses = cn(
-    "relative h-full flex flex-col rounded-2xl border border-border/80 transition-all duration-300 ease-out will-change-transform shadow-sm shadow-transparent hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 active:translate-y-0 active:scale-95 active:shadow-none hover:z-10",
+    "relative h-full flex flex-col rounded-2xl border border-border/80 transition-all duration-300 ease-out will-change-transform shadow-sm shadow-transparent hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 active:translate-y-0 active:scale-95 active:shadow-none hover:z-10",
     layout === "list" ? "bg-card/70 p-5" : "bg-card/70 p-5",
   );
 

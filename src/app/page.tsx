@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronRight, ArrowUpRight } from "lucide-react";
 
 import { QuestionCard } from "@/components/question-card";
 import { Badge } from "@/components/ui/badge";
@@ -15,14 +15,14 @@ export default async function Home() {
 
   return (
     <main className="min-h-screen bg-background">
-      <section className="relative w-full overflow-hidden pt-12 pb-16 md:pt-20 md:pb-20">
+      <section className="relative w-full overflow-hidden pt-8 pb-10 md:pt-14 md:pb-12">
         {/* Subtle Background Texture */}
         <div className="absolute inset-0 z-0 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:20px_20px] opacity-40 [mask-image:linear-gradient(to_bottom,white,transparent)]" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-4 md:px-6">
           {/* Hero Section */}
-          <div className="mb-8 flex flex-col items-center text-center md:mb-14">
-            <h1 className="max-w-4xl font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12] sm:leading-[1.1] tracking-tight text-foreground mb-6 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both [text-wrap:balance]">
+          <div className="mb-4 flex flex-col items-center text-center md:mb-8">
+            <h1 className="max-w-4xl font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl leading-[1.12] sm:leading-[1.1] tracking-tight text-foreground mb-4 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-150 ease-out fill-mode-both [text-wrap:balance]">
               Prepare for interviews with{" "}
               <AnimatedText
                 phrases={animatedWords}
@@ -30,37 +30,34 @@ export default async function Home() {
               />
             </h1>
 
-            <p className="max-w-2xl text-[15px] sm:text-lg md:text-xl leading-relaxed text-muted-foreground mb-8 md:mb-10 px-2 sm:px-0 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300 ease-out fill-mode-both">
+            <p className="max-w-2xl text-[15px] sm:text-lg md:text-xl leading-relaxed text-muted-foreground mb-5 md:mb-6 px-2 sm:px-0 animate-in fade-in slide-in-from-bottom-6 duration-700 delay-300 ease-out fill-mode-both">
               Stop guessing what interviewers want. Practice with concise
               explanations, realistic code snippets, and deep-dive conceptual
               learning paths.
             </p>
 
-            <div className="flex flex-col sm:flex-row w-full sm:w-auto justify-center gap-3 sm:gap-4 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 ease-out fill-mode-both px-2 sm:px-0">
-              <Button
-                asChild
-                size="lg"
-                className="rounded-full h-12 sm:h-12 px-6 sm:px-8 text-[15px] sm:text-base w-full sm:w-auto"
+            <div className="flex flex-row flex-wrap items-center justify-center gap-4 sm:gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-500 ease-out fill-mode-both px-2 w-full mt-2 sm:mt-2">
+              <Link
+                href="/topics"
+                className="group flex items-center justify-center gap-1.5 text-[15px] sm:text-lg font-medium text-foreground hover:text-primary transition-colors underline underline-offset-4 sm:no-underline relative sm:after:absolute sm:after:bottom-0 sm:after:left-0 sm:after:h-[1.5px] sm:after:w-full sm:after:origin-bottom-right sm:after:scale-x-0 sm:after:bg-primary sm:after:transition-transform sm:after:duration-300 sm:hover:after:origin-bottom-left sm:hover:after:scale-x-100"
               >
-                <Link href="/topics">
-                  Start Learning <ArrowRight className="ml-2 h-4 w-4" />
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="rounded-full h-12 sm:h-12 px-6 sm:px-8 text-[15px] sm:text-base bg-background/50 backdrop-blur-sm w-full sm:w-auto"
+                Explore Topics
+                <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </Link>
+              <Link
+                href="/questions"
+                className="group flex items-center justify-center gap-1.5 text-[15px] sm:text-lg text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 sm:no-underline relative sm:after:absolute sm:after:bottom-0 sm:after:left-0 sm:after:h-[1.5px] sm:after:w-full sm:after:origin-bottom-right sm:after:scale-x-0 sm:after:bg-foreground sm:after:transition-transform sm:after:duration-300 sm:hover:after:origin-bottom-left sm:hover:after:scale-x-100"
               >
-                <Link href="/questions">Explore Question Bank</Link>
-              </Button>
+                Explore Questions
+                <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </Link>
             </div>
           </div>
 
           {/* Featured Section: The Bento Grid */}
           {featuredQuestions && featuredQuestions.length > 0 && (
-            <div className="rounded-[2rem] md:rounded-3xl border border-border/80 bg-[oklch(0.985_0.004_95)]/80 p-5 sm:p-8 md:p-12 shadow-sm backdrop-blur-sm animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-700 ease-out fill-mode-both">
-              <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2 sm:gap-4 mb-6 md:mb-8">
+            <div className="pt-2 md:pt-4 animate-in fade-in slide-in-from-bottom-12 duration-1000 delay-700 ease-out fill-mode-both">
+              <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-2 sm:gap-4 mb-4 md:mb-6">
                 <div>
                   <h2 className="font-serif text-2xl md:text-3xl">
                     Hand-Picked Curations
@@ -69,27 +66,27 @@ export default async function Home() {
                     Our editor&apos;s choice for this week&apos;s practice.
                   </p>
                 </div>
-                <Button asChild variant="ghost" className="hidden md:flex">
-                  <Link href="/questions">
-                    View all questions <ChevronRight className="ml-1 h-4 w-4" />
-                  </Link>
-                </Button>
               </div>
 
               {/* Desktop View: The Bento Grid */}
               <div className="hidden md:grid gap-6 md:grid-cols-3 md:grid-rows-2">
                 {/* Hero Question (Spans 2 columns, 2 rows) */}
                 <div className="md:col-span-2 md:row-span-2">
-                  <article className="group relative flex h-full min-h-[250px] md:min-h-[300px] flex-col justify-end overflow-hidden rounded-2xl border border-border/80 bg-card p-5 sm:p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl hover:border-primary/50">
+                  <article className="group relative flex h-full min-h-[250px] md:min-h-[300px] flex-col justify-end overflow-hidden rounded-2xl border border-border/80 bg-card p-5 sm:p-8 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl">
                     <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
                     <div className="relative z-10 flex h-full flex-col">
                       <div className="mb-6 flex flex-wrap gap-2">
-                        <Badge
-                          variant="secondary"
-                          className="bg-primary/10 text-primary hover:bg-primary/20 font-medium tracking-wide"
-                        >
-                          🏆 WEEKLY SPOTLIGHT
-                        </Badge>
+                        {(featuredQuestions[0].categories.length
+                          ? featuredQuestions[0].categories
+                          : [featuredQuestions[0].category]
+                        ).map((category) => (
+                          <Badge
+                            key={`${featuredQuestions[0].id}-${category}`}
+                            variant="outline"
+                          >
+                            {category}
+                          </Badge>
+                        ))}
                       </div>
                       <div className="mt-auto">
                         <h4 className="font-serif text-3xl leading-snug md:text-4xl">
@@ -114,7 +111,7 @@ export default async function Home() {
                     <QuestionCard
                       question={featuredQuestions[1]}
                       featured={true}
-                      className="shadow-xs border-border/80 hover:border-primary/50"
+                      className="shadow-xs border-border/80"
                     />
                   </div>
                 )}
@@ -123,7 +120,7 @@ export default async function Home() {
                     <QuestionCard
                       question={featuredQuestions[2]}
                       featured={true}
-                      className="shadow-xs border-border/80 hover:border-primary/50"
+                      className="shadow-xs border-border/80"
                     />
                   </div>
                 )}
@@ -136,7 +133,7 @@ export default async function Home() {
                     key={question.slug}
                     question={question}
                     featured={true}
-                    className="shadow-sm border-border/80 hover:border-primary/50 bg-card"
+                    className="shadow-sm border-border/80 bg-card"
                   />
                 ))}
               </div>

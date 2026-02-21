@@ -20,9 +20,9 @@ type PlaylistCardVariant = "featured" | "dashboard";
 
 const VARIANT_STYLES: Record<PlaylistCardVariant, string> = {
   featured:
-    "rounded-xl border border-border/80 bg-card/70 p-4 transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-[0_0_20px_rgba(inherit,0.1)] hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 active:shadow-none bg-card",
+    "rounded-xl border border-border/80 bg-card/70 p-4 transition-all duration-300 ease-out hover:shadow-[0_0_20px_rgba(inherit,0.1)] hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 active:shadow-none bg-card",
   dashboard:
-    "rounded-2xl border border-border/70 bg-card/70 p-5 shadow-[0_1px_0_0_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-[0_0_20px_rgba(inherit,0.1)] hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 active:shadow-none bg-card",
+    "rounded-2xl border border-border/70 bg-card/70 p-5 shadow-[0_1px_0_0_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:shadow-[0_0_20px_rgba(inherit,0.1)] hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 active:shadow-none bg-card",
 };
 
 export function PlaylistCard({
