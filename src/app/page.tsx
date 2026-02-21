@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, ChevronRight, ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
 
 import { QuestionCard } from "@/components/question-card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { AnimatedText } from "@/components/ui/animated-text";
 import { listFeaturedQuestions } from "@/lib/interview/questions";
 

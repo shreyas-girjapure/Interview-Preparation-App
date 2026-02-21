@@ -6,7 +6,6 @@ import { ArrowUpRight, Tag } from "lucide-react";
 import { MarkdownContent } from "@/components/markdown-content";
 import { QuestionProgressHeader } from "@/components/question-progress-header";
 import { RelatedQuestionsTwoRowCarousel } from "@/components/related-questions-two-row-carousel";
-import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
 import {
