@@ -114,15 +114,15 @@ export default async function QuestionDetailsPage({
             )}
           </header>
 
-          <Separator className="my-5" />
+          <Separator className="my-5 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[520ms]" />
 
           <MarkdownContent
             source={question.answerMarkdown}
-            className="mobile-wrap-code w-full"
+            className="mobile-wrap-code w-full animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[620ms]"
           />
 
           {relatedQuestions.length ? (
-            <>
+            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[720ms]">
               <Separator className="my-6" />
               <section className="space-y-4">
                 <h2 className="font-serif text-2xl tracking-tight">
@@ -130,7 +130,7 @@ export default async function QuestionDetailsPage({
                 </h2>
                 <RelatedQuestionsTwoRowCarousel questions={relatedQuestions} />
               </section>
-            </>
+            </div>
           ) : null}
         </div>
       </article>

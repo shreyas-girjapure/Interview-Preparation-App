@@ -77,28 +77,32 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
             </p>
           </header>
 
-          <Separator className="my-7" />
+          <Separator className="my-7 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[420ms]" />
 
-          <MarkdownContent source={topic.overviewMarkdown} className="w-full" />
+          <MarkdownContent
+            source={topic.overviewMarkdown}
+            className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[520ms]"
+          />
 
-          <Separator className="my-8" />
-
-          <section className="space-y-4">
-            <h2 className="font-serif text-2xl tracking-tight">
-              Related questions
-            </h2>
-            {topic.relatedQuestions.length === 0 ? (
-              <div className="rounded-xl border border-border/80 bg-card/70 p-4">
-                <p className="text-sm text-muted-foreground">
-                  No questions are linked to this topic yet.
-                </p>
-              </div>
-            ) : (
-              <RelatedQuestionsTwoRowCarousel
-                questions={topic.relatedQuestions}
-              />
-            )}
-          </section>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[620ms]">
+            <Separator className="my-8" />
+            <section className="space-y-4">
+              <h2 className="font-serif text-2xl tracking-tight">
+                Related questions
+              </h2>
+              {topic.relatedQuestions.length === 0 ? (
+                <div className="rounded-xl border border-border/80 bg-card/70 p-4">
+                  <p className="text-sm text-muted-foreground">
+                    No questions are linked to this topic yet.
+                  </p>
+                </div>
+              ) : (
+                <RelatedQuestionsTwoRowCarousel
+                  questions={topic.relatedQuestions}
+                />
+              )}
+            </section>
+          </div>
         </div>
       </article>
     </main>

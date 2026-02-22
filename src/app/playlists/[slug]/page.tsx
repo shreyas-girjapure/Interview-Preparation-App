@@ -78,9 +78,9 @@ export default async function PlaylistDetailsPage({
             </p>
           </header>
 
-          <Separator className="my-7" />
+          <Separator className="my-7 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[420ms]" />
 
-          <section className="space-y-4">
+          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[520ms]">
             <h2 className="font-serif text-2xl tracking-tight">
               Questions in this playlist
             </h2>
