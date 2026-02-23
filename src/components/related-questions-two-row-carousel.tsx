@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/carousel";
 import { QuestionCard } from "@/components/question-card";
 import type { InterviewQuestionSummary } from "@/lib/interview/questions";
+import { type QuestionProgressState } from "@/lib/interview/question-progress-state";
 
 type QuestionPair = [InterviewQuestionSummary, InterviewQuestionSummary?];
 
@@ -24,8 +25,10 @@ function toQuestionPairs(questions: InterviewQuestionSummary[]) {
 
 export function RelatedQuestionsTwoRowCarousel({
   questions,
+  statesByQuestionId = {},
 }: {
   questions: InterviewQuestionSummary[];
+  statesByQuestionId?: Record<string, QuestionProgressState>;
 }) {
   if (!questions.length) {
     return null;
@@ -35,7 +38,12 @@ export function RelatedQuestionsTwoRowCarousel({
     return (
       <div className="grid gap-3 md:grid-cols-2">
         {questions.map((question) => (
-          <QuestionCard key={question.id} question={question} />
+          <QuestionCard
+            key={question.id}
+            question={question}
+            showProgress={true}
+            progressState={statesByQuestionId[question.id]}
+          />
         ))}
       </div>
     );
@@ -59,11 +67,18 @@ export function RelatedQuestionsTwoRowCarousel({
               className="basis-[300px] md:basis-[340px] lg:basis-[360px]"
             >
               <div className="flex h-full flex-col gap-3">
-                <QuestionCard question={topQuestion} className="h-[220px]" />
+                <QuestionCard
+                  question={topQuestion}
+                  className="h-[220px]"
+                  showProgress={true}
+                  progressState={statesByQuestionId[topQuestion.id]}
+                />
                 {bottomQuestion ? (
                   <QuestionCard
                     question={bottomQuestion}
                     className="h-[220px]"
+                    showProgress={true}
+                    progressState={statesByQuestionId[bottomQuestion.id]}
                   />
                 ) : (
                   <div

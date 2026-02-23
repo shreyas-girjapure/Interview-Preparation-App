@@ -1,9 +1,15 @@
+"use client";
+
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { QuestionProgressHeader } from "@/components/question-progress-header";
+import {
+  type QuestionProgressState,
+  labelQuestionProgressState,
+} from "@/lib/interview/question-progress-state";
 import type { InterviewQuestionSummary } from "@/lib/interview/questions";
 import { cn } from "@/lib/utils";
-import { type QuestionProgressState } from "@/lib/interview/question-progress-state";
+import { useQuestionProgressContext } from "@/contexts/question-progress-context";
 
 export type QuestionCardProps = {
   question: InterviewQuestionSummary;
@@ -11,8 +17,8 @@ export type QuestionCardProps = {
   staggerIndex?: number;
   featured?: boolean;
   layout?: "card" | "list";
+  /** @deprecated Pass states to QuestionProgressProvider instead */
   progressState?: QuestionProgressState;
-  isAuthenticated?: boolean;
   showProgress?: boolean;
 };
 
@@ -22,16 +28,23 @@ export function QuestionCard({
   staggerIndex,
   featured = false,
   layout = "card",
-  progressState,
-  isAuthenticated = false,
+  progressState: progressStateProp,
   showProgress = false,
 }: QuestionCardProps) {
+  // Prefer context-provided state; fall back to explicit prop (for backward compat)
+  const contextState = useQuestionProgressContext(question.id);
+  const progressState = showProgress
+    ? (progressStateProp ?? contextState)
+    : undefined;
+
   const categories = question.categories.length
     ? question.categories
     : [question.category];
 
+  const isRead = progressState === "read";
+
   const baseClasses = cn(
-    "relative flex flex-col h-full rounded-xl border border-border/80 transition-all duration-300 ease-out will-change-transform shadow-sm shadow-transparent hover:-translate-y-1 hover:border-primary/50 hover:shadow-xl hover:shadow-primary/10 active:translate-y-0 active:scale-95 active:shadow-none hover:z-10",
+    "relative flex flex-col h-full rounded-xl border border-border/80 transition-all duration-300 ease-out will-change-transform shadow-sm shadow-transparent hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 active:translate-y-0 active:scale-95 active:shadow-none hover:z-10 overflow-hidden",
     layout === "list" ? "bg-card/70 p-5" : "bg-card/70 p-4",
   );
 
@@ -55,54 +68,76 @@ export function QuestionCard({
 
   return (
     <article
-      className={cn(baseClasses, staggerClasses, className)}
+      className={cn(baseClasses, staggerClasses, className, "group")}
       style={
         staggerIndex !== undefined
           ? { animationDelay: `${staggerIndex * 100}ms` }
           : undefined
       }
     >
-      {showProgress && progressState ? (
-        <QuestionProgressHeader
-          questionId={question.id}
-          categories={categories}
-          initialState={progressState}
-          isAuthenticated={isAuthenticated}
-          showActions={false}
-          className="mb-3"
-        />
-      ) : (
+      <ArrowUpRight
+        className={cn(
+          "absolute pointer-events-none text-muted-foreground/30 transition-transform group-hover:text-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5",
+          layout === "list"
+            ? "top-5 right-5 w-4 h-4"
+            : "top-4 right-4 w-3.5 h-3.5",
+        )}
+      />
+      {showProgress && (
         <div
           className={cn(
-            "flex flex-wrap items-center gap-2",
-            layout === "list" || featured ? "mb-3" : "mb-2",
+            "absolute left-0 top-0 bottom-0 w-1 transition-colors duration-500",
+            isRead ? "bg-green-500" : "bg-transparent",
           )}
-        >
-          {categories.map((category) => (
-            <Badge key={`${question.id}-${category}`} variant="outline">
-              {category}
-            </Badge>
-          ))}
-        </div>
+        />
       )}
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-2 pr-8",
+          layout === "list" || featured ? "mb-3" : "mb-2",
+          showProgress && "pl-2",
+        )}
+      >
+        {categories.map((category) => (
+          <Badge
+            key={`${question.id}-${category}`}
+            variant="outline"
+            className="text-[10px] sm:text-xs"
+          >
+            {category}
+          </Badge>
+        ))}
+        {showProgress && progressState && !isRead && (
+          <Badge
+            variant="secondary"
+            className="text-[10px] sm:text-xs transition-opacity duration-300"
+          >
+            {labelQuestionProgressState(progressState)}
+          </Badge>
+        )}
+      </div>
 
       <HeadingTag
         className={cn(
           "font-serif",
           headingSize,
           featured ? "leading-snug" : "leading-tight",
+          showProgress && "pl-2 transition-colors duration-300",
+          showProgress && isRead && "text-muted-foreground",
         )}
       >
         <Link
           href={`/questions/${question.slug}`}
-          className="underline-offset-4 hover:underline"
+          className="after:absolute after:inset-0"
           prefetch={false}
         >
           {question.title}
         </Link>
       </HeadingTag>
 
-      <p className={cn(summaryClasses, "mt-2")}>{question.summary}</p>
+      <p className={cn(summaryClasses, "mt-2", showProgress && "pl-2")}>
+        {question.summary}
+      </p>
     </article>
   );
 }

@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getTopicBySlug, listTopicSlugs } from "@/lib/interview/questions";
+import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
 
 type Params = Promise<{
   slug: string;
@@ -49,6 +50,10 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
     notFound();
   }
 
+  const questionIds = topic.relatedQuestions.map((q) => q.id);
+  const { statesByQuestionId } =
+    await listViewerQuestionProgressStates(questionIds);
+
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
       <article className="mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-14">
@@ -62,7 +67,7 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
             <Link href="/topics">Back to topics</Link>
           </Button>
 
-          <header className="space-y-5">
+          <header className="page-copy-enter space-y-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary">
                 {topic.questionCount} related question
@@ -77,28 +82,33 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
             </p>
           </header>
 
-          <Separator className="my-7" />
+          <Separator className="my-7 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[420ms]" />
 
-          <MarkdownContent source={topic.overviewMarkdown} className="w-full" />
+          <MarkdownContent
+            source={topic.overviewMarkdown}
+            className="w-full animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[520ms]"
+          />
 
-          <Separator className="my-8" />
-
-          <section className="space-y-4">
-            <h2 className="font-serif text-2xl tracking-tight">
-              Related questions
-            </h2>
-            {topic.relatedQuestions.length === 0 ? (
-              <div className="rounded-xl border border-border/80 bg-card/70 p-4">
-                <p className="text-sm text-muted-foreground">
-                  No questions are linked to this topic yet.
-                </p>
-              </div>
-            ) : (
-              <RelatedQuestionsTwoRowCarousel
-                questions={topic.relatedQuestions}
-              />
-            )}
-          </section>
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[620ms]">
+            <Separator className="my-8" />
+            <section className="space-y-4">
+              <h2 className="font-serif text-2xl tracking-tight">
+                Related questions
+              </h2>
+              {topic.relatedQuestions.length === 0 ? (
+                <div className="rounded-xl border border-border/80 bg-card/70 p-4">
+                  <p className="text-sm text-muted-foreground">
+                    No questions are linked to this topic yet.
+                  </p>
+                </div>
+              ) : (
+                <RelatedQuestionsTwoRowCarousel
+                  questions={topic.relatedQuestions}
+                  statesByQuestionId={statesByQuestionId}
+                />
+              )}
+            </section>
+          </div>
         </div>
       </article>
     </main>

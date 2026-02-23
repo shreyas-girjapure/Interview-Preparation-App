@@ -7,6 +7,7 @@ import { listViewerQuestionProgressStates } from "@/lib/interview/question-progr
 import { listQuestions } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 import { QuestionCard } from "@/components/question-card";
+import { QuestionProgressProvider } from "@/contexts/question-progress-context";
 
 type SearchParams = Promise<{
   page?: string | string[];
@@ -76,17 +77,16 @@ export default async function QuestionsPage({
     QUESTIONS_PAGE_SIZE,
   );
   const visiblePages = getVisiblePages(pagination.page, pagination.totalPages);
-  const { isAuthenticated, statesByQuestionId } =
-    await listViewerQuestionProgressStates(
-      pagination.items.map((question) => question.id),
-    );
+  const { statesByQuestionId } = await listViewerQuestionProgressStates(
+    pagination.items.map((question) => question.id),
+  );
 
   const currentQuery = new URLSearchParams();
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <div className="mx-auto w-full max-w-7xl px-6 py-10 md:px-10 md:py-12">
-        <header className="space-y-4">
+      <div className="mx-auto w-full max-w-7xl px-6 py-6 md:px-10 md:py-8">
+        <header className="page-copy-enter space-y-3">
           <Badge
             variant="secondary"
             className="rounded-full px-3 py-1 text-xs tracking-wide uppercase"
@@ -104,8 +104,8 @@ export default async function QuestionsPage({
 
         <Separator className="my-6" />
 
-        <section className="space-y-4">
-          <p className="text-sm text-muted-foreground">
+        <section className="pt-2">
+          <p className="text-sm text-muted-foreground mb-5">
             Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
             question{pagination.total === 1 ? "" : "s"}
           </p>
@@ -117,22 +117,20 @@ export default async function QuestionsPage({
             </div>
           ) : (
             <>
-              <ul className="space-y-4">
-                {pagination.items.map((question, index) => (
-                  <li key={question.id} className="block">
-                    <QuestionCard
-                      question={question}
-                      staggerIndex={index}
-                      showProgress={true}
-                      layout="list"
-                      progressState={
-                        statesByQuestionId[question.id] ?? "unread"
-                      }
-                      isAuthenticated={isAuthenticated}
-                    />
-                  </li>
-                ))}
-              </ul>
+              <QuestionProgressProvider states={statesByQuestionId}>
+                <ul className="space-y-4">
+                  {pagination.items.map((question, index) => (
+                    <li key={question.id} className="block">
+                      <QuestionCard
+                        question={question}
+                        staggerIndex={index}
+                        showProgress={true}
+                        layout="list"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </QuestionProgressProvider>
 
               {pagination.totalPages > 1 ? (
                 <nav

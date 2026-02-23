@@ -10,7 +10,8 @@ export type PlaylistDashboardItem = {
   slug: string;
   title: string;
   description: string;
-  playlistType: PlaylistType;
+  isSystem: boolean;
+  tag: string | null;
   accessLevel: PlaylistAccess;
   totalItems: number;
   uniqueTopicCount: number;
@@ -33,7 +34,8 @@ export type PlaylistDetails = {
   slug: string;
   title: string;
   description: string;
-  playlistType: PlaylistType;
+  isSystem: boolean;
+  tag: string | null;
   accessLevel: PlaylistAccess;
   totalItems: number;
   estimatedMinutes: number;
@@ -64,7 +66,8 @@ type PlaylistRow = {
   slug: string;
   title: string;
   description: string | null;
-  playlist_type: PlaylistType;
+  is_system: boolean;
+  tag: string | null;
   access_level: PlaylistAccess;
   playlist_items: Array<{
     id: string;
@@ -217,7 +220,8 @@ function mapPlaylists(rows: PlaylistRow[], readQuestionIds: Set<string>) {
       slug: playlist.slug,
       title: playlist.title,
       description: normalizePlaylistSummary(playlist.description),
-      playlistType: playlist.playlist_type,
+      isSystem: playlist.is_system,
+      tag: playlist.tag,
       accessLevel: playlist.access_level,
       totalItems,
       uniqueTopicCount: mapPlaylistUniqueTopicCount(playlist),
@@ -327,7 +331,7 @@ export async function listPlaylistDashboardItems() {
       const { data, error } = await publicSupabase
         .from("playlists")
         .select(
-          "id, slug, title, description, playlist_type, access_level, sort_order, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
+          "id, slug, title, description, is_system, tag, access_level, sort_order, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
         )
         .eq("status", "published")
         .order("sort_order", { ascending: true })
@@ -371,7 +375,7 @@ export async function getPlaylistBySlug(slug: string) {
       const { data, error } = await publicSupabase
         .from("playlists")
         .select(
-          "id, slug, title, description, playlist_type, access_level, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
+          "id, slug, title, description, is_system, tag, access_level, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
         )
         .eq("status", "published")
         .eq("slug", normalizedSlug)
@@ -406,7 +410,8 @@ export async function getPlaylistBySlug(slug: string) {
     slug: playlist.slug,
     title: playlist.title,
     description: normalizePlaylistSummary(playlist.description),
-    playlistType: playlist.playlist_type,
+    isSystem: playlist.is_system,
+    tag: playlist.tag,
     accessLevel: playlist.access_level,
     totalItems,
     estimatedMinutes: safeEstimateMinutes(totalItems),

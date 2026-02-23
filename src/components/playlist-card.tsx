@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowUpRight } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,8 @@ type PlaylistCardItem = Pick<
   | "slug"
   | "title"
   | "description"
-  | "playlistType"
+  | "isSystem"
+  | "tag"
   | "accessLevel"
   | "totalItems"
   | "uniqueTopicCount"
@@ -20,35 +22,38 @@ type PlaylistCardVariant = "featured" | "dashboard";
 
 const VARIANT_STYLES: Record<PlaylistCardVariant, string> = {
   featured:
-    "rounded-xl border border-border/80 bg-card/70 p-4 transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-[0_0_20px_rgba(inherit,0.1)] hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 active:shadow-none bg-card",
+    "rounded-xl border border-border/80 bg-card/70 p-4 transition-all duration-300 ease-out hover:shadow-[0_0_20px_rgba(inherit,0.1)] hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 active:shadow-none bg-card",
   dashboard:
-    "rounded-2xl border border-border/70 bg-card/70 p-5 shadow-[0_1px_0_0_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:border-primary/50 hover:shadow-[0_0_20px_rgba(inherit,0.1)] hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 active:shadow-none bg-card",
+    "rounded-2xl border border-border/70 bg-card/70 p-5 shadow-[0_1px_0_0_rgba(0,0,0,0.03)] transition-all duration-300 ease-out hover:shadow-[0_0_20px_rgba(inherit,0.1)] hover:shadow-primary/20 hover:scale-[1.02] active:scale-95 active:shadow-none bg-card",
 };
 
 export function PlaylistCard({
   playlist,
   variant = "featured",
   showProgress = true,
+  staggerIndex,
 }: {
   playlist: PlaylistCardItem;
   variant?: PlaylistCardVariant;
   showProgress?: boolean;
+  staggerIndex?: number;
 }) {
   const itemsRead = playlist.itemsRead ?? 0;
   const completionPercent = playlist.completionPercent ?? 0;
 
   const cardBody = (
     <>
-      <div className="mb-3 flex flex-wrap gap-2">
+      <ArrowUpRight className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 w-4 h-4 pointer-events-none text-muted-foreground/30 transition-transform group-hover:text-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+      <div className="mb-3 flex flex-wrap gap-2 pr-8">
         <Badge variant="outline" className="capitalize">
-          {playlist.playlistType}
+          {playlist.tag || (playlist.isSystem ? "Playlist" : "Collection")}
         </Badge>
         <Badge variant="outline" className="capitalize">
           {playlist.accessLevel}
         </Badge>
       </div>
 
-      <h3 className="font-serif text-2xl leading-tight tracking-tight">
+      <h3 className="font-serif text-2xl leading-tight tracking-tight pr-8">
         {playlist.title}
       </h3>
 
@@ -85,16 +90,31 @@ export function PlaylistCard({
   );
 
   const wrapperClassName = cn(
-    "block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    "relative block h-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+    staggerIndex !== undefined &&
+      "animate-in fade-in slide-in-from-bottom-4 fill-mode-both",
     VARIANT_STYLES[variant],
   );
 
+  const animationStyle =
+    staggerIndex !== undefined
+      ? { animationDelay: `${staggerIndex * 100}ms` }
+      : undefined;
+
   if (!playlist.slug) {
-    return <article className={wrapperClassName}>{cardBody}</article>;
+    return (
+      <article className={wrapperClassName} style={animationStyle}>
+        {cardBody}
+      </article>
+    );
   }
 
   return (
-    <Link href={`/playlists/${playlist.slug}`} className={wrapperClassName}>
+    <Link
+      href={`/playlists/${playlist.slug}`}
+      className={cn("group", wrapperClassName)}
+      style={animationStyle}
+    >
       {cardBody}
     </Link>
   );

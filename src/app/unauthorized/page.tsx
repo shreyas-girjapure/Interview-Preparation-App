@@ -30,7 +30,7 @@ export default async function UnauthorizedPage({
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
       <section className="mx-auto w-full max-w-2xl px-6 py-12 md:py-14">
-        <div className="space-y-5 rounded-2xl border border-border/80 bg-card p-8 shadow-sm">
+        <div className="page-copy-enter space-y-5 rounded-2xl border border-border/80 bg-card p-8 shadow-sm">
           <Badge
             variant="secondary"
             className="rounded-full px-3 py-1 text-xs tracking-wide uppercase"
