@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useCallback, useRef } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   type QuestionProgressState,
@@ -7,6 +8,25 @@ import {
 
 function toToastActionLabel(state: QuestionProgressState) {
   return labelQuestionProgressState(state).toLowerCase();
+}
+
+async function saveProgressToServer(
+  questionId: string,
+  state: QuestionProgressState,
+): Promise<void> {
+  const response = await fetch("/api/questions/progress", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ questionId, state }),
+  });
+
+  const body = (await response.json().catch(() => null)) as {
+    error?: string;
+  } | null;
+
+  if (!response.ok) {
+    throw new Error(body?.error ?? "Unable to save question progress.");
+  }
 }
 
 export function useQuestionProgress({
@@ -18,130 +38,94 @@ export function useQuestionProgress({
   questionId: string;
   isAuthenticated: boolean;
 }) {
-  const [state, setState] = useState<QuestionProgressState>(initialState);
-  const [isSaving, setIsSaving] = useState(false);
+  const queryClient = useQueryClient();
+  // Cache key for this question's progress state
+  const queryKey = ["questionProgress", questionId];
 
-  const persistState = useCallback(
-    async (nextState: QuestionProgressState) => {
-      const response = await fetch("/api/questions/progress", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          questionId,
-          state: nextState,
-        }),
-      });
-
-      const body = (await response.json().catch(() => null)) as {
-        error?: string;
-      } | null;
-
-      if (!response.ok) {
-        throw new Error(body?.error || "Unable to save question progress.");
-      }
-    },
-    [questionId],
-  );
-
-  const undoStateChange = useCallback(
-    async (
-      undoToState: QuestionProgressState,
-      beforeUndoState: QuestionProgressState,
-    ) => {
-      setState(undoToState);
-
-      try {
-        await persistState(undoToState);
-        toast(`Reverted to ${toToastActionLabel(undoToState)}`);
-      } catch {
-        setState(beforeUndoState);
-        toast.error("Unable to undo question progress state.");
-      }
-    },
-    [persistState],
-  );
-
-  function stateChangeMessages(nextState: QuestionProgressState) {
-    if (nextState === "read") {
-      return {
-        title: "Question marked as read",
-        description: undefined,
-      };
-    }
-
-    return {
-      title: "Question marked as unread",
-      description: undefined,
-    };
+  // Seed the cache with the server-rendered state so the first render
+  // reads from cache without a network request.
+  if (queryClient.getQueryData(queryKey) === undefined) {
+    queryClient.setQueryData(queryKey, initialState);
   }
 
-  const updateState = useCallback(
-    async (nextState: QuestionProgressState) => {
-      if (isSaving) {
-        return;
-      }
+  const currentState =
+    (queryClient.getQueryData(queryKey) as QuestionProgressState | undefined) ??
+    initialState;
 
+  // Keep a stable ref to the last undo action so the toast closure captures it
+  const undoRef = useRef<(() => void) | null>(null);
+
+  const mutation = useMutation({
+    mutationFn: (nextState: QuestionProgressState) =>
+      saveProgressToServer(questionId, nextState),
+
+    // 1. Optimistically update the cache — no button lock, instant UI
+    onMutate: async (nextState) => {
+      // Cancel any in-flight refetch that might overwrite our optimistic update
+      await queryClient.cancelQueries({ queryKey });
+      const previousState =
+        queryClient.getQueryData<QuestionProgressState>(queryKey);
+      queryClient.setQueryData(queryKey, nextState);
+      return { previousState };
+    },
+
+    // 2. On success — show toast with Undo action
+    onSuccess: (_, nextState, context) => {
+      const previousState = context?.previousState ?? initialState;
+
+      undoRef.current = () => {
+        mutation.mutate(previousState);
+        toast(`Reverted to ${toToastActionLabel(previousState)}`);
+      };
+
+      if (nextState === "read") {
+        toast.success("Question marked as read", {
+          action: { label: "Undo", onClick: () => undoRef.current?.() },
+        });
+      } else {
+        toast("Question marked as unread", {
+          action: { label: "Undo", onClick: () => undoRef.current?.() },
+        });
+      }
+    },
+
+    // 3. On error — automatically roll back to previous state
+    onError: (error, _, context) => {
+      if (context?.previousState !== undefined) {
+        queryClient.setQueryData(queryKey, context.previousState);
+      }
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Unable to save question progress right now.",
+      );
+    },
+  });
+
+  const toggleRead = useCallback(() => {
+    if (!isAuthenticated) {
+      toast.error("Sign in to track question progress.");
+      return;
+    }
+    const nextState = currentState === "read" ? "unread" : "read";
+    mutation.mutate(nextState);
+  }, [currentState, isAuthenticated, mutation]);
+
+  const updateState = useCallback(
+    (nextState: QuestionProgressState) => {
       if (!isAuthenticated) {
         toast.error("Sign in to track question progress.");
         return;
       }
-
-      const previousState = state;
-      setState(nextState);
-      setIsSaving(true);
-
-      try {
-        await persistState(nextState);
-        const messages = stateChangeMessages(nextState);
-
-        const toastOptions: {
-          action: {
-            label: string;
-            onClick: () => void;
-          };
-          description?: string;
-        } = {
-          action: {
-            label: "Undo",
-            onClick: () => {
-              void undoStateChange(previousState, nextState);
-            },
-          },
-        };
-
-        if (messages.description) {
-          toastOptions.description = messages.description;
-        }
-
-        if (nextState === "read") {
-          toast.success(messages.title, toastOptions);
-        } else {
-          toast(messages.title, toastOptions);
-        }
-      } catch (error) {
-        setState(previousState);
-        toast.error(
-          error instanceof Error
-            ? error.message
-            : "Unable to save question progress right now.",
-        );
-      } finally {
-        setIsSaving(false);
-      }
+      mutation.mutate(nextState);
     },
-    [isAuthenticated, isSaving, persistState, state, undoStateChange],
+    [isAuthenticated, mutation],
   );
 
-  const toggleRead = useCallback(() => {
-    void updateState(state === "read" ? "unread" : "read");
-  }, [state, updateState]);
-
   return {
-    state,
-    isRead: state === "read",
-    isSaving,
+    state: currentState,
+    isRead: currentState === "read",
+    isSaving: mutation.isPending,
     updateState,
     toggleRead,
   };

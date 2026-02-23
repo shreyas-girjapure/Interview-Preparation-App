@@ -7,6 +7,7 @@ import { listViewerQuestionProgressStates } from "@/lib/interview/question-progr
 import { listQuestions } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 import { QuestionCard } from "@/components/question-card";
+import { QuestionProgressProvider } from "@/contexts/question-progress-context";
 
 type SearchParams = Promise<{
   page?: string | string[];
@@ -116,21 +117,20 @@ export default async function QuestionsPage({
             </div>
           ) : (
             <>
-              <ul className="space-y-4">
-                {pagination.items.map((question, index) => (
-                  <li key={question.id} className="block">
-                    <QuestionCard
-                      question={question}
-                      staggerIndex={index}
-                      showProgress={true}
-                      layout="list"
-                      progressState={
-                        statesByQuestionId[question.id] ?? "unread"
-                      }
-                    />
-                  </li>
-                ))}
-              </ul>
+              <QuestionProgressProvider states={statesByQuestionId}>
+                <ul className="space-y-4">
+                  {pagination.items.map((question, index) => (
+                    <li key={question.id} className="block">
+                      <QuestionCard
+                        question={question}
+                        staggerIndex={index}
+                        showProgress={true}
+                        layout="list"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </QuestionProgressProvider>
 
               {pagination.totalPages > 1 ? (
                 <nav

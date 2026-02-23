@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -7,6 +9,7 @@ import {
 } from "@/lib/interview/question-progress-state";
 import type { InterviewQuestionSummary } from "@/lib/interview/questions";
 import { cn } from "@/lib/utils";
+import { useQuestionProgressContext } from "@/contexts/question-progress-context";
 
 export type QuestionCardProps = {
   question: InterviewQuestionSummary;
@@ -14,6 +17,7 @@ export type QuestionCardProps = {
   staggerIndex?: number;
   featured?: boolean;
   layout?: "card" | "list";
+  /** @deprecated Pass states to QuestionProgressProvider instead */
   progressState?: QuestionProgressState;
   showProgress?: boolean;
 };
@@ -24,9 +28,15 @@ export function QuestionCard({
   staggerIndex,
   featured = false,
   layout = "card",
-  progressState,
+  progressState: progressStateProp,
   showProgress = false,
 }: QuestionCardProps) {
+  // Prefer context-provided state; fall back to explicit prop (for backward compat)
+  const contextState = useQuestionProgressContext(question.id);
+  const progressState = showProgress
+    ? (progressStateProp ?? contextState)
+    : undefined;
+
   const categories = question.categories.length
     ? question.categories
     : [question.category];
