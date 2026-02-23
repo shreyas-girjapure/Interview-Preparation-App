@@ -60,15 +60,17 @@ export default async function QuestionDetailsPage({
     notFound();
   }
 
-  const [
-    { isAuthenticated, statesByQuestionId },
-    linkedTopics,
-    relatedQuestions,
-  ] = await Promise.all([
-    listViewerQuestionProgressStates([question.id]),
-    listTopicsForQuestion(question),
-    listRelatedQuestionsForQuestion(question, 12),
+  const linkedTopicsPromise = listTopicsForQuestion(question);
+  const relatedQuestionsPromise = listRelatedQuestionsForQuestion(question, 12);
+
+  const [linkedTopics, relatedQuestions] = await Promise.all([
+    linkedTopicsPromise,
+    relatedQuestionsPromise,
   ]);
+
+  const questionIds = [question.id, ...relatedQuestions.map((q) => q.id)];
+  const { isAuthenticated, statesByQuestionId } =
+    await listViewerQuestionProgressStates(questionIds);
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
@@ -84,7 +86,6 @@ export default async function QuestionDetailsPage({
               }
               initialState={statesByQuestionId[question.id] ?? "unread"}
               isAuthenticated={isAuthenticated}
-              showActions={false}
             />
             <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
               {question.title}
@@ -128,7 +129,10 @@ export default async function QuestionDetailsPage({
                 <h2 className="font-serif text-2xl tracking-tight">
                   Related Questions
                 </h2>
-                <RelatedQuestionsTwoRowCarousel questions={relatedQuestions} />
+                <RelatedQuestionsTwoRowCarousel
+                  questions={relatedQuestions}
+                  statesByQuestionId={statesByQuestionId}
+                />
               </section>
             </div>
           ) : null}

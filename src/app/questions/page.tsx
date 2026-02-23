@@ -76,10 +76,9 @@ export default async function QuestionsPage({
     QUESTIONS_PAGE_SIZE,
   );
   const visiblePages = getVisiblePages(pagination.page, pagination.totalPages);
-  const { isAuthenticated, statesByQuestionId } =
-    await listViewerQuestionProgressStates(
-      pagination.items.map((question) => question.id),
-    );
+  const { statesByQuestionId } = await listViewerQuestionProgressStates(
+    pagination.items.map((question) => question.id),
+  );
 
   const currentQuery = new URLSearchParams();
 
@@ -128,7 +127,6 @@ export default async function QuestionsPage({
                       progressState={
                         statesByQuestionId[question.id] ?? "unread"
                       }
-                      isAuthenticated={isAuthenticated}
                     />
                   </li>
                 ))}

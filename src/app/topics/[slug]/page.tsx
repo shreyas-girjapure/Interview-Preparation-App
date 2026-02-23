@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { getTopicBySlug, listTopicSlugs } from "@/lib/interview/questions";
+import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
 
 type Params = Promise<{
   slug: string;
@@ -48,6 +49,10 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
   if (!topic) {
     notFound();
   }
+
+  const questionIds = topic.relatedQuestions.map((q) => q.id);
+  const { statesByQuestionId } =
+    await listViewerQuestionProgressStates(questionIds);
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
@@ -99,6 +104,7 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
               ) : (
                 <RelatedQuestionsTwoRowCarousel
                   questions={topic.relatedQuestions}
+                  statesByQuestionId={statesByQuestionId}
                 />
               )}
             </section>

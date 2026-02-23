@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { QuestionProgressHeader } from "@/components/question-progress-header";
+import {
+  type QuestionProgressState,
+  labelQuestionProgressState,
+} from "@/lib/interview/question-progress-state";
 import type { InterviewQuestionSummary } from "@/lib/interview/questions";
 import { cn } from "@/lib/utils";
-import { type QuestionProgressState } from "@/lib/interview/question-progress-state";
 
 export type QuestionCardProps = {
   question: InterviewQuestionSummary;
@@ -13,7 +15,6 @@ export type QuestionCardProps = {
   featured?: boolean;
   layout?: "card" | "list";
   progressState?: QuestionProgressState;
-  isAuthenticated?: boolean;
   showProgress?: boolean;
 };
 
@@ -24,15 +25,16 @@ export function QuestionCard({
   featured = false,
   layout = "card",
   progressState,
-  isAuthenticated = false,
   showProgress = false,
 }: QuestionCardProps) {
   const categories = question.categories.length
     ? question.categories
     : [question.category];
 
+  const isRead = progressState === "read";
+
   const baseClasses = cn(
-    "relative flex flex-col h-full rounded-xl border border-border/80 transition-all duration-300 ease-out will-change-transform shadow-sm shadow-transparent hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 active:translate-y-0 active:scale-95 active:shadow-none hover:z-10",
+    "relative flex flex-col h-full rounded-xl border border-border/80 transition-all duration-300 ease-out will-change-transform shadow-sm shadow-transparent hover:-translate-y-1 hover:shadow-xl hover:shadow-primary/10 active:translate-y-0 active:scale-95 active:shadow-none hover:z-10 overflow-hidden",
     layout === "list" ? "bg-card/70 p-5" : "bg-card/70 p-4",
   );
 
@@ -71,35 +73,47 @@ export function QuestionCard({
             : "top-4 right-4 w-3.5 h-3.5",
         )}
       />
-      {showProgress && progressState ? (
-        <QuestionProgressHeader
-          questionId={question.id}
-          categories={categories}
-          initialState={progressState}
-          isAuthenticated={isAuthenticated}
-          showActions={false}
-          className="mb-3"
-        />
-      ) : (
+      {showProgress && (
         <div
           className={cn(
-            "flex flex-wrap items-center gap-2 pr-8",
-            layout === "list" || featured ? "mb-3" : "mb-2",
+            "absolute left-0 top-0 bottom-0 w-1 transition-colors duration-500",
+            isRead ? "bg-green-500" : "bg-transparent",
           )}
-        >
-          {categories.map((category) => (
-            <Badge key={`${question.id}-${category}`} variant="outline">
-              {category}
-            </Badge>
-          ))}
-        </div>
+        />
       )}
+      <div
+        className={cn(
+          "flex flex-wrap items-center gap-2 pr-8",
+          layout === "list" || featured ? "mb-3" : "mb-2",
+          showProgress && "pl-2",
+        )}
+      >
+        {categories.map((category) => (
+          <Badge
+            key={`${question.id}-${category}`}
+            variant="outline"
+            className="text-[10px] sm:text-xs"
+          >
+            {category}
+          </Badge>
+        ))}
+        {showProgress && progressState && !isRead && (
+          <Badge
+            variant="secondary"
+            className="text-[10px] sm:text-xs transition-opacity duration-300"
+          >
+            {labelQuestionProgressState(progressState)}
+          </Badge>
+        )}
+      </div>
 
       <HeadingTag
         className={cn(
           "font-serif",
           headingSize,
           featured ? "leading-snug" : "leading-tight",
+          showProgress && "pl-2 transition-colors duration-300",
+          showProgress && isRead && "text-muted-foreground",
         )}
       >
         <Link
@@ -111,7 +125,9 @@ export function QuestionCard({
         </Link>
       </HeadingTag>
 
-      <p className={cn(summaryClasses, "mt-2")}>{question.summary}</p>
+      <p className={cn(summaryClasses, "mt-2", showProgress && "pl-2")}>
+        {question.summary}
+      </p>
     </article>
   );
 }

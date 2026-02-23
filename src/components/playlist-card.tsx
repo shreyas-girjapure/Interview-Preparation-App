@@ -10,7 +10,8 @@ type PlaylistCardItem = Pick<
   | "slug"
   | "title"
   | "description"
-  | "playlistType"
+  | "isSystem"
+  | "tag"
   | "accessLevel"
   | "totalItems"
   | "uniqueTopicCount"
@@ -45,7 +46,7 @@ export function PlaylistCard({
       <ArrowUpRight className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 w-4 h-4 pointer-events-none text-muted-foreground/30 transition-transform group-hover:text-primary group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
       <div className="mb-3 flex flex-wrap gap-2 pr-8">
         <Badge variant="outline" className="capitalize">
-          {playlist.playlistType}
+          {playlist.tag || (playlist.isSystem ? "Playlist" : "Collection")}
         </Badge>
         <Badge variant="outline" className="capitalize">
           {playlist.accessLevel}

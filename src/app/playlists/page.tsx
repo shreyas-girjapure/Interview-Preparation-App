@@ -13,7 +13,8 @@ function emptyStateCards() {
       title: "Role-based sprint",
       description:
         "No published playlists yet. Admins can create and publish playlists.",
-      playlistType: "role",
+      isSystem: true,
+      tag: "role",
       accessLevel: "free",
       totalItems: 0,
       uniqueTopicCount: 0,
@@ -26,7 +27,8 @@ function emptyStateCards() {
       title: "Company loop",
       description:
         "No published playlists yet. Admins can create and publish playlists.",
-      playlistType: "company",
+      isSystem: true,
+      tag: "company",
       accessLevel: "preview",
       totalItems: 0,
       uniqueTopicCount: 0,

@@ -61,7 +61,8 @@ export default async function PlaylistDetailsPage({
           <header className="page-copy-enter space-y-5">
             <div className="flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="capitalize">
-                {playlist.playlistType}
+                {playlist.tag ||
+                  (playlist.isSystem ? "Playlist" : "Collection")}
               </Badge>
               <Badge variant="outline" className="capitalize">
                 {playlist.accessLevel}
