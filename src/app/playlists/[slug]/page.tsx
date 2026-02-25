@@ -5,12 +5,22 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { QuestionCard } from "@/components/question-card";
+import { QuestionProgressProvider } from "@/contexts/question-progress-context";
+import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
 import { getPlaylistBySlug } from "@/lib/interview/playlists";
+import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 
 export const dynamic = "force-dynamic";
 
+const PLAYLIST_PAGE_SIZE = 10;
+
 type Params = Promise<{
   slug: string;
+}>;
+
+type SearchParams = Promise<{
+  page?: string | string[];
 }>;
 
 export async function generateMetadata({
@@ -33,92 +43,207 @@ export async function generateMetadata({
   };
 }
 
+function getSingleValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getHref(
+  slug: string,
+  current: URLSearchParams,
+  updates: {
+    page?: number | null;
+  },
+) {
+  const next = new URLSearchParams(current.toString());
+
+  if (updates.page === null) {
+    next.delete("page");
+  } else if (typeof updates.page === "number") {
+    if (updates.page <= 1) {
+      next.delete("page");
+    } else {
+      next.set("page", String(updates.page));
+    }
+  }
+
+  const queryString = next.toString();
+  return queryString
+    ? `/playlists/${slug}?${queryString}`
+    : `/playlists/${slug}`;
+}
+
+function getVisiblePages(currentPage: number, totalPages: number) {
+  if (totalPages <= 1) {
+    return [1];
+  }
+
+  const candidates = new Set<number>([
+    1,
+    totalPages,
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+  ]);
+
+  return Array.from(candidates)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((a, b) => a - b);
+}
+
 export default async function PlaylistDetailsPage({
   params,
+  searchParams,
 }: {
   params: Params;
+  searchParams: SearchParams;
 }) {
   const { slug } = await params;
+  const rawParams = await searchParams;
   const playlist = await getPlaylistBySlug(slug);
 
   if (!playlist) {
     notFound();
   }
 
+  const requestedPage = parsePositiveInt(getSingleValue(rawParams.page), 1);
+  const pagination = paginateItems(
+    playlist.questionSummaries,
+    requestedPage,
+    PLAYLIST_PAGE_SIZE,
+  );
+  const visiblePages = getVisiblePages(pagination.page, pagination.totalPages);
+
+  const { statesByQuestionId } = await listViewerQuestionProgressStates(
+    pagination.items.map((q) => q.id),
+  );
+
+  const currentQuery = new URLSearchParams();
+
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
-      <article className="mx-auto w-full max-w-6xl px-6 py-10 md:px-10 md:py-14">
-        <div className="mx-auto w-full max-w-[95ch]">
-          <Button
-            asChild
-            variant="ghost"
-            size="sm"
-            className="mb-5 h-auto px-0"
-          >
-            <Link href="/playlists">Back to playlists</Link>
-          </Button>
+      <div className="mx-auto w-full max-w-7xl px-6 py-6 md:px-10 md:py-8">
+        <Button asChild variant="ghost" size="sm" className="mb-5 h-auto px-0">
+          <Link href="/playlists">Back to playlists</Link>
+        </Button>
 
-          <header className="page-copy-enter space-y-5">
-            <div className="flex flex-wrap items-center gap-2">
-              <Badge variant="secondary" className="capitalize">
-                {playlist.tag ||
-                  (playlist.isSystem ? "Playlist" : "Collection")}
-              </Badge>
-              <Badge variant="outline" className="capitalize">
-                {playlist.accessLevel}
-              </Badge>
-              <Badge variant="outline">
-                {playlist.completionPercent}% completed
-              </Badge>
+        <header className="page-copy-enter space-y-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Badge variant="secondary" className="capitalize">
+              {playlist.tag || (playlist.isSystem ? "Playlist" : "Collection")}
+            </Badge>
+            <Badge variant="outline" className="capitalize">
+              {playlist.accessLevel}
+            </Badge>
+            <Badge variant="outline">
+              {playlist.completionPercent}% completed
+            </Badge>
+          </div>
+          <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
+            {playlist.title}
+          </h1>
+          <p className="max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
+            {playlist.description}
+          </p>
+        </header>
+
+        <Separator className="my-6" />
+
+        <section className="pt-2">
+          <p className="text-sm text-muted-foreground mb-5">
+            Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
+            question{pagination.total === 1 ? "" : "s"}
+          </p>
+          {pagination.total === 0 ? (
+            <div className="rounded-xl border border-border/80 bg-card/70 p-6">
+              <p className="text-muted-foreground">
+                This playlist has no linked questions yet.
+              </p>
             </div>
-            <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
-              {playlist.title}
-            </h1>
-            <p className="text-base leading-8 text-foreground/70 md:text-lg">
-              {playlist.description}
-            </p>
-          </header>
+          ) : (
+            <>
+              <QuestionProgressProvider states={statesByQuestionId}>
+                <ul className="space-y-4">
+                  {pagination.items.map((question, index) => (
+                    <li key={question.id} className="block">
+                      <QuestionCard
+                        question={question}
+                        staggerIndex={index}
+                        showProgress={true}
+                        layout="list"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </QuestionProgressProvider>
 
-          <Separator className="my-7 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[420ms]" />
-
-          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[520ms]">
-            <h2 className="font-serif text-2xl tracking-tight">
-              Questions in this playlist
-            </h2>
-            {playlist.questions.length === 0 ? (
-              <div className="rounded-xl border border-border/80 bg-card/70 p-4">
-                <p className="text-sm text-muted-foreground">
-                  This playlist has no linked questions yet.
-                </p>
-              </div>
-            ) : (
-              <ol className="space-y-3">
-                {playlist.questions.map((question, index) => (
-                  <li
-                    key={question.id}
-                    className="rounded-xl border border-border/80 bg-card/70 p-4"
-                  >
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <Badge variant="outline">#{index + 1}</Badge>
-                    </div>
-                    <h3 className="font-serif text-xl leading-tight">
+              {pagination.totalPages > 1 ? (
+                <nav
+                  aria-label="Playlist questions pagination"
+                  className="flex flex-wrap items-center gap-2 pt-2"
+                >
+                  {pagination.hasPreviousPage ? (
+                    <Button asChild size="sm" variant="outline">
                       <Link
-                        href={`/questions/${question.slug}`}
-                        className="underline-offset-4 hover:underline"
+                        href={getHref(slug, currentQuery, {
+                          page: pagination.page - 1,
+                        })}
+                        scroll={false}
                       >
-                        {question.title}
+                        Previous
                       </Link>
-                    </h3>
-                    <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      {question.summary}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
-        </div>
-      </article>
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled>
+                      Previous
+                    </Button>
+                  )}
+
+                  {visiblePages.map((pageNumber) => (
+                    <Button
+                      key={pageNumber}
+                      asChild
+                      size="sm"
+                      variant={
+                        pageNumber === pagination.page ? "default" : "outline"
+                      }
+                    >
+                      <Link
+                        href={getHref(slug, currentQuery, {
+                          page: pageNumber,
+                        })}
+                        scroll={false}
+                      >
+                        {pageNumber}
+                      </Link>
+                    </Button>
+                  ))}
+
+                  {pagination.hasNextPage ? (
+                    <Button asChild size="sm" variant="outline">
+                      <Link
+                        href={getHref(slug, currentQuery, {
+                          page: pagination.page + 1,
+                        })}
+                        scroll={false}
+                      >
+                        Next
+                      </Link>
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" disabled>
+                      Next
+                    </Button>
+                  )}
+
+                  <span className="ml-1 text-sm text-muted-foreground">
+                    Page {pagination.page} of {pagination.totalPages}
+                  </span>
+                </nav>
+              ) : null}
+            </>
+          )}
+        </section>
+      </div>
     </main>
   );
 }

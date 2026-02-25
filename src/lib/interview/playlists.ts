@@ -1,5 +1,9 @@
 import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  type InterviewQuestionSummary,
+  mapQuestionSummary,
+} from "@/lib/interview/questions";
 import { pickSingle } from "@/lib/utils";
 
 export type PlaylistType = "role" | "company" | "custom";
@@ -44,6 +48,7 @@ export type PlaylistDetails = {
   itemsRead: number;
   completionPercent: number;
   questions: PlaylistQuestionItem[];
+  questionSummaries: InterviewQuestionSummary[];
 };
 
 type QuestionTopicRelation =
@@ -73,6 +78,64 @@ type PlaylistRow = {
     id: string;
     sort_order: number | null;
     questions: PlaylistQuestionRelation | null;
+  }> | null;
+};
+
+/* ── Richer row type used by getPlaylistBySlug ── */
+
+type DetailCategoryRelation =
+  | { slug: string | null; name: string | null }
+  | Array<{ slug: string | null; name: string | null }>;
+
+type DetailSubcategoryRelation =
+  | {
+      slug: string | null;
+      name: string | null;
+      categories: DetailCategoryRelation | null;
+    }
+  | Array<{
+      slug: string | null;
+      name: string | null;
+      categories: DetailCategoryRelation | null;
+    }>;
+
+type DetailTopicRelation = {
+  id: string | null;
+  slug: string | null;
+  name: string | null;
+  short_description: string | null;
+  status: string | null;
+  subcategories: DetailSubcategoryRelation | null;
+};
+
+type PlaylistDetailQuestionRow = {
+  id: string | null;
+  slug: string | null;
+  title: string | null;
+  summary: string | null;
+  status: string | null;
+  question_topics: Array<{
+    sort_order: number | null;
+    topics: DetailTopicRelation | DetailTopicRelation[] | null;
+  }> | null;
+};
+
+type PlaylistDetailQuestionRelation =
+  | PlaylistDetailQuestionRow
+  | PlaylistDetailQuestionRow[];
+
+type PlaylistDetailRow = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  is_system: boolean;
+  tag: string | null;
+  access_level: PlaylistAccess;
+  playlist_items: Array<{
+    id: string;
+    sort_order: number | null;
+    questions: PlaylistDetailQuestionRelation | null;
   }> | null;
 };
 
@@ -363,38 +426,87 @@ export async function listFeaturedPlaylists(limit = 3) {
   return playlists.slice(0, Math.max(0, limit));
 }
 
+function mapPlaylistDetailQuestionSummaries(
+  playlist: PlaylistDetailRow,
+): InterviewQuestionSummary[] {
+  const orderedItems = [...(playlist.playlist_items ?? [])].sort(
+    (a, b) =>
+      (a.sort_order ?? Number.MAX_SAFE_INTEGER) -
+      (b.sort_order ?? Number.MAX_SAFE_INTEGER),
+  );
+
+  return orderedItems
+    .map((item) => {
+      const question = pickSingle(item.questions);
+
+      if (
+        !question?.id ||
+        !question.slug ||
+        !question.title ||
+        question.status !== "published"
+      ) {
+        return null;
+      }
+
+      // Shape the row to match the QuestionRow type that mapQuestionSummary expects
+      return mapQuestionSummary({
+        id: question.id,
+        slug: question.slug,
+        title: question.title,
+        summary: question.summary,
+        created_at: null,
+        published_at: null,
+        question_topics: question.question_topics,
+      });
+    })
+    .filter((summary): summary is InterviewQuestionSummary => Boolean(summary));
+}
+
 export async function getPlaylistBySlug(slug: string) {
   const normalizedSlug = slug.trim().toLowerCase();
   if (!normalizedSlug) {
     return undefined;
   }
 
-  const playlist = await withPublicPlaylistClient<PlaylistRow | undefined>(
-    undefined,
-    async (publicSupabase) => {
-      const { data, error } = await publicSupabase
-        .from("playlists")
-        .select(
-          "id, slug, title, description, is_system, tag, access_level, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
-        )
-        .eq("status", "published")
-        .eq("slug", normalizedSlug)
-        .maybeSingle();
+  const playlist = await withPublicPlaylistClient<
+    PlaylistDetailRow | undefined
+  >(undefined, async (publicSupabase) => {
+    const { data, error } = await publicSupabase
+      .from("playlists")
+      .select(
+        `id, slug, title, description, is_system, tag, access_level,
+           playlist_items(id, sort_order,
+             questions(id, slug, title, summary, status,
+               question_topics(sort_order,
+                 topics(id, slug, name, short_description, status,
+                   subcategories(slug, name,
+                     categories(slug, name)
+                   )
+                 )
+               )
+             )
+           )`,
+      )
+      .eq("status", "published")
+      .eq("slug", normalizedSlug)
+      .maybeSingle();
 
-      if (error) {
-        console.error(`Failed to fetch playlist "${normalizedSlug}"`, error);
-        return undefined;
-      }
+    if (error) {
+      console.error(`Failed to fetch playlist "${normalizedSlug}"`, error);
+      return undefined;
+    }
 
-      return (data as PlaylistRow | null) ?? undefined;
-    },
-  );
+    return (data as PlaylistDetailRow | null) ?? undefined;
+  });
 
   if (!playlist) {
     return undefined;
   }
 
-  const questions = mapPlaylistQuestions(playlist);
+  // Build lightweight items for legacy fields
+  const questions = mapPlaylistQuestions(playlist as unknown as PlaylistRow);
+  // Build full summaries for QuestionCard rendering
+  const questionSummaries = mapPlaylistDetailQuestionSummaries(playlist);
   const totalItems = questions.length;
   const readQuestionIds = await listUserReadQuestionIds(
     questions.map((question) => question.id),
@@ -420,5 +532,6 @@ export async function getPlaylistBySlug(slug: string) {
     itemsRead,
     completionPercent: toCompletionPercent(itemsRead, totalItems),
     questions,
+    questionSummaries,
   } satisfies PlaylistDetails;
 }
