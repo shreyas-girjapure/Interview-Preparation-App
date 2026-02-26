@@ -104,6 +104,8 @@ describe("mapTopicSlugs", () => {
           short_description: "",
           status: "published",
           subcategories: null,
+          publishedAt: null,
+          updatedAt: null,
         },
       },
       {
@@ -115,6 +117,8 @@ describe("mapTopicSlugs", () => {
           short_description: "",
           status: "published",
           subcategories: null,
+          publishedAt: null,
+          updatedAt: null,
         },
       },
     ];
@@ -132,6 +136,8 @@ describe("mapTopicSlugs", () => {
           short_description: "",
           status: "draft",
           subcategories: null,
+          publishedAt: null,
+          updatedAt: null,
         },
       },
       {
@@ -143,6 +149,8 @@ describe("mapTopicSlugs", () => {
           short_description: "",
           status: "published",
           subcategories: null,
+          publishedAt: null,
+          updatedAt: null,
         },
       },
     ];
@@ -160,6 +168,8 @@ describe("mapTopicSlugs", () => {
           short_description: "",
           status: "published",
           subcategories: null,
+          publishedAt: null,
+          updatedAt: null,
         },
       },
       {
@@ -171,6 +181,8 @@ describe("mapTopicSlugs", () => {
           short_description: "",
           status: "published",
           subcategories: null,
+          publishedAt: null,
+          updatedAt: null,
         },
       },
     ];
@@ -200,6 +212,8 @@ describe("mapCategoryMetadata", () => {
             name: "Sub",
             categories: { slug: "javascript", name: "JavaScript" },
           },
+          publishedAt: null,
+          updatedAt: null,
         },
       },
     ];
@@ -222,6 +236,8 @@ describe("mapCategoryMetadata", () => {
           name: "Sub",
           categories: { slug: "javascript", name: "JavaScript" },
         },
+        publishedAt: null,
+        updatedAt: null,
       },
     });
     const topics = [makeTopic("1"), makeTopic("2")];
@@ -240,6 +256,7 @@ describe("mapQuestionSummary", () => {
     summary: "A closure explanation.",
     created_at: null,
     published_at: null,
+    updated_at: null,
     sort_order: null,
     question_topics: null,
   };
@@ -272,6 +289,7 @@ describe("mapQuestionDetail", () => {
       summary: "Summary",
       created_at: null,
       published_at: null,
+      updated_at: null,
       sort_order: null,
       question_topics: null,
     };
@@ -293,6 +311,8 @@ describe("matchesQuestionSearch", () => {
     categorySlugs: ["javascript"],
     summary: "Closures capture variables from outer scope.",
     topicSlugs: ["closures"],
+    publishedAt: null,
+    updatedAt: null,
   };
 
   it("returns true for empty search", () => {
@@ -330,6 +350,8 @@ describe("matchesTopicSearch", () => {
     name: "Closures",
     shortDescription: "Understanding JavaScript closures.",
     questionCount: 5,
+    publishedAt: null,
+    updatedAt: null,
   };
 
   it("returns true for empty search", () => {
@@ -370,6 +392,8 @@ describe("deriveFallbackPrerequisiteTopicIds", () => {
     overview_markdown: null,
     sort_order: sortOrder,
     subcategory_id: subcategoryId,
+    published_at: null,
+    updated_at: null,
   });
 
   it("returns topics from same subcategory with lower sort_order", () => {

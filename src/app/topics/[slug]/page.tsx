@@ -92,9 +92,12 @@ export default async function TopicDetailsPage({ params }: { params: Params }) {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 ease-out fill-mode-both delay-[620ms]">
             <Separator className="my-8" />
             <section className="space-y-4">
-              <h2 className="font-serif text-2xl tracking-tight">
-                Related questions
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-serif text-2xl tracking-tight">
+                  Related questions
+                </h2>
+              </div>
+
               {topic.relatedQuestions.length === 0 ? (
                 <div className="rounded-xl border border-border/80 bg-card/70 p-4">
                   <p className="text-sm text-muted-foreground">

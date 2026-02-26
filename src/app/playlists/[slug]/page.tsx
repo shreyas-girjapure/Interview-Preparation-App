@@ -9,11 +9,20 @@ import { QuestionCard } from "@/components/question-card";
 import { QuestionProgressProvider } from "@/contexts/question-progress-context";
 import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
 import { getPlaylistBySlug } from "@/lib/interview/playlists";
+import { sortQuestions } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
+import { SortDropdown, type SortOption } from "@/components/sort-dropdown";
 
 export const dynamic = "force-dynamic";
 
 const PLAYLIST_PAGE_SIZE = 10;
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+  { label: "Recently Modified", value: "recently-modified" },
+  { label: "Alphabetical", value: "alphabetical" },
+];
 
 type Params = Promise<{
   slug: string;
@@ -21,6 +30,7 @@ type Params = Promise<{
 
 type SearchParams = Promise<{
   page?: string | string[];
+  sort?: string | string[];
 }>;
 
 export async function generateMetadata({
@@ -106,8 +116,12 @@ export default async function PlaylistDetailsPage({
   }
 
   const requestedPage = parsePositiveInt(getSingleValue(rawParams.page), 1);
+  const sortOption = getSingleValue(rawParams.sort);
+
+  const sortedQuestions = sortQuestions(playlist.questionSummaries, sortOption);
+
   const pagination = paginateItems(
-    playlist.questionSummaries,
+    sortedQuestions,
     requestedPage,
     PLAYLIST_PAGE_SIZE,
   );
@@ -149,10 +163,15 @@ export default async function PlaylistDetailsPage({
         <Separator className="my-6" />
 
         <section className="pt-2">
-          <p className="text-sm text-muted-foreground mb-5">
-            Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
-            question{pagination.total === 1 ? "" : "s"}
-          </p>
+          <div className="flex items-center justify-between mb-5">
+            <p className="text-sm text-muted-foreground">
+              Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
+              question{pagination.total === 1 ? "" : "s"}
+            </p>
+            {pagination.total > 1 && (
+              <SortDropdown options={SORT_OPTIONS} defaultSort="newest" />
+            )}
+          </div>
           {pagination.total === 0 ? (
             <div className="rounded-xl border border-border/80 bg-card/70 p-6">
               <p className="text-muted-foreground">

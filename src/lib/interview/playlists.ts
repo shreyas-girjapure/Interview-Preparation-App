@@ -23,6 +23,8 @@ export type PlaylistDashboardItem = {
   nextUp: string;
   itemsRead: number;
   completionPercent: number;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
 export type PlaylistQuestionItem = {
@@ -74,11 +76,18 @@ type PlaylistRow = {
   is_system: boolean;
   tag: string | null;
   access_level: PlaylistAccess;
+  created_at: string | null;
+  updated_at: string | null;
   playlist_items: Array<{
     id: string;
     sort_order: number | null;
     questions: PlaylistQuestionRelation | null;
   }> | null;
+};
+
+export type PlaylistFilters = {
+  search?: string;
+  sort?: string;
 };
 
 /* ── Richer row type used by getPlaylistBySlug ── */
@@ -114,6 +123,7 @@ type PlaylistDetailQuestionRow = {
   title: string | null;
   summary: string | null;
   status: string | null;
+  updated_at: string | null;
   question_topics: Array<{
     sort_order: number | null;
     topics: DetailTopicRelation | DetailTopicRelation[] | null;
@@ -292,6 +302,8 @@ function mapPlaylists(rows: PlaylistRow[], readQuestionIds: Set<string>) {
       nextUp: normalizeItemText(nextQuestion?.title || nextQuestion?.summary),
       itemsRead,
       completionPercent: toCompletionPercent(itemsRead, totalItems),
+      createdAt: playlist.created_at,
+      updatedAt: playlist.updated_at,
     };
   });
 }
@@ -387,14 +399,19 @@ export async function listPlaylistSlugs() {
   });
 }
 
-export async function listPlaylistDashboardItems() {
+export async function listPlaylistDashboardItems(
+  filters: PlaylistFilters = {},
+) {
+  const search = filters.search ?? "";
+  const sortOption = filters.sort ?? "newest";
+
   const playlists = await withPublicPlaylistClient<PlaylistRow[]>(
     [],
     async (publicSupabase) => {
       const { data, error } = await publicSupabase
         .from("playlists")
         .select(
-          "id, slug, title, description, is_system, tag, access_level, sort_order, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
+          "id, slug, title, description, is_system, tag, access_level, sort_order, created_at, updated_at, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
         )
         .eq("status", "published")
         .order("sort_order", { ascending: true })
@@ -418,7 +435,56 @@ export async function listPlaylistDashboardItems() {
   const readQuestionIds = await listUserReadQuestionIds(
     listQuestionIdsForPlaylists(playlists),
   );
-  return mapPlaylists(playlists, readQuestionIds);
+
+  const mapped = mapPlaylists(playlists, readQuestionIds);
+
+  return sortPlaylists(
+    mapped.filter((p) => {
+      if (!search) return true;
+      const term = search.toLowerCase();
+      return (
+        p.title.toLowerCase().includes(term) ||
+        p.description.toLowerCase().includes(term)
+      );
+    }),
+    sortOption,
+  );
+}
+
+export type PlaylistSortOption =
+  | "newest"
+  | "oldest"
+  | "recently-modified"
+  | "alphabetical";
+
+export function sortPlaylists<
+  T extends {
+    title: string;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+  },
+>(playlists: T[], sortOption: PlaylistSortOption | string = "newest"): T[] {
+  return [...playlists].sort((a, b) => {
+    if (sortOption === "alphabetical") {
+      return a.title.localeCompare(b.title);
+    }
+
+    if (sortOption === "recently-modified") {
+      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return timeB - timeA;
+    }
+
+    // Default to newest or explicit "oldest"
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+    if (sortOption === "oldest") {
+      return timeA - timeB;
+    }
+
+    return timeB - timeA; // newest
+  });
 }
 
 export async function listFeaturedPlaylists(limit = 3) {
@@ -456,6 +522,7 @@ function mapPlaylistDetailQuestionSummaries(
         summary: question.summary,
         created_at: null,
         published_at: null,
+        updated_at: question.updated_at ?? null,
         question_topics: question.question_topics,
       });
     })
@@ -476,7 +543,7 @@ export async function getPlaylistBySlug(slug: string) {
       .select(
         `id, slug, title, description, is_system, tag, access_level,
            playlist_items(id, sort_order,
-             questions(id, slug, title, summary, status,
+             questions(id, slug, title, summary, status, updated_at,
                question_topics(sort_order,
                  topics(id, slug, name, short_description, status,
                    subcategories(slug, name,
