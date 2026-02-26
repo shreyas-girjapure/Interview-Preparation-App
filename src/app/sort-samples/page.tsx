@@ -14,7 +14,6 @@ import {
   Check,
   ArrowUp,
   ArrowDown,
-  SlidersHorizontal,
   ListFilter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -215,7 +214,7 @@ export default function SortSamplesPage() {
         {/* Sample 6: Hover Underline Menu */}
         <section className="bg-card p-6 rounded-2xl border shadow-sm space-y-4">
           <h2 className="text-lg font-medium border-b pb-2">
-            6. The "Filter Menu" Strip
+            6. The &quot;Filter Menu&quot; Strip
           </h2>
           <p className="text-sm text-muted-foreground">
             Sits above the list as a row of subtle clickable headers.
@@ -250,7 +249,7 @@ export default function SortSamplesPage() {
             7. Icon-Only Trigger
           </h2>
           <p className="text-sm text-muted-foreground">
-            Extremely space-efficient. Good if sort isn't changed often.
+            Extremely space-efficient. Good if sort isn&apos;t changed often.
           </p>
           <Popover>
             <PopoverTrigger asChild>
