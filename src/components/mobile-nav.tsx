@@ -16,6 +16,7 @@ type MobileNavProps = {
   canAccessAdminArea: boolean;
   accountInitial: string;
   accountLabel: string;
+  accountAvatarUrl: string | null;
 };
 
 export function MobileNav({
@@ -23,6 +24,7 @@ export function MobileNav({
   canAccessAdminArea,
   accountInitial,
   accountLabel,
+  accountAvatarUrl,
 }: MobileNavProps) {
   if (!isAuthenticated) {
     return (
@@ -69,8 +71,16 @@ export function MobileNav({
               aria-label={accountLabel}
               title={accountLabel}
             >
-              <span className="inline-flex size-6 items-center justify-center rounded-full border border-border/70 bg-foreground text-[10px] font-semibold text-background">
-                {accountInitial}
+              <span className="inline-flex size-6 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-foreground text-[10px] font-semibold text-background">
+                {accountAvatarUrl ? (
+                  <img
+                    src={accountAvatarUrl}
+                    alt={accountLabel}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  accountInitial
+                )}
               </span>
               <span className="ml-2">Account</span>
             </Link>

@@ -107,14 +107,17 @@ export function QuestionCard({
             {category}
           </Badge>
         ))}
-        {showProgress && progressState && !isRead && (
-          <Badge
-            variant="secondary"
-            className="text-[10px] sm:text-xs transition-opacity duration-300"
-          >
-            {labelQuestionProgressState(progressState)}
-          </Badge>
-        )}
+        {showProgress &&
+          progressState &&
+          progressState !== "unread" &&
+          !isRead && (
+            <Badge
+              variant="secondary"
+              className="text-[10px] sm:text-xs transition-opacity duration-300"
+            >
+              {labelQuestionProgressState(progressState)}
+            </Badge>
+          )}
       </div>
 
       <HeadingTag
@@ -123,7 +126,6 @@ export function QuestionCard({
           headingSize,
           featured ? "leading-snug" : "leading-tight",
           showProgress && "pl-2 transition-colors duration-300",
-          showProgress && isRead && "text-muted-foreground",
         )}
       >
         <Link
