@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { hasAdminAreaAccess, isAppRole } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils";
 import { Providers } from "./providers";
 import "./globals.css";
 
