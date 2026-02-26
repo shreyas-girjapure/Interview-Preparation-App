@@ -19,7 +19,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-import { Check, Plus, Search, ListPlus, Loader2 } from "lucide-react";
+import { Check, Plus, Search, ListPlus, Loader2, X } from "lucide-react";
 import { createUserPlaylist } from "./playlist-actions";
 
 /* ── Types ── */
@@ -27,7 +27,6 @@ export type PickerQuestion = {
   id: string;
   title: string;
   topic: string;
-  difficulty: string;
 };
 
 type CreatePlaylistModalProps = {
@@ -59,7 +58,7 @@ export function CreatePlaylistModal({
   const [description, setDescription] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState("");
-  const [activeTopic, setActiveTopic] = useState("All");
+  const [selectedTopics, setSelectedTopics] = useState<string[]>([]);
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
   const [isPending, startTransition] = useTransition();
 
@@ -91,17 +90,32 @@ export function CreatePlaylistModal({
         !search ||
         q.title.toLowerCase().includes(search.toLowerCase()) ||
         q.topic.toLowerCase().includes(search.toLowerCase());
-      const matchesTopic = activeTopic === "All" || q.topic === activeTopic;
+      const matchesTopic =
+        selectedTopics.length === 0 || selectedTopics.includes(q.topic);
       return matchesSearch && matchesTopic;
     });
-  }, [questions, search, activeTopic]);
+  }, [questions, search, selectedTopics]);
+
+  // Suggested topics based on search
+  const suggestedTopics = useMemo(() => {
+    if (!search.trim()) return [];
+    return topics
+      .filter(
+        (t) =>
+          t.toLowerCase().includes(search.toLowerCase()) &&
+          !selectedTopics.includes(t),
+      )
+      .slice(0, 10);
+  }, [search, topics, selectedTopics]);
 
   const visible = filtered.slice(0, visibleCount);
   const hasMore = visibleCount < filtered.length;
 
   // Reset visible count when filters change
-  const handleTopicChange = (topic: string) => {
-    setActiveTopic(topic);
+  const handleTopicToggle = (topic: string) => {
+    setSelectedTopics((prev) =>
+      prev.includes(topic) ? prev.filter((t) => t !== topic) : [...prev, topic],
+    );
     setVisibleCount(PAGE_SIZE);
   };
   const handleSearchChange = (value: string) => {
@@ -117,7 +131,7 @@ export function CreatePlaylistModal({
       setDescription("");
       setSelected([]);
       setSearch("");
-      setActiveTopic("All");
+      setSelectedTopics([]);
       setVisibleCount(PAGE_SIZE);
     }
   };
@@ -216,9 +230,24 @@ export function CreatePlaylistModal({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <Label>Add Questions</Label>
-                <span className="text-xs text-muted-foreground">
-                  {selected.length} selected
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-muted-foreground">
+                    {selected.length} selected
+                  </span>
+                  {(selected.length > 0 || selectedTopics.length > 0) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelected([]);
+                        setSelectedTopics([]);
+                      }}
+                      className="flex items-center gap-1 text-xs font-medium text-muted-foreground underline hover:text-foreground md:no-underline md:hover:underline transition-colors"
+                    >
+                      Clear all
+                      <X className="size-3" />
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Search bar */}
@@ -234,24 +263,38 @@ export function CreatePlaylistModal({
               </div>
 
               {/* Topic filter pills */}
-              <div className="flex flex-wrap gap-1.5">
-                {["All", ...topics].map((topic) => (
-                  <button
-                    key={topic}
-                    type="button"
-                    onClick={() => handleTopicChange(topic)}
-                    disabled={isPending}
-                    className={cn(
-                      "rounded-full px-2.5 py-1 text-xs font-medium border transition-all",
-                      activeTopic === topic
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground",
-                    )}
-                  >
-                    {topic}
-                  </button>
-                ))}
-              </div>
+              {(selectedTopics.length > 0 || suggestedTopics.length > 0) && (
+                <div className="flex flex-wrap gap-1.5">
+                  {selectedTopics.map((topic) => (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() => handleTopicToggle(topic)}
+                      disabled={isPending}
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-xs font-medium border transition-all flex items-center gap-1",
+                        "bg-primary text-primary-foreground border-primary hover:bg-primary/90",
+                      )}
+                    >
+                      {topic} <span className="opacity-70 text-[10px]">✕</span>
+                    </button>
+                  ))}
+                  {suggestedTopics.map((topic) => (
+                    <button
+                      key={topic}
+                      type="button"
+                      onClick={() => handleTopicToggle(topic)}
+                      disabled={isPending}
+                      className={cn(
+                        "rounded-full px-2.5 py-1 text-xs font-medium border transition-all flex items-center gap-1",
+                        "border-border bg-card text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                      )}
+                    >
+                      {topic} <span className="opacity-70 text-[10px]">+</span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Full-width question tiles */}
@@ -294,7 +337,7 @@ export function CreatePlaylistModal({
                     <div className="flex-1 min-w-0">
                       <p className="font-medium leading-snug">{q.title}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {q.topic} · {q.difficulty}
+                        {q.topic}
                       </p>
                     </div>
                   </button>

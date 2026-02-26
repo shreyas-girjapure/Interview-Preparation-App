@@ -54,7 +54,6 @@ async function fetchPickerQuestions(): Promise<PickerQuestion[]> {
       id: row.id as string,
       title: row.title as string,
       topic: topicName,
-      difficulty: "Mixed",
     };
   });
 }
