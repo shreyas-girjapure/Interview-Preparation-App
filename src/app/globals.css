@@ -335,31 +335,14 @@
 }
 
 @media (max-width: 767px) {
-  .mobile-wrap-code
-    :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
-    pre {
-    white-space: pre-wrap;
-    overflow-wrap: anywhere;
-    word-break: break-word;
-    overflow-x: hidden;
-  }
-
-  .mobile-wrap-code
-    :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
-    code {
-    white-space: inherit;
-  }
-
-  .feature-wrap-code-mobile
-    :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
+  :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
     pre {
     white-space: pre-wrap;
     overflow-wrap: anywhere;
     word-break: break-word;
   }
 
-  .feature-wrap-code-mobile
-    :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
+  :where([data-rehype-pretty-code-fragment], [data-rehype-pretty-code-figure])
     code {
     white-space: inherit;
   }

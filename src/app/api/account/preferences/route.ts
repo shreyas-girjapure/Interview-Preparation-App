@@ -15,7 +15,6 @@ const savePreferencesSchema = z
     targetRole: z.string().nullable().optional(),
     experienceLevel: experienceLevelSchema.nullable().optional(),
     dailyGoalMinutes: z.number().int().min(0).max(1440).nullable().optional(),
-    wrapCodeBlocksOnMobile: z.boolean().optional(),
   })
   .strict()
   .refine((payload) => Object.keys(payload).length > 0, {
@@ -31,17 +30,6 @@ function normalizeFocusAreas(focusAreas: string[]) {
 function normalizeNullableText(value: string | null) {
   const trimmed = value?.trim() ?? "";
   return trimmed || null;
-}
-
-function isMissingWrapCodeBlocksColumnError(
-  error: {
-    message?: string | null;
-  } | null,
-) {
-  const message = error?.message?.toLowerCase() ?? "";
-  return (
-    message.includes("wrap_code_blocks_on_mobile") && message.includes("column")
-  );
 }
 
 export async function POST(request: Request) {
@@ -104,7 +92,6 @@ export async function POST(request: Request) {
     target_role?: string | null;
     experience_level?: ExperienceLevel | null;
     daily_goal_minutes?: number | null;
-    wrap_code_blocks_on_mobile?: boolean;
   } = {
     user_id: user.id,
   };
@@ -125,43 +112,9 @@ export async function POST(request: Request) {
     upsertPayload.daily_goal_minutes = payload.dailyGoalMinutes;
   }
 
-  if (payload.wrapCodeBlocksOnMobile !== undefined) {
-    upsertPayload.wrap_code_blocks_on_mobile = payload.wrapCodeBlocksOnMobile;
-  }
-
   const { error: saveError } = await supabase
     .from("user_preferences")
     .upsert(upsertPayload, { onConflict: "user_id" });
-
-  if (saveError && isMissingWrapCodeBlocksColumnError(saveError)) {
-    const fallbackPayload = { ...upsertPayload };
-    delete fallbackPayload.wrap_code_blocks_on_mobile;
-
-    if (Object.keys(fallbackPayload).length === 1) {
-      return NextResponse.json({
-        ok: true,
-        warning:
-          "Code-wrap feature is unavailable until the latest database migration is applied.",
-      });
-    }
-
-    const { error: fallbackSaveError } = await supabase
-      .from("user_preferences")
-      .upsert(fallbackPayload, { onConflict: "user_id" });
-
-    if (fallbackSaveError) {
-      return NextResponse.json(
-        { error: `Unable to save preferences: ${fallbackSaveError.message}` },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({
-      ok: true,
-      warning:
-        "Code-wrap feature is unavailable until the latest database migration is applied.",
-    });
-  }
 
   if (saveError) {
     return NextResponse.json(

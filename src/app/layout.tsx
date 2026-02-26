@@ -18,17 +18,6 @@ export const metadata: Metadata = {
     "Readable interview preparation with clean explanations and code.",
 };
 
-function isMissingWrapCodeBlocksColumnError(
-  error: {
-    message?: string | null;
-  } | null,
-) {
-  const message = error?.message?.toLowerCase() ?? "";
-  return (
-    message.includes("wrap_code_blocks_on_mobile") && message.includes("column")
-  );
-}
-
 export default async function RootLayout({
   children,
 }: Readonly<{
@@ -42,7 +31,6 @@ export default async function RootLayout({
   let isAuthenticated = false;
   let accountInitial = "U";
   let accountLabel = "Account";
-  let wrapCodeBlocksOnMobile = false;
   let canAccessAdminArea = false;
 
   if (hasSupabasePublicEnv) {
@@ -71,26 +59,6 @@ export default async function RootLayout({
 
         const role = isAppRole(userProfile?.role) ? userProfile.role : null;
         canAccessAdminArea = hasAdminAreaAccess(role);
-
-        const { data: preferences, error: preferencesError } = await supabase
-          .from("user_preferences")
-          .select("wrap_code_blocks_on_mobile")
-          .eq("user_id", user.id)
-          .maybeSingle<{
-            wrap_code_blocks_on_mobile: boolean | null;
-          }>();
-
-        if (
-          preferencesError &&
-          !isMissingWrapCodeBlocksColumnError(preferencesError) &&
-          preferencesError.code !== "PGRST116"
-        ) {
-          console.warn("Unable to load wrap-code feature preference.");
-        }
-
-        wrapCodeBlocksOnMobile = Boolean(
-          preferences?.wrap_code_blocks_on_mobile,
-        );
       }
     } catch {
       isAuthenticated = false;
@@ -99,12 +67,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body
-        className={cn(
-          "antialiased",
-          wrapCodeBlocksOnMobile && "feature-wrap-code-mobile",
-        )}
-      >
+      <body className="antialiased">
         <Providers>
           <ScrollToTop />
           <div className="min-h-screen">
