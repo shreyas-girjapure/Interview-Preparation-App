@@ -8,6 +8,9 @@ export type InterviewQuestion = {
   category: string;
   categories: string[];
   categorySlugs: string[];
+  subcategory?: string;
+  subcategories: string[];
+  subcategorySlugs: string[];
   summary: string;
   answerMarkdown: string;
   topicSlugs: string[];
@@ -32,6 +35,7 @@ export type InterviewTopicSummary = {
   name: string;
   shortDescription: string;
   questionCount: number;
+  subcategory?: string;
   publishedAt: string | null;
   updatedAt: string | null;
 };
@@ -101,6 +105,7 @@ type TopicRow = {
   overview_markdown: string | null;
   sort_order: number | null;
   subcategory_id: string | null;
+  subcategories?: SubcategoryRelation | null;
   published_at: string | null;
   updated_at: string | null;
 };
@@ -189,12 +194,17 @@ export function mapCategoryMetadata(
     return {
       labels: [],
       slugs: [],
+      subcategoryLabels: [],
+      subcategorySlugs: [],
     };
   }
 
   const labels: string[] = [];
   const slugs: string[] = [];
-  const seen = new Set<string>();
+  const subcategoryLabels: string[] = [];
+  const subcategorySlugs: string[] = [];
+  const seenCategory = new Set<string>();
+  const seenSubcategory = new Set<string>();
 
   const mapped = questionTopics
     .map((relation) => ({
@@ -206,22 +216,35 @@ export function mapCategoryMetadata(
 
   for (const entry of mapped) {
     const topicSubcategory = pickSingle(entry.topic?.subcategories);
+    const subcategoryLabel = topicSubcategory?.name?.trim();
+    const subcategorySlug = topicSubcategory?.slug?.trim().toLowerCase();
+
+    if (
+      subcategoryLabel &&
+      subcategorySlug &&
+      !seenSubcategory.has(subcategorySlug)
+    ) {
+      seenSubcategory.add(subcategorySlug);
+      subcategoryLabels.push(subcategoryLabel);
+      subcategorySlugs.push(subcategorySlug);
+    }
+
     const topicCategory = pickSingle(topicSubcategory?.categories);
     const categoryLabel = topicCategory?.name?.trim();
     const categorySlug = topicCategory?.slug?.trim().toLowerCase();
 
-    if (!categoryLabel || !categorySlug || seen.has(categorySlug)) {
-      continue;
+    if (categoryLabel && categorySlug && !seenCategory.has(categorySlug)) {
+      seenCategory.add(categorySlug);
+      labels.push(categoryLabel);
+      slugs.push(categorySlug);
     }
-
-    seen.add(categorySlug);
-    labels.push(categoryLabel);
-    slugs.push(categorySlug);
   }
 
   return {
     labels,
     slugs,
+    subcategoryLabels,
+    subcategorySlugs,
   };
 }
 
@@ -235,6 +258,9 @@ export function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
     category: categories.labels[0] ?? "General",
     categories: categories.labels,
     categorySlugs: categories.slugs,
+    subcategory: categories.subcategoryLabels[0],
+    subcategories: categories.subcategoryLabels,
+    subcategorySlugs: categories.subcategorySlugs,
     summary: row.summary?.trim() || "No summary available yet.",
     topicSlugs: mapTopicSlugs(row.question_topics),
     publishedAt: row.published_at,
@@ -534,7 +560,7 @@ async function fetchPublishedTopicRows() {
     const { data, error } = await supabase
       .from("topics")
       .select(
-        "id, slug, name, short_description, overview_markdown, sort_order, subcategory_id, published_at, updated_at",
+        "id, slug, name, short_description, overview_markdown, sort_order, subcategory_id, published_at, updated_at, subcategories(name, slug)",
       )
       .eq("status", "published")
       .order("sort_order", { ascending: true })
@@ -590,6 +616,8 @@ function mapTopicSummary(
   topic: TopicRow,
   countsByTopicId: Map<string, number>,
 ): InterviewTopicSummary {
+  const subcategory = pickSingle(topic.subcategories);
+
   return {
     id: topic.id,
     slug: topic.slug,
@@ -598,6 +626,7 @@ function mapTopicSummary(
       topic.short_description?.trim() ||
       "Interview concept overview is being prepared.",
     questionCount: countsByTopicId.get(topic.id) ?? 0,
+    subcategory: subcategory?.name?.trim(),
     publishedAt: topic.published_at,
     updatedAt: topic.updated_at,
   };
@@ -617,6 +646,9 @@ async function resolveQuestionSummaryBySlug(slug: string) {
     category: question.category,
     categories: question.categories,
     categorySlugs: question.categorySlugs,
+    subcategory: question.subcategory,
+    subcategories: question.subcategories,
+    subcategorySlugs: question.subcategorySlugs,
     summary: question.summary,
     topicSlugs: question.topicSlugs,
   };

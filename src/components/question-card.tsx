@@ -37,9 +37,13 @@ export function QuestionCard({
     ? (progressStateProp ?? contextState)
     : undefined;
 
-  const categories = question.categories.length
-    ? question.categories
-    : [question.category];
+  const displayCategories = question.subcategories?.length
+    ? question.subcategories
+    : question.subcategory
+      ? [question.subcategory]
+      : question.categories.length
+        ? question.categories
+        : [question.category];
 
   const isRead = progressState === "read";
 
@@ -98,7 +102,7 @@ export function QuestionCard({
           showProgress && "pl-2",
         )}
       >
-        {categories.map((category) => (
+        {displayCategories.map((category) => (
           <Badge
             key={`${question.id}-${category}`}
             variant="outline"
