@@ -8,13 +8,22 @@ import { listQuestions } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 import { QuestionCard } from "@/components/question-card";
 import { QuestionProgressProvider } from "@/contexts/question-progress-context";
+import { SortDropdown, type SortOption } from "@/components/sort-dropdown";
 
 type SearchParams = Promise<{
   page?: string | string[];
+  sort?: string | string[];
 }>;
 
 const QUESTIONS_PAGE_SIZE = 10;
 export const dynamic = "force-dynamic";
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+  { label: "Recently Modified", value: "recently-modified" },
+  { label: "Alphabetical", value: "alphabetical" },
+];
 
 function getSingleValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -68,8 +77,9 @@ export default async function QuestionsPage({
   const rawParams = await searchParams;
 
   const requestedPage = parsePositiveInt(getSingleValue(rawParams.page), 1);
+  const sortOption = getSingleValue(rawParams.sort);
 
-  const questions = await listQuestions();
+  const questions = await listQuestions({ sort: sortOption });
 
   const pagination = paginateItems(
     questions,
@@ -105,10 +115,15 @@ export default async function QuestionsPage({
         <Separator className="my-6" />
 
         <section className="pt-2">
-          <p className="text-sm text-muted-foreground mb-5">
-            Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
-            question{pagination.total === 1 ? "" : "s"}
-          </p>
+          <div className="flex items-center justify-between mb-5">
+            <p className="text-sm text-muted-foreground">
+              Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
+              question{pagination.total === 1 ? "" : "s"}
+            </p>
+            {pagination.total > 1 && (
+              <SortDropdown options={SORT_OPTIONS} defaultSort="newest" />
+            )}
+          </div>
           {pagination.total === 0 ? (
             <div className="rounded-xl border border-border/80 bg-card/70 p-6">
               <p className="text-muted-foreground">

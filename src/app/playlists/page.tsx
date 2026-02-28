@@ -2,8 +2,69 @@ import { Badge } from "@/components/ui/badge";
 import { PlaylistCard } from "@/components/playlist-card";
 import { Separator } from "@/components/ui/separator";
 import { listPlaylistDashboardItems } from "@/lib/interview/playlists";
+import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  CreatePlaylistModal,
+  type PickerQuestion,
+} from "./create-playlist-modal";
+import { SortDropdown, type SortOption } from "@/components/sort-dropdown";
 
 export const dynamic = "force-dynamic";
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+  { label: "Recently Modified", value: "recently-modified" },
+  { label: "Alphabetical", value: "alphabetical" },
+];
+
+/** Lightweight query: published questions with their first topic name. */
+async function fetchPickerQuestions(): Promise<PickerQuestion[]> {
+  const supabase = createSupabasePublicServerClient();
+  const { data, error } = await supabase
+    .from("questions")
+    .select(
+      `
+      id,
+      title,
+      question_topics(
+        sort_order,
+        topics(
+          name
+        )
+      )
+    `,
+    )
+    .eq("status", "published")
+    .order("title", { ascending: true });
+
+  if (error || !data) return [];
+
+  return data.map((row: Record<string, unknown>) => {
+    // Extract first topic name from the nested relation
+    let topicName = "General";
+    const qt = row.question_topics as Array<{
+      topics: { name: string } | { name: string }[] | null;
+    }> | null;
+    if (qt && qt.length > 0) {
+      const topicRel = qt[0]?.topics;
+      if (topicRel) {
+        if (Array.isArray(topicRel)) {
+          topicName = topicRel[0]?.name ?? "General";
+        } else {
+          topicName = topicRel.name ?? "General";
+        }
+      }
+    }
+
+    return {
+      id: row.id as string,
+      title: row.title as string,
+      topic: topicName,
+    };
+  });
+}
 
 function emptyStateCards() {
   return [
@@ -38,8 +99,30 @@ function emptyStateCards() {
   ] as const;
 }
 
-export default async function PlaylistsDashboardConceptPage() {
-  const playlistCards = await listPlaylistDashboardItems();
+type SearchParams = Promise<{
+  sort?: string | string[];
+}>;
+
+export default async function PlaylistsDashboardConceptPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  const supabase = await createSupabaseServerClient();
+  const rawParams = await searchParams;
+  const sortOption = Array.isArray(rawParams.sort)
+    ? rawParams.sort[0]
+    : rawParams.sort;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isSignedIn = !!user;
+
+  const [playlistCards, pickerQuestions] = await Promise.all([
+    listPlaylistDashboardItems({ sort: sortOption }),
+    fetchPickerQuestions(),
+  ]);
   const cards = playlistCards.length ? playlistCards : emptyStateCards();
 
   return (
@@ -56,9 +139,19 @@ export default async function PlaylistsDashboardConceptPage() {
             Hand-crafted collections of questions designed to help you master
             specific roles, companies, and technologies in depth.
           </p>
+          <CreatePlaylistModal
+            questions={pickerQuestions}
+            isSignedIn={isSignedIn}
+          />
         </header>
 
         <Separator className="bg-border/60" />
+
+        <div className="flex items-center justify-end pt-2">
+          {cards.length > 1 && (
+            <SortDropdown options={SORT_OPTIONS} defaultSort="newest" />
+          )}
+        </div>
 
         <section className="pt-2">
           <ul className="grid gap-4 md:grid-cols-3">

@@ -8,6 +8,7 @@ export type TopicCardData = {
   name: string;
   shortDescription: string;
   questionCount?: number;
+  subcategory?: string;
 };
 
 export type TopicCardProps = {

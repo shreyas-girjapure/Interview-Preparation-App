@@ -6,12 +6,22 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { listTopics } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
+import { SortDropdown, type SortOption } from "@/components/sort-dropdown";
 
 type SearchParams = Promise<{
   page?: string | string[];
+  sort?: string | string[];
 }>;
 
 const TOPICS_PAGE_SIZE = 12;
+
+const SORT_OPTIONS: SortOption[] = [
+  { label: "Newest First", value: "newest" },
+  { label: "Oldest First", value: "oldest" },
+  { label: "Recently Modified", value: "recently-modified" },
+  { label: "Alphabetical", value: "alphabetical" },
+  { label: "Most Questions", value: "popular" },
+];
 
 function getSingleValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
@@ -59,7 +69,8 @@ export default async function TopicsPage({
 }) {
   const rawParams = await searchParams;
   const requestedPage = parsePositiveInt(getSingleValue(rawParams.page), 1);
-  const topics = await listTopics();
+  const sortOption = getSingleValue(rawParams.sort);
+  const topics = await listTopics({ sort: sortOption });
   const pagination = paginateItems(topics, requestedPage, TOPICS_PAGE_SIZE);
   const visiblePages = getVisiblePages(pagination.page, pagination.totalPages);
 
@@ -87,10 +98,15 @@ export default async function TopicsPage({
         <Separator className="my-6" />
 
         <section className="pt-2">
-          <p className="text-sm text-muted-foreground mb-5">
-            Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
-            topic{pagination.total === 1 ? "" : "s"}
-          </p>
+          <div className="flex items-center justify-between mb-5">
+            <p className="text-sm text-muted-foreground">
+              Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
+              topic{pagination.total === 1 ? "" : "s"}
+            </p>
+            {pagination.total > 1 && (
+              <SortDropdown options={SORT_OPTIONS} defaultSort="alphabetical" />
+            )}
+          </div>
 
           {pagination.total === 0 ? (
             <div className="rounded-xl border border-border/80 bg-card/70 p-6">

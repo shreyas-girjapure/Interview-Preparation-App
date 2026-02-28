@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +17,7 @@ type MobileNavProps = {
   canAccessAdminArea: boolean;
   accountInitial: string;
   accountLabel: string;
+  accountAvatarUrl: string | null;
 };
 
 export function MobileNav({
@@ -23,6 +25,7 @@ export function MobileNav({
   canAccessAdminArea,
   accountInitial,
   accountLabel,
+  accountAvatarUrl,
 }: MobileNavProps) {
   if (!isAuthenticated) {
     return (
@@ -69,8 +72,18 @@ export function MobileNav({
               aria-label={accountLabel}
               title={accountLabel}
             >
-              <span className="inline-flex size-6 items-center justify-center rounded-full border border-border/70 bg-foreground text-[10px] font-semibold text-background">
-                {accountInitial}
+              <span className="inline-flex size-6 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-foreground text-[10px] font-semibold text-background">
+                {accountAvatarUrl ? (
+                  <Image
+                    src={accountAvatarUrl}
+                    alt={accountLabel}
+                    width={24}
+                    height={24}
+                    className="size-full object-cover"
+                  />
+                ) : (
+                  accountInitial
+                )}
               </span>
               <span className="ml-2">Account</span>
             </Link>

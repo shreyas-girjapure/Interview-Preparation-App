@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { BrandLogo } from "@/components/brand-logo";
@@ -8,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { hasAdminAreaAccess, isAppRole } from "@/lib/auth/roles";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { cn } from "@/lib/utils";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -17,17 +17,6 @@ export const metadata: Metadata = {
   description:
     "Readable interview preparation with clean explanations and code.",
 };
-
-function isMissingWrapCodeBlocksColumnError(
-  error: {
-    message?: string | null;
-  } | null,
-) {
-  const message = error?.message?.toLowerCase() ?? "";
-  return (
-    message.includes("wrap_code_blocks_on_mobile") && message.includes("column")
-  );
-}
 
 export default async function RootLayout({
   children,
@@ -42,7 +31,7 @@ export default async function RootLayout({
   let isAuthenticated = false;
   let accountInitial = "U";
   let accountLabel = "Account";
-  let wrapCodeBlocksOnMobile = false;
+  let accountAvatarUrl: string | null = null;
   let canAccessAdminArea = false;
 
   if (hasSupabasePublicEnv) {
@@ -65,32 +54,14 @@ export default async function RootLayout({
 
         const { data: userProfile } = await supabase
           .from("users")
-          .select("role")
+          .select("role, avatar_url")
           .eq("id", user.id)
-          .maybeSingle<{ role: string | null }>();
+          .maybeSingle<{ role: string | null; avatar_url: string | null }>();
 
+        accountAvatarUrl =
+          userProfile?.avatar_url ?? user.user_metadata?.avatar_url ?? null;
         const role = isAppRole(userProfile?.role) ? userProfile.role : null;
         canAccessAdminArea = hasAdminAreaAccess(role);
-
-        const { data: preferences, error: preferencesError } = await supabase
-          .from("user_preferences")
-          .select("wrap_code_blocks_on_mobile")
-          .eq("user_id", user.id)
-          .maybeSingle<{
-            wrap_code_blocks_on_mobile: boolean | null;
-          }>();
-
-        if (
-          preferencesError &&
-          !isMissingWrapCodeBlocksColumnError(preferencesError) &&
-          preferencesError.code !== "PGRST116"
-        ) {
-          console.warn("Unable to load wrap-code feature preference.");
-        }
-
-        wrapCodeBlocksOnMobile = Boolean(
-          preferences?.wrap_code_blocks_on_mobile,
-        );
       }
     } catch {
       isAuthenticated = false;
@@ -99,15 +70,10 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body
-        className={cn(
-          "antialiased",
-          wrapCodeBlocksOnMobile && "feature-wrap-code-mobile",
-        )}
-      >
+      <body className="antialiased">
         <Providers>
           <ScrollToTop />
-          <div className="min-h-screen">
+          <div className="flex min-h-screen flex-col pb-16 md:pb-24">
             <header className="border-b border-border/70 bg-background/95 backdrop-blur">
               <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-2 sm:px-6 md:px-10 md:py-3">
                 <Link href="/" className="flex items-center gap-2 sm:gap-2.5">
@@ -122,6 +88,7 @@ export default async function RootLayout({
                     canAccessAdminArea={canAccessAdminArea}
                     accountInitial={accountInitial}
                     accountLabel={accountLabel}
+                    accountAvatarUrl={accountAvatarUrl}
                   />
                 </div>
                 <div className="hidden items-center gap-2 md:flex">
@@ -145,9 +112,19 @@ export default async function RootLayout({
                         href="/account"
                         aria-label={accountLabel}
                         title={accountLabel}
-                        className="inline-flex size-8 items-center justify-center rounded-full border border-border/70 bg-foreground text-[11px] font-semibold tracking-[0.01em] text-background shadow-xs transition-opacity hover:opacity-90"
+                        className="inline-flex size-8 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-foreground text-[11px] font-semibold tracking-[0.01em] text-background shadow-xs transition-opacity hover:opacity-90"
                       >
-                        {accountInitial}
+                        {accountAvatarUrl ? (
+                          <Image
+                            src={accountAvatarUrl}
+                            alt={accountLabel}
+                            width={32}
+                            height={32}
+                            className="size-full object-cover"
+                          />
+                        ) : (
+                          accountInitial
+                        )}
                       </Link>
                     </>
                   ) : (
@@ -158,7 +135,7 @@ export default async function RootLayout({
                 </div>
               </div>
             </header>
-            {children}
+            <div className="flex-1">{children}</div>
           </div>
         </Providers>
         <Toaster richColors position="top-right" />

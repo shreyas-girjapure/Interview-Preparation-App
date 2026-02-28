@@ -39,33 +39,29 @@ npx supabase migration list --linked
 npx supabase db push --linked --yes
 ```
 
-4. Verify dev/prod DB parity:
+4. Sync prod data from dev using **reset** (recommended — avoids Supabase schema cache issues that silently swallow inserts after new migrations):
 
 ```bash
-npm run db:verify:dev-prod
-```
-
-5. If parity is required, sync prod data from dev:
-
-```bash
-# schema reset + migration replay + data sync
 npm run db:sync:dev-prod:reset
 ```
 
-6. If schema is aligned and only row-level replacement is needed:
+> **Why reset?** After new migrations that add columns, Supabase's PostgREST schema
+> cache may not have refreshed yet. The regular sync (`db:sync:dev-prod`) can then
+> silently fail to insert rows for those tables — the script reports success but rows
+> are missing. `--reset-target` replays all migrations first, which forces the cache
+> to rebuild before data is written. Always prefer this path.
 
-```bash
-npm run db:sync:dev-prod
-```
-
-7. Run production guardrail smoke:
+5. Run production guardrail smoke:
 
 ```bash
 npm run db:smoke:guardrail:prod
 ```
 
-8. Re-check parity:
+6. Re-check parity:
 
 ```bash
 npm run db:verify:dev-prod
 ```
+
+> If parity fails (non-zero exit) after the reset sync, something is genuinely wrong —
+> do not proceed. Check the error output from step 4.

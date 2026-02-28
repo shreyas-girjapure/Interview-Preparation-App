@@ -50,6 +50,13 @@ export default async function Home() {
                 Explore Questions
                 <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
               </Link>
+              <Link
+                href="/playlists"
+                className="group flex items-center justify-center gap-1.5 text-[15px] sm:text-lg text-muted-foreground hover:text-foreground transition-colors underline underline-offset-4 sm:no-underline relative sm:after:absolute sm:after:bottom-0 sm:after:left-0 sm:after:h-[1.5px] sm:after:w-full sm:after:origin-bottom-right sm:after:scale-x-0 sm:after:bg-foreground sm:after:transition-transform sm:after:duration-300 sm:hover:after:origin-bottom-left sm:hover:after:scale-x-100"
+              >
+                Explore Playlists
+                <ArrowUpRight className="h-3.5 w-3.5 sm:h-4 sm:w-4 opacity-70 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+              </Link>
             </div>
           </div>
 

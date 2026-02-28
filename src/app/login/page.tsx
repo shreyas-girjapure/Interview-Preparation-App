@@ -54,10 +54,10 @@ export default async function LoginPage({
       <section className="mx-auto w-full max-w-lg px-6 py-12 md:py-14">
         <div className="page-copy-enter mb-8 text-center">
           <h1 className="font-serif text-4xl tracking-tight md:text-5xl">
-            Welcome back.
+            Welcome.
           </h1>
           <p className="mt-3 text-base leading-7 text-muted-foreground">
-            Continue with Google to access your account preferences.
+            Sign in or continue with Google to save your progress.
           </p>
         </div>
 
@@ -83,12 +83,9 @@ export default async function LoginPage({
 
           <Separator className="my-6" />
 
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
             <Button asChild variant="link" className="h-auto p-0">
               <Link href="/">Back to home</Link>
-            </Button>
-            <Button asChild variant="link" className="h-auto p-0">
-              <Link href="/questions">Browse questions</Link>
             </Button>
           </div>
         </div>

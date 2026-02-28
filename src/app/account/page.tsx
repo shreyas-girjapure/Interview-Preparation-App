@@ -1,26 +1,12 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { type ExperienceLevel } from "@/lib/account/experience-level";
-import { FeaturesForm } from "@/app/account/features-form";
 import { PreferencesForm } from "@/app/account/preferences-form";
 
 export const dynamic = "force-dynamic";
-
-function isMissingWrapCodeBlocksColumnError(
-  error: {
-    message?: string | null;
-  } | null,
-) {
-  const message = error?.message?.toLowerCase() ?? "";
-  return (
-    message.includes("wrap_code_blocks_on_mobile") && message.includes("column")
-  );
-}
 
 export default async function AccountPage() {
   const supabase = await createSupabaseServerClient();
@@ -32,44 +18,28 @@ export default async function AccountPage() {
     redirect("/login?next=/account");
   }
 
-  const { data: preferencesWithFeature, error: preferencesWithFeatureError } =
-    await supabase
-      .from("user_preferences")
-      .select(
-        "focus_areas, target_role, experience_level, daily_goal_minutes, wrap_code_blocks_on_mobile",
-      )
-      .eq("user_id", user.id)
-      .maybeSingle<{
-        focus_areas: string[] | null;
-        target_role: string | null;
-        experience_level: ExperienceLevel | null;
-        daily_goal_minutes: number | null;
-        wrap_code_blocks_on_mobile: boolean | null;
-      }>();
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("avatar_url, full_name")
+    .eq("id", user.id)
+    .maybeSingle<{ avatar_url: string | null; full_name: string | null }>();
 
-  let preferences = preferencesWithFeature;
-  let preferencesError = preferencesWithFeatureError;
+  const avatarUrl =
+    userProfile?.avatar_url ?? user.user_metadata?.avatar_url ?? null;
+  const fullName =
+    userProfile?.full_name ?? user.user_metadata?.full_name ?? null;
+  const initial = (fullName || user.email || "U").charAt(0).toUpperCase();
 
-  if (isMissingWrapCodeBlocksColumnError(preferencesWithFeatureError)) {
-    const { data: fallbackPreferences, error: fallbackError } = await supabase
-      .from("user_preferences")
-      .select("focus_areas, target_role, experience_level, daily_goal_minutes")
-      .eq("user_id", user.id)
-      .maybeSingle<{
-        focus_areas: string[] | null;
-        target_role: string | null;
-        experience_level: ExperienceLevel | null;
-        daily_goal_minutes: number | null;
-      }>();
-
-    preferences = fallbackPreferences
-      ? {
-          ...fallbackPreferences,
-          wrap_code_blocks_on_mobile: false,
-        }
-      : null;
-    preferencesError = fallbackError;
-  }
+  const { data: preferences, error: preferencesError } = await supabase
+    .from("user_preferences")
+    .select("focus_areas, target_role, experience_level, daily_goal_minutes")
+    .eq("user_id", user.id)
+    .maybeSingle<{
+      focus_areas: string[] | null;
+      target_role: string | null;
+      experience_level: ExperienceLevel | null;
+      daily_goal_minutes: number | null;
+    }>();
 
   if (preferencesError && preferencesError.code !== "PGRST116") {
     console.warn("Unable to load user preferences.", preferencesError);
@@ -81,52 +51,59 @@ export default async function AccountPage() {
     experienceLevel: preferences?.experience_level ?? null,
     dailyGoalMinutes: preferences?.daily_goal_minutes ?? null,
   };
-  const initialWrapCodeBlocksOnMobile =
-    preferences?.wrap_code_blocks_on_mobile ?? false;
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
       <section className="mx-auto w-full max-w-3xl px-6 py-10 md:py-14">
-        <header className="page-copy-enter space-y-4">
-          <Badge
-            variant="secondary"
-            className="rounded-full px-3 py-1 text-xs tracking-wide uppercase"
-          >
-            Account
-          </Badge>
-          <h1 className="font-serif text-4xl tracking-tight md:text-5xl">
-            Signed in successfully
+        <header className="page-copy-enter space-y-2">
+          <h1 className="font-serif text-3xl tracking-tight md:text-5xl">
+            Account Settings
           </h1>
+          <p className="text-muted-foreground text-sm md:text-base">
+            Manage your profile, preferences, and account security.
+          </p>
         </header>
 
-        <Separator className="my-6" />
+        <div className="mt-8 flex flex-col sm:flex-row sm:items-center justify-between gap-6 rounded-2xl border border-border/60 bg-card/50 p-6 shadow-sm transition-all hover:bg-card/70 hover:shadow-md">
+          <div className="flex items-center gap-5">
+            <div className="inline-flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-background bg-muted text-3xl font-semibold text-foreground shadow-sm ring-1 ring-border/40 hover:ring-border/60 transition-all">
+              {avatarUrl ? (
+                <Image
+                  src={avatarUrl}
+                  alt={fullName ?? "Profile"}
+                  width={80}
+                  height={80}
+                  className="size-full object-cover transition-transform duration-500 hover:scale-105"
+                />
+              ) : (
+                initial
+              )}
+            </div>
+            <div className="space-y-1">
+              <h2 className="text-xl font-semibold tracking-tight capitalize">
+                {fullName || "User Profile"}
+              </h2>
+              <p className="text-sm font-medium text-muted-foreground">
+                {user.email ?? "No email provided"}
+              </p>
+            </div>
+          </div>
 
-        <div className="space-y-4 rounded-xl border border-border/80 bg-card/70 p-6">
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Email
-            </p>
-            <p className="text-base font-medium">{user.email ?? "Unknown"}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              User ID
-            </p>
-            <p className="break-all text-sm">{user.id}</p>
-          </div>
-          <div className="flex flex-wrap gap-3 pt-2">
-            <form method="post" action="/auth/sign-out?next=/">
-              <Button type="submit" variant="outline">
-                Sign out
-              </Button>
-            </form>
-            <Button asChild>
-              <Link href="/questions">Browse questions</Link>
+          <form
+            method="post"
+            action="/auth/sign-out?next=/"
+            className="shrink-0 w-full sm:w-auto"
+          >
+            <Button
+              type="submit"
+              className="w-full sm:w-auto rounded-full px-6 font-medium shadow-sm transition-transform hover:scale-105"
+            >
+              Sign out
             </Button>
-          </div>
+          </form>
         </div>
 
-        <div className="mt-6 space-y-4 rounded-xl border border-border/80 bg-card/70 p-6">
+        <div className="mt-6 space-y-4 rounded-2xl border border-border/60 bg-card/50 p-6 shadow-sm">
           <div>
             <h2 className="font-serif text-2xl tracking-tight">Preferences</h2>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -134,18 +111,6 @@ export default async function AccountPage() {
             </p>
           </div>
           <PreferencesForm initialPreferences={initialPreferences} />
-        </div>
-
-        <div className="mt-6 space-y-4 rounded-xl border border-border/80 bg-card/70 p-6">
-          <div>
-            <h2 className="font-serif text-2xl tracking-tight">Features</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Reader behaviors and toggles. More options will be added here.
-            </p>
-          </div>
-          <FeaturesForm
-            initialWrapCodeBlocksOnMobile={initialWrapCodeBlocksOnMobile}
-          />
         </div>
       </section>
     </main>

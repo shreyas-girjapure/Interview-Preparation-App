@@ -8,9 +8,14 @@ export type InterviewQuestion = {
   category: string;
   categories: string[];
   categorySlugs: string[];
+  subcategory?: string;
+  subcategories: string[];
+  subcategorySlugs: string[];
   summary: string;
   answerMarkdown: string;
   topicSlugs: string[];
+  publishedAt: string | null;
+  updatedAt: string | null;
 };
 
 export type InterviewQuestionSummary = Omit<
@@ -21,6 +26,7 @@ export type InterviewQuestionSummary = Omit<
 export type QuestionFilters = {
   category?: string;
   search?: string;
+  sort?: string;
 };
 
 export type InterviewTopicSummary = {
@@ -29,6 +35,9 @@ export type InterviewTopicSummary = {
   name: string;
   shortDescription: string;
   questionCount: number;
+  subcategory?: string;
+  publishedAt: string | null;
+  updatedAt: string | null;
 };
 
 export type InterviewTopicDetails = InterviewTopicSummary & {
@@ -40,6 +49,7 @@ export type InterviewTopicDetails = InterviewTopicSummary & {
 
 export type TopicFilters = {
   search?: string;
+  sort?: string;
 };
 
 type FilterOption = {
@@ -80,6 +90,7 @@ type QuestionRow = {
   summary: string | null;
   created_at: string | null;
   published_at: string | null;
+  updated_at: string | null;
   question_topics: Array<{
     sort_order: number | null;
     topics: TopicRelation | TopicRelation[] | null;
@@ -94,6 +105,9 @@ type TopicRow = {
   overview_markdown: string | null;
   sort_order: number | null;
   subcategory_id: string | null;
+  subcategories?: SubcategoryRelation | null;
+  published_at: string | null;
+  updated_at: string | null;
 };
 
 type TopicRelationType = "related" | "prerequisite" | "deep_dive";
@@ -180,12 +194,17 @@ export function mapCategoryMetadata(
     return {
       labels: [],
       slugs: [],
+      subcategoryLabels: [],
+      subcategorySlugs: [],
     };
   }
 
   const labels: string[] = [];
   const slugs: string[] = [];
-  const seen = new Set<string>();
+  const subcategoryLabels: string[] = [];
+  const subcategorySlugs: string[] = [];
+  const seenCategory = new Set<string>();
+  const seenSubcategory = new Set<string>();
 
   const mapped = questionTopics
     .map((relation) => ({
@@ -197,22 +216,35 @@ export function mapCategoryMetadata(
 
   for (const entry of mapped) {
     const topicSubcategory = pickSingle(entry.topic?.subcategories);
+    const subcategoryLabel = topicSubcategory?.name?.trim();
+    const subcategorySlug = topicSubcategory?.slug?.trim().toLowerCase();
+
+    if (
+      subcategoryLabel &&
+      subcategorySlug &&
+      !seenSubcategory.has(subcategorySlug)
+    ) {
+      seenSubcategory.add(subcategorySlug);
+      subcategoryLabels.push(subcategoryLabel);
+      subcategorySlugs.push(subcategorySlug);
+    }
+
     const topicCategory = pickSingle(topicSubcategory?.categories);
     const categoryLabel = topicCategory?.name?.trim();
     const categorySlug = topicCategory?.slug?.trim().toLowerCase();
 
-    if (!categoryLabel || !categorySlug || seen.has(categorySlug)) {
-      continue;
+    if (categoryLabel && categorySlug && !seenCategory.has(categorySlug)) {
+      seenCategory.add(categorySlug);
+      labels.push(categoryLabel);
+      slugs.push(categorySlug);
     }
-
-    seen.add(categorySlug);
-    labels.push(categoryLabel);
-    slugs.push(categorySlug);
   }
 
   return {
     labels,
     slugs,
+    subcategoryLabels,
+    subcategorySlugs,
   };
 }
 
@@ -226,8 +258,13 @@ export function mapQuestionSummary(row: QuestionRow): InterviewQuestionSummary {
     category: categories.labels[0] ?? "General",
     categories: categories.labels,
     categorySlugs: categories.slugs,
+    subcategory: categories.subcategoryLabels[0],
+    subcategories: categories.subcategoryLabels,
+    subcategorySlugs: categories.subcategorySlugs,
     summary: row.summary?.trim() || "No summary available yet.",
     topicSlugs: mapTopicSlugs(row.question_topics),
+    publishedAt: row.published_at,
+    updatedAt: row.updated_at,
   };
 }
 
@@ -488,6 +525,7 @@ async function fetchPublishedQuestionRows() {
           summary,
           created_at,
           published_at,
+          updated_at,
           question_topics(
             sort_order,
             topics(
@@ -522,7 +560,7 @@ async function fetchPublishedTopicRows() {
     const { data, error } = await supabase
       .from("topics")
       .select(
-        "id, slug, name, short_description, overview_markdown, sort_order, subcategory_id",
+        "id, slug, name, short_description, overview_markdown, sort_order, subcategory_id, published_at, updated_at, subcategories(name, slug)",
       )
       .eq("status", "published")
       .order("sort_order", { ascending: true })
@@ -578,6 +616,8 @@ function mapTopicSummary(
   topic: TopicRow,
   countsByTopicId: Map<string, number>,
 ): InterviewTopicSummary {
+  const subcategory = pickSingle(topic.subcategories);
+
   return {
     id: topic.id,
     slug: topic.slug,
@@ -586,6 +626,9 @@ function mapTopicSummary(
       topic.short_description?.trim() ||
       "Interview concept overview is being prepared.",
     questionCount: countsByTopicId.get(topic.id) ?? 0,
+    subcategory: subcategory?.name?.trim(),
+    publishedAt: topic.published_at,
+    updatedAt: topic.updated_at,
   };
 }
 
@@ -603,6 +646,9 @@ async function resolveQuestionSummaryBySlug(slug: string) {
     category: question.category,
     categories: question.categories,
     categorySlugs: question.categorySlugs,
+    subcategory: question.subcategory,
+    subcategories: question.subcategories,
+    subcategorySlugs: question.subcategorySlugs,
     summary: question.summary,
     topicSlugs: question.topicSlugs,
   };
@@ -616,13 +662,52 @@ export async function listQuestions(filters: QuestionFilters = {}) {
     mapQuestionSummary,
   );
 
-  return summaries.filter((question) => {
+  const filtered = summaries.filter((question) => {
     const categoryMatch = category
       ? question.categorySlugs.includes(category)
       : true;
     const searchMatch = matchesQuestionSearch(question, search);
 
     return categoryMatch && searchMatch;
+  });
+
+  return sortQuestions(filtered, filters.sort);
+}
+
+export type QuestionSortOption =
+  | "newest"
+  | "oldest"
+  | "alphabetical"
+  | "recently-modified";
+
+export function sortQuestions<
+  T extends {
+    title: string;
+    publishedAt: string | null;
+    updatedAt?: string | null;
+  },
+>(questions: T[], sortOption: QuestionSortOption | string = "newest"): T[] {
+  return [...questions].sort((a, b) => {
+    if (sortOption === "alphabetical") {
+      return a.title.localeCompare(b.title);
+    }
+
+    if (sortOption === "recently-modified") {
+      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return timeB - timeA;
+    }
+
+    // Default to newest or explicit "oldest"
+    const timeA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+    const timeB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+
+    if (sortOption === "oldest") {
+      return timeA - timeB;
+    }
+
+    // "newest" (fallback)
+    return timeB - timeA;
   });
 }
 
@@ -751,14 +836,60 @@ export async function getQuestionBySlug(slug: string) {
 
 export async function listTopics(filters: TopicFilters = {}) {
   const search = filters.search ?? "";
+  const sortOption = filters.sort ?? "alphabetical";
+
   const topicRows = await fetchPublishedTopicRows();
   const countsByTopicId = await fetchPublishedQuestionCountByTopicIds(
     topicRows.map((topic) => topic.id),
   );
 
-  return topicRows
+  const mapped = topicRows
     .map((topic) => mapTopicSummary(topic, countsByTopicId))
     .filter((topic) => matchesTopicSearch(topic, search));
+
+  return sortTopics(mapped, sortOption);
+}
+
+export type TopicSortOption =
+  | "newest"
+  | "oldest"
+  | "alphabetical"
+  | "popular"
+  | "recently-modified";
+
+export function sortTopics<
+  T extends {
+    name: string;
+    questionCount: number;
+    publishedAt?: string | null;
+    updatedAt?: string | null;
+  },
+>(topics: T[], sortOption: TopicSortOption | string = "alphabetical"): T[] {
+  return [...topics].sort((a, b) => {
+    if (sortOption === "popular") {
+      return b.questionCount - a.questionCount;
+    }
+
+    if (sortOption === "recently-modified") {
+      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return timeB - timeA;
+    }
+
+    if (sortOption === "newest" || sortOption === "oldest") {
+      const timeA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+      const timeB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+
+      if (sortOption === "oldest") {
+        return timeA - timeB;
+      }
+
+      return timeB - timeA; // newest
+    }
+
+    // Default to alphabetical
+    return a.name.localeCompare(b.name);
+  });
 }
 
 export async function listTopicSlugs() {

@@ -1,5 +1,9 @@
 import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import {
+  type InterviewQuestionSummary,
+  mapQuestionSummary,
+} from "@/lib/interview/questions";
 import { pickSingle } from "@/lib/utils";
 
 export type PlaylistType = "role" | "company" | "custom";
@@ -19,6 +23,8 @@ export type PlaylistDashboardItem = {
   nextUp: string;
   itemsRead: number;
   completionPercent: number;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
 export type PlaylistQuestionItem = {
@@ -44,6 +50,7 @@ export type PlaylistDetails = {
   itemsRead: number;
   completionPercent: number;
   questions: PlaylistQuestionItem[];
+  questionSummaries: InterviewQuestionSummary[];
 };
 
 type QuestionTopicRelation =
@@ -69,10 +76,76 @@ type PlaylistRow = {
   is_system: boolean;
   tag: string | null;
   access_level: PlaylistAccess;
+  created_at: string | null;
+  updated_at: string | null;
   playlist_items: Array<{
     id: string;
     sort_order: number | null;
     questions: PlaylistQuestionRelation | null;
+  }> | null;
+};
+
+export type PlaylistFilters = {
+  search?: string;
+  sort?: string;
+};
+
+/* ── Richer row type used by getPlaylistBySlug ── */
+
+type DetailCategoryRelation =
+  | { slug: string | null; name: string | null }
+  | Array<{ slug: string | null; name: string | null }>;
+
+type DetailSubcategoryRelation =
+  | {
+      slug: string | null;
+      name: string | null;
+      categories: DetailCategoryRelation | null;
+    }
+  | Array<{
+      slug: string | null;
+      name: string | null;
+      categories: DetailCategoryRelation | null;
+    }>;
+
+type DetailTopicRelation = {
+  id: string | null;
+  slug: string | null;
+  name: string | null;
+  short_description: string | null;
+  status: string | null;
+  subcategories: DetailSubcategoryRelation | null;
+};
+
+type PlaylistDetailQuestionRow = {
+  id: string | null;
+  slug: string | null;
+  title: string | null;
+  summary: string | null;
+  status: string | null;
+  updated_at: string | null;
+  question_topics: Array<{
+    sort_order: number | null;
+    topics: DetailTopicRelation | DetailTopicRelation[] | null;
+  }> | null;
+};
+
+type PlaylistDetailQuestionRelation =
+  | PlaylistDetailQuestionRow
+  | PlaylistDetailQuestionRow[];
+
+type PlaylistDetailRow = {
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  is_system: boolean;
+  tag: string | null;
+  access_level: PlaylistAccess;
+  playlist_items: Array<{
+    id: string;
+    sort_order: number | null;
+    questions: PlaylistDetailQuestionRelation | null;
   }> | null;
 };
 
@@ -229,6 +302,8 @@ function mapPlaylists(rows: PlaylistRow[], readQuestionIds: Set<string>) {
       nextUp: normalizeItemText(nextQuestion?.title || nextQuestion?.summary),
       itemsRead,
       completionPercent: toCompletionPercent(itemsRead, totalItems),
+      createdAt: playlist.created_at,
+      updatedAt: playlist.updated_at,
     };
   });
 }
@@ -324,14 +399,19 @@ export async function listPlaylistSlugs() {
   });
 }
 
-export async function listPlaylistDashboardItems() {
+export async function listPlaylistDashboardItems(
+  filters: PlaylistFilters = {},
+) {
+  const search = filters.search ?? "";
+  const sortOption = filters.sort ?? "newest";
+
   const playlists = await withPublicPlaylistClient<PlaylistRow[]>(
     [],
     async (publicSupabase) => {
       const { data, error } = await publicSupabase
         .from("playlists")
         .select(
-          "id, slug, title, description, is_system, tag, access_level, sort_order, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
+          "id, slug, title, description, is_system, tag, access_level, sort_order, created_at, updated_at, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
         )
         .eq("status", "published")
         .order("sort_order", { ascending: true })
@@ -355,12 +435,98 @@ export async function listPlaylistDashboardItems() {
   const readQuestionIds = await listUserReadQuestionIds(
     listQuestionIdsForPlaylists(playlists),
   );
-  return mapPlaylists(playlists, readQuestionIds);
+
+  const mapped = mapPlaylists(playlists, readQuestionIds);
+
+  return sortPlaylists(
+    mapped.filter((p) => {
+      if (!search) return true;
+      const term = search.toLowerCase();
+      return (
+        p.title.toLowerCase().includes(term) ||
+        p.description.toLowerCase().includes(term)
+      );
+    }),
+    sortOption,
+  );
+}
+
+export type PlaylistSortOption =
+  | "newest"
+  | "oldest"
+  | "recently-modified"
+  | "alphabetical";
+
+export function sortPlaylists<
+  T extends {
+    title: string;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+  },
+>(playlists: T[], sortOption: PlaylistSortOption | string = "newest"): T[] {
+  return [...playlists].sort((a, b) => {
+    if (sortOption === "alphabetical") {
+      return a.title.localeCompare(b.title);
+    }
+
+    if (sortOption === "recently-modified") {
+      const timeA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
+      const timeB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
+      return timeB - timeA;
+    }
+
+    // Default to newest or explicit "oldest"
+    const timeA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const timeB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+
+    if (sortOption === "oldest") {
+      return timeA - timeB;
+    }
+
+    return timeB - timeA; // newest
+  });
 }
 
 export async function listFeaturedPlaylists(limit = 3) {
   const playlists = await listPlaylistDashboardItems();
   return playlists.slice(0, Math.max(0, limit));
+}
+
+function mapPlaylistDetailQuestionSummaries(
+  playlist: PlaylistDetailRow,
+): InterviewQuestionSummary[] {
+  const orderedItems = [...(playlist.playlist_items ?? [])].sort(
+    (a, b) =>
+      (a.sort_order ?? Number.MAX_SAFE_INTEGER) -
+      (b.sort_order ?? Number.MAX_SAFE_INTEGER),
+  );
+
+  return orderedItems
+    .map((item) => {
+      const question = pickSingle(item.questions);
+
+      if (
+        !question?.id ||
+        !question.slug ||
+        !question.title ||
+        question.status !== "published"
+      ) {
+        return null;
+      }
+
+      // Shape the row to match the QuestionRow type that mapQuestionSummary expects
+      return mapQuestionSummary({
+        id: question.id,
+        slug: question.slug,
+        title: question.title,
+        summary: question.summary,
+        created_at: null,
+        published_at: null,
+        updated_at: question.updated_at ?? null,
+        question_topics: question.question_topics,
+      });
+    })
+    .filter((summary): summary is InterviewQuestionSummary => Boolean(summary));
 }
 
 export async function getPlaylistBySlug(slug: string) {
@@ -369,32 +535,45 @@ export async function getPlaylistBySlug(slug: string) {
     return undefined;
   }
 
-  const playlist = await withPublicPlaylistClient<PlaylistRow | undefined>(
-    undefined,
-    async (publicSupabase) => {
-      const { data, error } = await publicSupabase
-        .from("playlists")
-        .select(
-          "id, slug, title, description, is_system, tag, access_level, playlist_items(id, sort_order, questions(id, slug, title, summary, status, question_topics(topic_id)))",
-        )
-        .eq("status", "published")
-        .eq("slug", normalizedSlug)
-        .maybeSingle();
+  const playlist = await withPublicPlaylistClient<
+    PlaylistDetailRow | undefined
+  >(undefined, async (publicSupabase) => {
+    const { data, error } = await publicSupabase
+      .from("playlists")
+      .select(
+        `id, slug, title, description, is_system, tag, access_level,
+           playlist_items(id, sort_order,
+             questions(id, slug, title, summary, status, updated_at,
+               question_topics(sort_order,
+                 topics(id, slug, name, short_description, status,
+                   subcategories(slug, name,
+                     categories(slug, name)
+                   )
+                 )
+               )
+             )
+           )`,
+      )
+      .eq("status", "published")
+      .eq("slug", normalizedSlug)
+      .maybeSingle();
 
-      if (error) {
-        console.error(`Failed to fetch playlist "${normalizedSlug}"`, error);
-        return undefined;
-      }
+    if (error) {
+      console.error(`Failed to fetch playlist "${normalizedSlug}"`, error);
+      return undefined;
+    }
 
-      return (data as PlaylistRow | null) ?? undefined;
-    },
-  );
+    return (data as PlaylistDetailRow | null) ?? undefined;
+  });
 
   if (!playlist) {
     return undefined;
   }
 
-  const questions = mapPlaylistQuestions(playlist);
+  // Build lightweight items for legacy fields
+  const questions = mapPlaylistQuestions(playlist as unknown as PlaylistRow);
+  // Build full summaries for QuestionCard rendering
+  const questionSummaries = mapPlaylistDetailQuestionSummaries(playlist);
   const totalItems = questions.length;
   const readQuestionIds = await listUserReadQuestionIds(
     questions.map((question) => question.id),
@@ -420,5 +599,6 @@ export async function getPlaylistBySlug(slug: string) {
     itemsRead,
     completionPercent: toCompletionPercent(itemsRead, totalItems),
     questions,
+    questionSummaries,
   } satisfies PlaylistDetails;
 }

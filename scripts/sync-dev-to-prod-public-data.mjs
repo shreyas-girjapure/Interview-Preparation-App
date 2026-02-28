@@ -593,7 +593,7 @@ async function main() {
       console.error(
         `count mismatches found (${mismatches.length}): ${JSON.stringify(mismatches)}`,
       );
-      process.exitCode = 2;
+      process.exit(2);
       return;
     }
 
@@ -648,7 +648,7 @@ async function main() {
     console.error(
       `sync completed with verification mismatches (${mismatches.length}): ${JSON.stringify(mismatches)}`,
     );
-    process.exitCode = 3;
+    process.exit(3);
     return;
   }
 
@@ -658,5 +658,5 @@ async function main() {
 main().catch((error) => {
   console.error("sync failed");
   console.error(error instanceof Error ? error.message : String(error));
-  process.exitCode = 1;
+  process.exit(1);
 });
