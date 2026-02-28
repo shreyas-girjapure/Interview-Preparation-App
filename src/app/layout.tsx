@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 
 import { BrandLogo } from "@/components/brand-logo";
@@ -114,9 +115,11 @@ export default async function RootLayout({
                         className="inline-flex size-8 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-foreground text-[11px] font-semibold tracking-[0.01em] text-background shadow-xs transition-opacity hover:opacity-90"
                       >
                         {accountAvatarUrl ? (
-                          <img
+                          <Image
                             src={accountAvatarUrl}
                             alt={accountLabel}
+                            width={32}
+                            height={32}
                             className="size-full object-cover"
                           />
                         ) : (

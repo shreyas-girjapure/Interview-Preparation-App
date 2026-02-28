@@ -194,7 +194,12 @@ describe("mapTopicSlugs", () => {
 
 describe("mapCategoryMetadata", () => {
   it("returns empty labels/slugs for null input", () => {
-    expect(mapCategoryMetadata(null)).toEqual({ labels: [], slugs: [] });
+    expect(mapCategoryMetadata(null)).toEqual({
+      labels: [],
+      slugs: [],
+      subcategoryLabels: [],
+      subcategorySlugs: [],
+    });
   });
 
   it("extracts category from topic → subcategory → category chain", () => {
@@ -309,6 +314,9 @@ describe("matchesQuestionSearch", () => {
     category: "JavaScript",
     categories: ["JavaScript"],
     categorySlugs: ["javascript"],
+    subcategory: "Core Concepts",
+    subcategories: ["Core Concepts"],
+    subcategorySlugs: ["core-concepts"],
     summary: "Closures capture variables from outer scope.",
     topicSlugs: ["closures"],
     publishedAt: null,

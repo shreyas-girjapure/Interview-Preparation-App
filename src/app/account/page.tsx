@@ -1,8 +1,7 @@
 import { redirect } from "next/navigation";
 
-import { Badge } from "@/components/ui/badge";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { type ExperienceLevel } from "@/lib/account/experience-level";
 import { PreferencesForm } from "@/app/account/preferences-form";
@@ -69,9 +68,11 @@ export default async function AccountPage() {
           <div className="flex items-center gap-5">
             <div className="inline-flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-background bg-muted text-3xl font-semibold text-foreground shadow-sm ring-1 ring-border/40 hover:ring-border/60 transition-all">
               {avatarUrl ? (
-                <img
+                <Image
                   src={avatarUrl}
                   alt={fullName ?? "Profile"}
+                  width={80}
+                  height={80}
                   className="size-full object-cover transition-transform duration-500 hover:scale-105"
                 />
               ) : (

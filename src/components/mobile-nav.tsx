@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Menu } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -73,9 +74,11 @@ export function MobileNav({
             >
               <span className="inline-flex size-6 items-center justify-center overflow-hidden rounded-full border border-border/70 bg-foreground text-[10px] font-semibold text-background">
                 {accountAvatarUrl ? (
-                  <img
+                  <Image
                     src={accountAvatarUrl}
                     alt={accountLabel}
+                    width={24}
+                    height={24}
                     className="size-full object-cover"
                   />
                 ) : (
