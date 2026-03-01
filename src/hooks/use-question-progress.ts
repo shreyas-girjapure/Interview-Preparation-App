@@ -1,10 +1,10 @@
 import { useCallback, useRef } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
 import {
   type QuestionProgressState,
   labelQuestionProgressState,
 } from "@/lib/interview/question-progress-state";
+import { showAppToast } from "@/lib/toast";
 
 function toToastActionLabel(state: QuestionProgressState) {
   return labelQuestionProgressState(state).toLowerCase();
@@ -75,15 +75,22 @@ export function useQuestionProgress({
 
       undoRef.current = () => {
         mutation.mutate(previousState);
-        toast(`Reverted to ${toToastActionLabel(previousState)}`);
+        showAppToast({
+          title: "Progress reverted",
+          description: `State set back to ${toToastActionLabel(previousState)}.`,
+        });
       };
 
       if (nextState === "read") {
-        toast.success("Question marked as read", {
+        showAppToast({
+          title: "Question marked as read",
+          description: "Progress was saved.",
           action: { label: "Undo", onClick: () => undoRef.current?.() },
         });
       } else {
-        toast("Question marked as unread", {
+        showAppToast({
+          title: "Question marked as unread",
+          description: "The question is now marked as unread.",
           action: { label: "Undo", onClick: () => undoRef.current?.() },
         });
       }
@@ -94,17 +101,22 @@ export function useQuestionProgress({
       if (context?.previousState !== undefined) {
         queryClient.setQueryData(queryKey, context.previousState);
       }
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Unable to save question progress right now.",
-      );
+      showAppToast({
+        title: "Unable to save progress",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Please try again in a moment.",
+      });
     },
   });
 
   const toggleRead = useCallback(() => {
     if (!isAuthenticated) {
-      toast.error("Sign in to track question progress.");
+      showAppToast({
+        title: "Sign in required",
+        description: "Sign in to track question progress.",
+      });
       return;
     }
     const nextState = currentState === "read" ? "unread" : "read";
@@ -114,7 +126,10 @@ export function useQuestionProgress({
   const updateState = useCallback(
     (nextState: QuestionProgressState) => {
       if (!isAuthenticated) {
-        toast.error("Sign in to track question progress.");
+        showAppToast({
+          title: "Sign in required",
+          description: "Sign in to track question progress.",
+        });
         return;
       }
       mutation.mutate(nextState);

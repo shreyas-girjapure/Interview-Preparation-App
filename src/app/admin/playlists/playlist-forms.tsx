@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState, useTransition, type FormEvent } from "react";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
@@ -9,6 +8,7 @@ import {
   MultiCombobox,
   type MultiComboboxOption,
 } from "@/components/ui/multi-combobox";
+import { showAppToast } from "@/lib/toast";
 
 type ServerActionResult = {
   ok: boolean;
@@ -112,11 +112,17 @@ function CreatePlaylistForm({
         const result = await createPlaylistAction(formData);
 
         if (!result.ok) {
-          toast.error(result.message);
+          showAppToast({
+            title: "Create playlist failed",
+            description: result.message,
+          });
           return;
         }
 
-        toast.success(result.message);
+        showAppToast({
+          title: "Playlist created",
+          description: result.message,
+        });
         form.reset();
         setPlaylistType("role");
         setAccessLevel("free");
@@ -299,7 +305,10 @@ function LinkQuestionsForm({
     event.preventDefault();
 
     if (!canSubmit) {
-      toast.error("Select a playlist and at least one published question.");
+      showAppToast({
+        title: "Selections required",
+        description: "Select a playlist and at least one published question.",
+      });
       return;
     }
 
@@ -310,11 +319,17 @@ function LinkQuestionsForm({
         const result = await linkQuestionsAction(formData);
 
         if (!result.ok) {
-          toast.error(result.message);
+          showAppToast({
+            title: "Link questions failed",
+            description: result.message,
+          });
           return;
         }
 
-        toast.success(result.message);
+        showAppToast({
+          title: "Questions linked",
+          description: result.message,
+        });
         setSelectedQuestionIds([]);
       })();
     });

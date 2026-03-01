@@ -12,6 +12,7 @@ import { getPlaylistBySlug } from "@/lib/interview/playlists";
 import { sortQuestions } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 import { SortDropdown, type SortOption } from "@/components/sort-dropdown";
+import { PlaylistActions } from "./playlist-actions-client";
 
 export const dynamic = "force-dynamic";
 
@@ -141,17 +142,31 @@ export default async function PlaylistDetailsPage({
         </Button>
 
         <header className="page-copy-enter space-y-3">
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary" className="capitalize">
-              {playlist.tag || (playlist.isSystem ? "Playlist" : "Collection")}
-            </Badge>
-            <Badge variant="outline" className="capitalize">
-              {playlist.accessLevel}
-            </Badge>
-            <Badge variant="outline">
-              {playlist.completionPercent}% completed
-            </Badge>
+          {/* Badges row — action button pins to the right on all screen sizes */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="capitalize">
+                {playlist.tag ||
+                  (playlist.isSystem ? "Playlist" : "Collection")}
+              </Badge>
+              <Badge variant="outline" className="capitalize">
+                {playlist.accessLevel}
+              </Badge>
+              <Badge variant="outline">
+                {playlist.completionPercent}% completed
+              </Badge>
+            </div>
+
+            {/* Show actions only for non-system (user-created) playlists */}
+            {!playlist.isSystem && (
+              <PlaylistActions
+                playlistId={playlist.id}
+                initialTitle={playlist.title}
+                initialDescription={playlist.description}
+              />
+            )}
           </div>
+
           <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
             {playlist.title}
           </h1>
