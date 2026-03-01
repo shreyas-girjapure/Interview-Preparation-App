@@ -4,10 +4,8 @@ import { Separator } from "@/components/ui/separator";
 import { listPlaylistDashboardItems } from "@/lib/interview/playlists";
 import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import {
-  CreatePlaylistModal,
-  type PickerQuestion,
-} from "./create-playlist-modal";
+import type { PickerQuestion } from "./picker-question";
+import { CreatePlaylistModal } from "./create-playlist-modal";
 import { SortDropdown, type SortOption } from "@/components/sort-dropdown";
 
 export const dynamic = "force-dynamic";

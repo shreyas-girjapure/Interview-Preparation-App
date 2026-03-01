@@ -7,11 +7,15 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { QuestionCard } from "@/components/question-card";
 import { QuestionProgressProvider } from "@/contexts/question-progress-context";
+import { hasAdminAreaAccess, isAppRole } from "@/lib/auth/roles";
 import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
 import { getPlaylistBySlug } from "@/lib/interview/playlists";
 import { sortQuestions } from "@/lib/interview/questions";
 import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 import { SortDropdown, type SortOption } from "@/components/sort-dropdown";
+import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { PickerQuestion } from "../picker-question";
 import { PlaylistActions } from "./playlist-actions-client";
 
 export const dynamic = "force-dynamic";
@@ -56,6 +60,79 @@ export async function generateMetadata({
 
 function getSingleValue(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value;
+}
+
+async function canManageAllPlaylists() {
+  try {
+    const supabase = await createSupabaseServerClient();
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      return false;
+    }
+
+    const { data: profile, error: profileError } = await supabase
+      .from("users")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle<{ role: string | null }>();
+
+    if (profileError) {
+      return false;
+    }
+
+    const role = isAppRole(profile?.role) ? profile.role : null;
+    return hasAdminAreaAccess(role);
+  } catch {
+    return false;
+  }
+}
+
+async function fetchPickerQuestions(): Promise<PickerQuestion[]> {
+  const supabase = createSupabasePublicServerClient();
+  const { data, error } = await supabase
+    .from("questions")
+    .select(
+      `
+      id,
+      title,
+      question_topics(
+        sort_order,
+        topics(
+          name
+        )
+      )
+    `,
+    )
+    .eq("status", "published")
+    .order("title", { ascending: true });
+
+  if (error || !data) return [];
+
+  return data.map((row: Record<string, unknown>) => {
+    let topicName = "General";
+    const questionTopics = row.question_topics as Array<{
+      topics: { name: string } | { name: string }[] | null;
+    }> | null;
+
+    if (questionTopics && questionTopics.length > 0) {
+      const topicRelation = questionTopics[0]?.topics;
+      if (topicRelation) {
+        topicName = Array.isArray(topicRelation)
+          ? (topicRelation[0]?.name ?? "General")
+          : (topicRelation.name ?? "General");
+      }
+    }
+
+    return {
+      id: row.id as string,
+      title: row.title as string,
+      topic: topicName,
+    };
+  });
 }
 
 function getHref(
@@ -131,6 +208,9 @@ export default async function PlaylistDetailsPage({
   const { statesByQuestionId } = await listViewerQuestionProgressStates(
     pagination.items.map((q) => q.id),
   );
+  const hasGlobalPlaylistAccess = await canManageAllPlaylists();
+  const canManagePlaylist = !playlist.isSystem || hasGlobalPlaylistAccess;
+  const pickerQuestions = canManagePlaylist ? await fetchPickerQuestions() : [];
 
   const currentQuery = new URLSearchParams();
 
@@ -158,11 +238,15 @@ export default async function PlaylistDetailsPage({
             </div>
 
             {/* Show actions only for non-system (user-created) playlists */}
-            {!playlist.isSystem && (
+            {canManagePlaylist && (
               <PlaylistActions
                 playlistId={playlist.id}
                 initialTitle={playlist.title}
                 initialDescription={playlist.description}
+                pickerQuestions={pickerQuestions}
+                initialQuestionIds={playlist.questionSummaries.map(
+                  (question) => question.id,
+                )}
               />
             )}
           </div>

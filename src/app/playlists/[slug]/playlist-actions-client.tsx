@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronDown, Pencil, Trash2 } from "lucide-react";
 
+import type { PickerQuestion } from "../picker-question";
+import { PlaylistQuestionPicker } from "../playlist-question-picker";
 import { deleteUserPlaylist, updateUserPlaylist } from "./playlist-actions";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,7 +19,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -34,12 +35,15 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
 import { showAppToast } from "@/lib/toast";
 
 type PlaylistActionsProps = {
   playlistId: string;
   initialTitle: string;
   initialDescription: string;
+  pickerQuestions: PickerQuestion[];
+  initialQuestionIds: string[];
 };
 
 function showSuccessToast(title: string, description: string) {
@@ -52,6 +56,8 @@ export function PlaylistActions({
   playlistId,
   initialTitle,
   initialDescription,
+  pickerQuestions,
+  initialQuestionIds,
 }: PlaylistActionsProps) {
   const router = useRouter();
 
@@ -62,12 +68,17 @@ export function PlaylistActions({
 
   const [savedTitle, setSavedTitle] = useState(initialTitle);
   const [savedDescription, setSavedDescription] = useState(initialDescription);
+  const [savedQuestionIds, setSavedQuestionIds] =
+    useState<string[]>(initialQuestionIds);
   const [title, setTitle] = useState(initialTitle);
   const [description, setDescription] = useState(initialDescription);
+  const [selectedQuestionIds, setSelectedQuestionIds] =
+    useState<string[]>(initialQuestionIds);
 
   function resetDraftValues() {
     setTitle(savedTitle);
     setDescription(savedDescription);
+    setSelectedQuestionIds(savedQuestionIds);
   }
 
   function onEditOpenChange(nextOpen: boolean) {
@@ -84,11 +95,25 @@ export function PlaylistActions({
 
   async function handleSave() {
     const nextTitle = title.trim();
+    const nextQuestionIds = Array.from(
+      new Set(
+        selectedQuestionIds
+          .map((questionId) => questionId.trim())
+          .filter((questionId) => questionId.length > 0),
+      ),
+    );
 
     if (!nextTitle) {
       showAppToast({
         title: "Playlist name required",
         description: "Enter a playlist name to continue.",
+      });
+      return;
+    }
+    if (nextQuestionIds.length === 0) {
+      showAppToast({
+        title: "Questions required",
+        description: "Select at least one question.",
       });
       return;
     }
@@ -100,6 +125,7 @@ export function PlaylistActions({
         playlistId,
         title: nextTitle,
         description,
+        questionIds: nextQuestionIds,
       });
 
       if (!result.ok) {
@@ -111,10 +137,13 @@ export function PlaylistActions({
       }
 
       const nextDescription = result.description ?? "";
+      const nextSavedQuestionIds = result.questionIds;
       setSavedTitle(result.title);
       setSavedDescription(nextDescription);
+      setSavedQuestionIds(nextSavedQuestionIds);
       setTitle(result.title);
       setDescription(nextDescription);
+      setSelectedQuestionIds(nextSavedQuestionIds);
       setIsEditOpen(false);
 
       showSuccessToast(
@@ -192,7 +221,7 @@ export function PlaylistActions({
               className="gap-2"
             >
               <Pencil className="h-4 w-4" />
-              Edit details
+              Edit playlist
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -207,15 +236,15 @@ export function PlaylistActions({
       </div>
 
       <Dialog open={isEditOpen} onOpenChange={onEditOpenChange}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="px-5 pt-5 pb-0 sm:px-6">
             <DialogTitle>Edit Playlist</DialogTitle>
             <DialogDescription>
-              Update the name and description of your playlist.
+              Update the details and question selection for your playlist.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4 py-2">
+          <div className="flex-1 overflow-y-auto space-y-4 px-5 py-4 sm:px-6">
             <div className="space-y-1.5">
               <Label htmlFor="playlist-name">Playlist Name</Label>
               <Input
@@ -243,20 +272,38 @@ export function PlaylistActions({
                 disabled={isSaving}
               />
             </div>
+
+            <Separator />
+
+            <PlaylistQuestionPicker
+              questions={pickerQuestions}
+              selectedIds={selectedQuestionIds}
+              onSelectedIdsChange={setSelectedQuestionIds}
+              disabled={isSaving}
+              label="Questions"
+              pinSelectedFirst={true}
+            />
           </div>
 
-          <DialogFooter className="gap-2">
+          <div className="border-t px-5 py-4 sm:px-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
             <Button
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => onEditOpenChange(false)}
               disabled={isSaving}
             >
               Cancel
             </Button>
-            <Button onClick={handleSave} disabled={isSaving || !title.trim()}>
+            <Button
+              className="w-full sm:w-auto"
+              onClick={handleSave}
+              disabled={
+                isSaving || !title.trim() || selectedQuestionIds.length === 0
+              }
+            >
               {isSaving ? "Saving..." : "Save changes"}
             </Button>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
