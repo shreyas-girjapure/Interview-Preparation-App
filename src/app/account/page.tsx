@@ -94,10 +94,7 @@ export default async function AccountPage() {
             action="/auth/sign-out?next=/"
             className="shrink-0 w-full sm:w-auto"
           >
-            <Button
-              type="submit"
-              className="w-full sm:w-auto rounded-full px-6 font-medium shadow-sm transition-transform hover:scale-105"
-            >
+            <Button type="submit" className="w-full sm:w-auto">
               Sign out
             </Button>
           </form>

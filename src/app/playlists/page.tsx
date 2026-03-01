@@ -1,7 +1,14 @@
+import Link from "next/link";
+
 import { Badge } from "@/components/ui/badge";
 import { PlaylistCard } from "@/components/playlist-card";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { listPlaylistDashboardItems } from "@/lib/interview/playlists";
+import {
+  listPlaylistDashboardItems,
+  type PlaylistDashboardItem,
+} from "@/lib/interview/playlists";
+import { paginateItems, parsePositiveInt } from "@/lib/pagination";
 import { createSupabasePublicServerClient } from "@/lib/supabase/public-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { PickerQuestion } from "./picker-question";
@@ -9,6 +16,7 @@ import { CreatePlaylistModal } from "./create-playlist-modal";
 import { SortDropdown, type SortOption } from "@/components/sort-dropdown";
 
 export const dynamic = "force-dynamic";
+const PLAYLISTS_PAGE_SIZE = 9;
 
 const SORT_OPTIONS: SortOption[] = [
   { label: "Newest First", value: "newest" },
@@ -64,7 +72,7 @@ async function fetchPickerQuestions(): Promise<PickerQuestion[]> {
   });
 }
 
-function emptyStateCards() {
+function emptyStateCards(): PlaylistDashboardItem[] {
   return [
     {
       id: "empty-role",
@@ -77,8 +85,12 @@ function emptyStateCards() {
       accessLevel: "free",
       totalItems: 0,
       uniqueTopicCount: 0,
+      estimatedMinutes: 10,
+      nextUp: "Continue from the next question",
       itemsRead: 0,
       completionPercent: 0,
+      createdAt: null,
+      updatedAt: null,
     },
     {
       id: "empty-company",
@@ -91,13 +103,57 @@ function emptyStateCards() {
       accessLevel: "preview",
       totalItems: 0,
       uniqueTopicCount: 0,
+      estimatedMinutes: 10,
+      nextUp: "Continue from the next question",
       itemsRead: 0,
       completionPercent: 0,
+      createdAt: null,
+      updatedAt: null,
     },
-  ] as const;
+  ];
+}
+
+function getSingleValue(value: string | string[] | undefined) {
+  return Array.isArray(value) ? value[0] : value;
+}
+
+function getHref(current: URLSearchParams, updates: { page?: number | null }) {
+  const next = new URLSearchParams(current.toString());
+
+  if (updates.page === null) {
+    next.delete("page");
+  } else if (typeof updates.page === "number") {
+    if (updates.page <= 1) {
+      next.delete("page");
+    } else {
+      next.set("page", String(updates.page));
+    }
+  }
+
+  const queryString = next.toString();
+  return queryString ? `/playlists?${queryString}` : "/playlists";
+}
+
+function getVisiblePages(currentPage: number, totalPages: number) {
+  if (totalPages <= 1) {
+    return [1];
+  }
+
+  const candidates = new Set<number>([
+    1,
+    totalPages,
+    currentPage - 1,
+    currentPage,
+    currentPage + 1,
+  ]);
+
+  return Array.from(candidates)
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((a, b) => a - b);
 }
 
 type SearchParams = Promise<{
+  page?: string | string[];
   sort?: string | string[];
 }>;
 
@@ -108,9 +164,8 @@ export default async function PlaylistsDashboardConceptPage({
 }) {
   const supabase = await createSupabaseServerClient();
   const rawParams = await searchParams;
-  const sortOption = Array.isArray(rawParams.sort)
-    ? rawParams.sort[0]
-    : rawParams.sort;
+  const requestedPage = parsePositiveInt(getSingleValue(rawParams.page), 1);
+  const sortOption = getSingleValue(rawParams.sort);
 
   const {
     data: { user },
@@ -122,6 +177,13 @@ export default async function PlaylistsDashboardConceptPage({
     fetchPickerQuestions(),
   ]);
   const cards = playlistCards.length ? playlistCards : emptyStateCards();
+  const pagination = paginateItems(cards, requestedPage, PLAYLISTS_PAGE_SIZE);
+  const visiblePages = getVisiblePages(pagination.page, pagination.totalPages);
+
+  const currentQuery = new URLSearchParams();
+  if (sortOption) {
+    currentQuery.set("sort", sortOption);
+  }
 
   return (
     <main className="min-h-screen bg-[oklch(0.985_0.004_95)]">
@@ -147,15 +209,19 @@ export default async function PlaylistsDashboardConceptPage({
 
         <Separator className="bg-border/60" />
 
-        <div className="flex items-center justify-end pt-2">
-          {cards.length > 1 && (
+        <div className="flex items-center justify-between pt-2 mb-5">
+          <p className="text-sm text-muted-foreground">
+            Showing {pagination.start}-{pagination.end} of {pagination.total}{" "}
+            playlist{pagination.total === 1 ? "" : "s"}
+          </p>
+          {pagination.total > 1 && (
             <SortDropdown options={SORT_OPTIONS} defaultSort="newest" />
           )}
         </div>
 
         <section className="pt-2">
           <ul className="grid gap-4 md:grid-cols-3">
-            {cards.map((playlist, index) => (
+            {pagination.items.map((playlist, index) => (
               <li key={playlist.id}>
                 <PlaylistCard
                   playlist={playlist}
@@ -166,6 +232,69 @@ export default async function PlaylistsDashboardConceptPage({
               </li>
             ))}
           </ul>
+
+          {pagination.totalPages > 1 ? (
+            <nav
+              aria-label="Playlists pagination"
+              className="flex flex-wrap items-center gap-2 pt-4"
+            >
+              {pagination.hasPreviousPage ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link
+                    href={getHref(currentQuery, {
+                      page: pagination.page - 1,
+                    })}
+                    scroll={false}
+                  >
+                    Previous
+                  </Link>
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" disabled>
+                  Previous
+                </Button>
+              )}
+
+              {visiblePages.map((pageNumber) => (
+                <Button
+                  key={pageNumber}
+                  asChild
+                  size="sm"
+                  variant={
+                    pageNumber === pagination.page ? "default" : "outline"
+                  }
+                >
+                  <Link
+                    href={getHref(currentQuery, { page: pageNumber })}
+                    scroll={false}
+                  >
+                    {pageNumber}
+                  </Link>
+                </Button>
+              ))}
+
+              {pagination.hasNextPage ? (
+                <Button asChild size="sm" variant="outline">
+                  <Link
+                    href={getHref(currentQuery, {
+                      page: pagination.page + 1,
+                    })}
+                    scroll={false}
+                  >
+                    Next
+                  </Link>
+                </Button>
+              ) : (
+                <Button size="sm" variant="outline" disabled>
+                  Next
+                </Button>
+              )}
+
+              <span className="ml-1 text-sm text-muted-foreground">
+                Page {pagination.page} of {pagination.totalPages}
+              </span>
+            </nav>
+          ) : null}
         </section>
       </section>
     </main>
