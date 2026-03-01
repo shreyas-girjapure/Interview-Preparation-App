@@ -132,17 +132,19 @@ export default async function PlaylistsDashboardConceptPage({
           <Badge variant="secondary" className="rounded-full px-3 py-1">
             Playlists
           </Badge>
-          <h1 className="max-w-4xl font-serif text-4xl leading-tight tracking-tight md:text-5xl">
-            Curated Playlists
-          </h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="max-w-4xl font-serif text-4xl leading-tight tracking-tight md:text-5xl">
+              Curated Playlists
+            </h1>
+            <CreatePlaylistModal
+              questions={pickerQuestions}
+              isSignedIn={isSignedIn}
+            />
+          </div>
           <p className="max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
             Hand-crafted collections of questions designed to help you master
             specific roles, companies, and technologies in depth.
           </p>
-          <CreatePlaylistModal
-            questions={pickerQuestions}
-            isSignedIn={isSignedIn}
-          />
         </header>
 
         <Separator className="bg-border/60" />

@@ -2,9 +2,9 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
+import { showAppToast } from "@/lib/toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -64,7 +64,10 @@ export function CreatePlaylistModal({
   // Auth-gated open
   const handleButtonClick = () => {
     if (!isSignedIn) {
-      toast.error("Please sign in to create a playlist.");
+      showAppToast({
+        title: "Sign in required",
+        description: "Please sign in to create a playlist.",
+      });
       router.push(`/login?next=${encodeURIComponent("/playlists")}`);
       return;
     }
@@ -138,15 +141,24 @@ export function CreatePlaylistModal({
   // Submit
   const handleCreate = () => {
     if (!name.trim()) {
-      toast.error("Playlist name is required.");
+      showAppToast({
+        title: "Playlist name required",
+        description: "Enter a playlist name to continue.",
+      });
       return;
     }
     if (!description.trim()) {
-      toast.error("Description is required.");
+      showAppToast({
+        title: "Description required",
+        description: "Add a short description for your playlist.",
+      });
       return;
     }
     if (selected.length === 0) {
-      toast.error("Select at least one question.");
+      showAppToast({
+        title: "Questions required",
+        description: "Select at least one question.",
+      });
       return;
     }
 
@@ -159,11 +171,17 @@ export function CreatePlaylistModal({
         });
 
         if (!result.ok) {
-          toast.error(result.message);
+          showAppToast({
+            title: "Create playlist failed",
+            description: result.message,
+          });
           return;
         }
 
-        toast.success(result.message);
+        showAppToast({
+          title: "Playlist created",
+          description: result.message,
+        });
         handleOpenChange(false);
       })();
     });
@@ -171,9 +189,15 @@ export function CreatePlaylistModal({
 
   return (
     <>
-      <Button size="lg" className="gap-2" onClick={handleButtonClick}>
+      <Button
+        size="icon"
+        className="shrink-0 sm:h-10 sm:w-auto sm:px-4"
+        onClick={handleButtonClick}
+        aria-label="Create playlist"
+      >
         <Plus className="size-4" />
-        Create Playlist
+        <span className="hidden sm:inline">Create Playlist</span>
+        <span className="sr-only sm:hidden">Create Playlist</span>
       </Button>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">

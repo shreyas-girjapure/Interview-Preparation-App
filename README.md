@@ -6,7 +6,7 @@ A Next.js app for interview preparation - question browsing, practice flows, and
 
 - `src/` - Next.js app source (App Router, components, lib)
 - `public/` - static assets
-- `docs/` - planning and architecture notes (`docs/PROJECT_TRACKING.md` is the primary status file)
+- `docs/` - planning and architecture notes (`docs/PROJECT.md` is the primary status file)
 - `.github/workflows/` - CI pipeline
 
 ## Local development
@@ -63,7 +63,7 @@ You can run it in Supabase SQL Editor, or with Supabase CLI if you use local/dev
 
 For ongoing table/column/index changes, use:
 
-- `docs/SUPABASE_MIGRATION_PLAYBOOK.md`
+- `docs/MIGRATION_AND_SCRIPTS.md`
 - `scripts/supabase-migrate.ps1`
 
 Common DB workflow commands:
@@ -84,7 +84,7 @@ npm run db:sync:dev-prod:reset
 
 Cutover runbook:
 
-- `docs/PRODUCTION_CUTOVER_RUNBOOK.md`
+- `docs/MIGRATION_AND_SCRIPTS.md`
 
 Notes:
 

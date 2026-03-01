@@ -2,7 +2,6 @@
 
 import { useMemo, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Combobox, type ComboboxOption } from "@/components/ui/combobox";
@@ -10,6 +9,7 @@ import {
   EXPERIENCE_LEVELS,
   type ExperienceLevel,
 } from "@/lib/account/experience-level";
+import { showAppToast } from "@/lib/toast";
 
 export type AccountPreferences = {
   focusAreas: string[];
@@ -117,7 +117,10 @@ export function PreferencesForm({
     if (dailyGoalResult.error) {
       setSaveState("error");
       setErrorMessage(dailyGoalResult.error);
-      toast.error(dailyGoalResult.error);
+      showAppToast({
+        title: "Invalid daily goal",
+        description: dailyGoalResult.error,
+      });
       return;
     }
 
@@ -148,7 +151,10 @@ export function PreferencesForm({
         setSaveState("error");
         const message = body?.error || "Unable to save preferences right now.";
         setErrorMessage(message);
-        toast.error(message);
+        showAppToast({
+          title: "Unable to save preferences",
+          description: message,
+        });
         return;
       }
     } catch {
@@ -156,12 +162,18 @@ export function PreferencesForm({
       const message =
         "Unable to save preferences right now. Check your connection and try again.";
       setErrorMessage(message);
-      toast.error(message);
+      showAppToast({
+        title: "Unable to save preferences",
+        description: message,
+      });
       return;
     }
 
     setSaveState("saved");
-    toast.success("Preferences saved.");
+    showAppToast({
+      title: "Preferences saved",
+      description: "Your account preferences were updated.",
+    });
     router.refresh();
   }
 

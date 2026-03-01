@@ -117,6 +117,10 @@ function resolveRuntimeEnv({ envPath, fallbackAccessToken }) {
     process.env.SUPABASE_ACCESS_TOKEN ||
     fallbackAccessToken ||
     "";
+  const serviceRoleKey =
+    values.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    "";
 
   if (!url) {
     throw new Error(
@@ -147,6 +151,7 @@ function resolveRuntimeEnv({ envPath, fallbackAccessToken }) {
     projectRef,
     dbPassword,
     accessToken,
+    serviceRoleKey,
     filePath: envPath,
   };
 }
@@ -169,7 +174,16 @@ function runSupabaseCommand(args, accessToken, stdio = "inherit") {
   });
 }
 
-function getServiceRoleKey(projectRef, accessToken) {
+function getServiceRoleKey(projectRef, accessToken, fallbackKey) {
+  if (projectRef === "local") {
+    if (!fallbackKey) {
+      throw new Error(
+        "Missing SUPABASE_SERVICE_ROLE_KEY for local project ref",
+      );
+    }
+    return fallbackKey;
+  }
+
   const output = runSupabaseCommand(
     ["projects", "api-keys", "--project-ref", projectRef, "--output", "json"],
     accessToken,
@@ -560,10 +574,12 @@ async function main() {
   const sourceServiceRoleKey = getServiceRoleKey(
     sourceEnv.projectRef,
     sourceEnv.accessToken,
+    sourceEnv.serviceRoleKey,
   );
   const targetServiceRoleKey = getServiceRoleKey(
     targetEnv.projectRef,
     targetEnv.accessToken,
+    targetEnv.serviceRoleKey,
   );
 
   const sourceClient = createClient(sourceEnv.url, sourceServiceRoleKey, {
