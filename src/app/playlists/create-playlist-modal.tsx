@@ -189,9 +189,15 @@ export function CreatePlaylistModal({
 
   return (
     <>
-      <Button size="lg" className="gap-2" onClick={handleButtonClick}>
+      <Button
+        size="icon"
+        className="shrink-0 sm:h-10 sm:w-auto sm:px-4"
+        onClick={handleButtonClick}
+        aria-label="Create playlist"
+      >
         <Plus className="size-4" />
-        Create Playlist
+        <span className="hidden sm:inline">Create Playlist</span>
+        <span className="sr-only sm:hidden">Create Playlist</span>
       </Button>
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
