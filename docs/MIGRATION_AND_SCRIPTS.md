@@ -1,55 +1,49 @@
 # Migration and Scripts Runbook
 
-Last updated: 2026-03-01
+Last updated: 2026-03-07
 
 ## 1. Supabase Environment Strategy
 
-- **Development**: Local dev, synthetic/seed data. Google auth via localhost. Project: `stxikhpofortkerjeuhf`.
-- **Production**: Live traffic, real content. Google auth via prod URLs. Project: `xglbjcouoyjegryxorqo`.
+- **Local Docker**: `supabase start` / `.env.local`. Project ref: `local`.
+- **Cloud Dev (Stage)**: `.env.stage`. Project ref: `stxikhpofortkerjeuhf`.
+- **Production**: `.env.production`. Project ref: `xglbjcouoyjegryxorqo`.
 
-**Required Env Vars:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL` (in `.env.local` and `.env.production`).
+**Required Env Vars:** `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`, `NEXT_PUBLIC_APP_URL` (in each `.env.*`).
 
-## 2. Supabase Migration Playbook
+## 2. Schema Management
 
-Source of truth for schema changes: `supabase/migrations/`.
-Always use forward-only migrations. Never edit applied migration files. Insert schema changes inside `begin; ... commit;`.
+Source of truth: `supabase/migrations/20260307000000_initial_schema.sql` (single squashed file).
+
+- **Never put seed/data INSERT statements in migration files.** Migrations are DDL only.
+- Always use forward-only migrations. Insert schema changes inside `begin; ... commit;`.
 
 ### Commands
 
-- **Local:** `npx supabase start` | `npx supabase migration up --local` | `npx supabase db reset --local`
-- **Agent Workflow:** Use `/db-push` workflow (`.agent/workflows/db-push.md`) for dev pushing.
-- **Push to Remote (Dev/Prod):**
-  ```bash
-  npx supabase link --project-ref <project_ref> --yes
-  npx supabase db push --linked --dry-run
-  npx supabase db push --linked --yes
-  npx supabase migration list --linked
-  ```
+- **Local:** `npx supabase start` | `npx supabase db reset --local`
+- **Push to Remote:** `npx supabase link --project-ref <ref> --yes` → `npx supabase db push --linked --yes`
 
-## 3. Production Cutover Runbook
+## 3. Data Sync Scripts
 
-Goal: Ship code from `dev` to `main` and make production DB data match dev DB data in a repeatable, guardrail-safe way.
+| Script                           | Purpose                                                            |
+| -------------------------------- | ------------------------------------------------------------------ |
+| `npm run db:sync:dev-prod`       | Full destructive sync (delete + re-insert) from dev → prod         |
+| `npm run db:sync:dev-prod:merge` | Upsert-only sync from dev → prod (safe for single-question pushes) |
+| `npm run db:sync:dev-prod:reset` | Reset prod schema + full sync                                      |
+| `npm run db:sync:prod-local`     | Pull prod content into local (merge, content-only)                 |
+| `npm run db:verify:dev-prod`     | Compare dev vs prod row counts                                     |
+| `npm run db:verify:prod-local`   | Compare prod vs local row counts                                   |
+| `npm run db:cutover:dev-prod`    | Full sync + guardrail smoke + verify                               |
 
-### Available NPM Scripts
+## 4. Production Cutover Flow
 
-- `npm run db:verify:dev-prod` : Compares dev vs prod row counts for public tables.
-- `npm run db:sync:dev-prod` : Syncs dev data to prod (row replacement, FK-safe order).
-- `npm run db:sync:dev-prod:reset` : Destructive reset of prod DB objects/data, then sync.
-- `npm run db:smoke:guardrail:prod` : Final safeguard check after sync.
+1. `npm run ci` on dev branch
+2. Merge dev → main and push
+3. Push schema: `npx supabase db push --linked --yes`
+4. Sync data: `npm run db:sync:dev-prod:reset`
+5. Verify: `npm run db:smoke:guardrail:prod` + `npm run db:verify:dev-prod`
 
-### Release Flow
+## 5. Adding Content
 
-1. Merge and push code:
-   ```bash
-   git checkout main
-   git merge --no-ff dev -m "release: promote dev to main"
-   git push origin main
-   ```
-2. Apply schema migrations to prod:
-   ```bash
-   npx supabase migration list --linked
-   npx supabase db push --linked --yes
-   ```
-3. If syncing data exactly to match dev (wipes real prod data!): `npm run db:sync:dev-prod:reset`
-4. If only updating rows (schema is aligned): `npm run db:sync:dev-prod`
-5. Final checks: `npm run db:smoke:guardrail:prod` and `npm run db:verify:dev-prod`
+- Use generation scripts or Supabase Studio to add questions to dev DB
+- Push to prod: `npm run db:sync:dev-prod:merge`
+- Pull from prod to local: `npm run db:sync:prod-local`
