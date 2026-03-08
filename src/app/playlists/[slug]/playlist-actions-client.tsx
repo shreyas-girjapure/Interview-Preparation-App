@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronDown, Pencil, Trash2 } from "lucide-react";
+import { MoreHorizontal, Pencil, Trash2, Share } from "lucide-react";
 
 import type { PickerQuestion } from "../picker-question";
 import { PlaylistQuestionPicker } from "../playlist-question-picker";
@@ -193,47 +193,64 @@ export function PlaylistActions({
 
   return (
     <>
-      <div className="flex w-fit items-stretch rounded-md border border-input shadow-sm">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-9 gap-1.5 rounded-r-none border-r border-input px-3 font-medium"
-          onClick={() => setIsEditOpen(true)}
-        >
-          <Pencil className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Edit Playlist</span>
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-9 rounded-l-none px-2"
-              aria-label="More options"
-            >
-              <ChevronDown className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-[160px]">
-            <DropdownMenuItem
-              onSelect={() => setIsEditOpen(true)}
-              className="gap-2"
-            >
-              <Pencil className="h-4 w-4" />
-              Edit playlist
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onSelect={() => setIsDeleteOpen(true)}
-              className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
-            >
-              <Trash2 className="h-4 w-4" />
-              Delete playlist
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 xl:h-10 xl:w-10 rounded-full hover:bg-transparent hover:text-black dark:hover:text-white transition-colors"
+            aria-label="More options"
+          >
+            <MoreHorizontal className="!h-[22px] !w-[22px] stroke-[1.25]" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-48 shadow-lg">
+          <DropdownMenuItem
+            onSelect={async () => {
+              try {
+                if (navigator.share) {
+                  await navigator.share({
+                    title: document.title,
+                    url: window.location.href,
+                  });
+                } else {
+                  await navigator.clipboard.writeText(window.location.href);
+                  showAppToast({
+                    title: "Link copied",
+                    description: "Playlist link copied to clipboard.",
+                  });
+                }
+              } catch (err) {
+                if ((err as Error).name !== "AbortError") {
+                  showAppToast({
+                    title: "Failed to share",
+                    description: "Could not share this playlist.",
+                  });
+                }
+              }
+            }}
+            className="gap-2"
+          >
+            <Share className="h-4 w-4" />
+            Share
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            onSelect={() => setIsEditOpen(true)}
+            className="gap-2"
+          >
+            <Pencil className="h-4 w-4" />
+            Edit playlist
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            onSelect={() => setIsDeleteOpen(true)}
+            className="gap-2 text-destructive focus:bg-destructive/10 focus:text-destructive"
+          >
+            <Trash2 className="h-4 w-4" />
+            Delete playlist
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
 
       <Dialog open={isEditOpen} onOpenChange={onEditOpenChange}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">

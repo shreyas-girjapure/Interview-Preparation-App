@@ -106,3 +106,155 @@ export async function createUserPlaylist(payload: {
     message: `Playlist "${name.trim()}" created with ${questionIds.length} question${questionIds.length === 1 ? "" : "s"}.`,
   };
 }
+
+export type PlaylistWithPresence = {
+  id: string;
+  title: string;
+  hasQuestion: boolean;
+  questionCount: number;
+  isOwner: boolean;
+};
+
+export async function getUserPlaylistsForQuestion(
+  questionId: string,
+): Promise<{
+  ok: boolean;
+  playlists: PlaylistWithPresence[];
+  message?: string;
+}> {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, playlists: [], message: "You must be signed in." };
+  }
+
+  // Check if user is admin/editor
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle<{ role: string | null }>();
+
+  const isAdmin =
+    userProfile?.role === "admin" || userProfile?.role === "editor";
+
+  // Admins see all playlists, regular users only their own
+  let query = supabase
+    .from("playlists")
+    .select("id, title, created_by, playlist_items(question_id)")
+    .order("created_at", { ascending: false });
+
+  if (!isAdmin) {
+    query = query.eq("created_by", user.id);
+  }
+
+  const { data: playlists, error } = await query;
+
+  if (error || !playlists) {
+    console.error("Failed to fetch user playlists", error);
+    return { ok: false, playlists: [], message: "Failed to load playlists." };
+  }
+
+  const result: PlaylistWithPresence[] = playlists.map((p) => ({
+    id: p.id,
+    title: p.title,
+    hasQuestion:
+      p.playlist_items?.some(
+        (item: { question_id: string }) => item.question_id === questionId,
+      ) ?? false,
+    questionCount: p.playlist_items?.length ?? 0,
+    isOwner: p.created_by === user.id,
+  }));
+
+  return { ok: true, playlists: result };
+}
+
+export async function toggleQuestionInPlaylist(payload: {
+  playlistId: string;
+  questionId: string;
+  isAdding: boolean;
+}): Promise<{ ok: boolean; message: string }> {
+  const { playlistId, questionId, isAdding } = payload;
+  const supabase = await createSupabaseServerClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { ok: false, message: "You must be signed in to manage playlists." };
+  }
+
+  // Check if user is admin/editor
+  const { data: userProfile } = await supabase
+    .from("users")
+    .select("role")
+    .eq("id", user.id)
+    .maybeSingle<{ role: string | null }>();
+
+  const isAdmin =
+    userProfile?.role === "admin" || userProfile?.role === "editor";
+
+  // Verify playlist ownership (admins can modify any playlist)
+  let playlistQuery = supabase
+    .from("playlists")
+    .select("id")
+    .eq("id", playlistId);
+
+  if (!isAdmin) {
+    playlistQuery = playlistQuery.eq("created_by", user.id);
+  }
+
+  const { data: playlist, error: playlistError } = await playlistQuery.single();
+
+  if (playlistError || !playlist) {
+    return { ok: false, message: "Playlist not found or access denied." };
+  }
+
+  if (isAdding) {
+    // Get max sort_order
+    const { data: items } = await supabase
+      .from("playlist_items")
+      .select("sort_order")
+      .eq("playlist_id", playlistId)
+      .order("sort_order", { ascending: false })
+      .limit(1);
+
+    const nextSortOrder = (items?.[0]?.sort_order ?? 0) + 1;
+
+    const { error: insertError } = await supabase
+      .from("playlist_items")
+      .insert({
+        playlist_id: playlistId,
+        question_id: questionId,
+        sort_order: nextSortOrder,
+      });
+
+    if (insertError) {
+      if (insertError.code === "23505") {
+        // unique violation
+        return { ok: true, message: "Question already in playlist." };
+      }
+      return { ok: false, message: "Failed to add question to playlist." };
+    }
+  } else {
+    const { error: deleteError } = await supabase
+      .from("playlist_items")
+      .delete()
+      .eq("playlist_id", playlistId)
+      .eq("question_id", questionId);
+
+    if (deleteError) {
+      return { ok: false, message: "Failed to remove question." };
+    }
+  }
+
+  revalidatePath("/playlists");
+  return {
+    ok: true,
+    message: isAdding ? "Added to playlist" : "Removed from playlist",
+  };
+}

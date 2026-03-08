@@ -130,8 +130,13 @@
   * {
     @apply border-border outline-ring/50;
   }
+
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground font-sans antialiased overflow-x-hidden w-full;
   }
 }
 
@@ -202,8 +207,16 @@
   word-break: break-word;
 }
 
-.interview-prose.question-detail-prose :where(h2, h3, h4) {
+.interview-prose.question-detail-prose :where(h2) {
   font-family: var(--font-reading), serif;
+  font-weight: 600;
+  color: color-mix(in oklch, var(--foreground) 98%, black);
+  letter-spacing: -0.018em;
+  text-wrap: pretty;
+}
+
+.interview-prose.question-detail-prose :where(h3, h4, h5, h6) {
+  font-family: var(--font-ui), sans-serif;
   font-weight: 600;
   color: color-mix(in oklch, var(--foreground) 98%, black);
   letter-spacing: -0.018em;

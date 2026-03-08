@@ -23,8 +23,11 @@ import { PlaylistQuestionPicker } from "./playlist-question-picker";
 import { createUserPlaylist } from "./playlist-actions";
 
 type CreatePlaylistModalProps = {
-  questions: PickerQuestion[];
+  questions?: PickerQuestion[];
   isSignedIn: boolean;
+  trigger?: React.ReactNode;
+  defaultSelected?: string[];
+  onSuccess?: () => void;
 };
 
 function toSlug(name: string) {
@@ -40,12 +43,15 @@ function toSlug(name: string) {
 export function CreatePlaylistModal({
   questions,
   isSignedIn,
+  trigger,
+  defaultSelected = [],
+  onSuccess,
 }: CreatePlaylistModalProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [selected, setSelected] = useState<string[]>([]);
+  const [selected, setSelected] = useState<string[]>(defaultSelected);
   const [isPending, startTransition] = useTransition();
 
   const handleButtonClick = () => {
@@ -67,7 +73,7 @@ export function CreatePlaylistModal({
     if (!next) {
       setName("");
       setDescription("");
-      setSelected([]);
+      setSelected(defaultSelected);
     }
   };
 
@@ -86,7 +92,7 @@ export function CreatePlaylistModal({
       });
       return;
     }
-    if (selected.length === 0) {
+    if (questions && questions.length > 0 && selected.length === 0) {
       showAppToast({
         title: "Questions required",
         description: "Select at least one question.",
@@ -115,28 +121,36 @@ export function CreatePlaylistModal({
           description: result.message,
         });
         handleOpenChange(false);
+        onSuccess?.();
       })();
     });
   };
 
   return (
     <>
-      <Button
-        size="icon"
-        className="shrink-0 sm:h-10 sm:w-auto sm:px-4"
-        onClick={handleButtonClick}
-        aria-label="Create playlist"
-      >
-        <Plus className="size-4" />
-        <span className="hidden sm:inline">Create Playlist</span>
-        <span className="sr-only sm:hidden">Create Playlist</span>
-      </Button>
+      {trigger ? (
+        <div
+          onClick={handleButtonClick}
+          className="inline-block w-full sm:w-auto"
+        >
+          {trigger}
+        </div>
+      ) : (
+        <Button
+          size="icon"
+          className="shrink-0 sm:h-10 sm:w-auto sm:px-4"
+          onClick={handleButtonClick}
+          aria-label="Create playlist"
+        >
+          <Plus className="size-4" />
+          <span className="hidden sm:inline">Create Playlist</span>
+          <span className="sr-only sm:hidden">Create Playlist</span>
+        </Button>
+      )}
       <Dialog open={open} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-2xl max-h-[90vh] flex flex-col p-0">
           <DialogHeader className="px-5 pt-5 pb-0 sm:px-6">
-            <DialogTitle className="font-serif text-2xl">
-              Create New Playlist
-            </DialogTitle>
+            <DialogTitle>Create New Playlist</DialogTitle>
             <DialogDescription>
               Build a custom collection from available questions.
             </DialogDescription>
@@ -177,15 +191,18 @@ export function CreatePlaylistModal({
               />
             </div>
 
-            <Separator />
-
-            <PlaylistQuestionPicker
-              questions={questions}
-              selectedIds={selected}
-              onSelectedIdsChange={setSelected}
-              disabled={isPending}
-              label="Add Questions"
-            />
+            {questions && questions.length > 0 && (
+              <>
+                <Separator />
+                <PlaylistQuestionPicker
+                  questions={questions}
+                  selectedIds={selected}
+                  onSelectedIdsChange={setSelected}
+                  disabled={isPending}
+                  label="Add Questions"
+                />
+              </>
+            )}
           </div>
 
           <div className="border-t px-5 py-4 sm:px-6 flex flex-col-reverse sm:flex-row sm:justify-end gap-2">
