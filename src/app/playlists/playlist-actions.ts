@@ -115,9 +115,7 @@ export type PlaylistWithPresence = {
   isOwner: boolean;
 };
 
-export async function getUserPlaylistsForQuestion(
-  questionId: string,
-): Promise<{
+export async function getUserPlaylistsForQuestion(questionId: string): Promise<{
   ok: boolean;
   playlists: PlaylistWithPresence[];
   message?: string;
