@@ -6,6 +6,16 @@ As a signed-in user, I want the browser to connect to the interview through the 
 OpenAI Agents SDK so the spoken interview feels natural without us hand-rolling
 the low-level Realtime transport.
 
+## Status
+
+- `Status`: Complete
+- `Shipped`: Mic access is requested only after the start action, the browser
+  connects through the OpenAI Agents SDK realtime transport, the first
+  interviewer turn is triggered automatically, and cleanup covers route exit,
+  failure, cancel, reset, and normal completion.
+- `Pending`: Optional hardening remains around richer autoplay fallback UI and
+  deeper transport telemetry.
+
 ## Acceptance Criteria
 
 1. The browser requests microphone access only after an explicit user action.
@@ -26,6 +36,10 @@ the low-level Realtime transport.
   `autoGainControl`.
 - Use the official OpenAI Agents SDK for TypeScript and the current voice-agent
   quickstart patterns at implementation time.
+- Before coding, read through the current OpenAI developer docs via MCP for the
+  Agents SDK voice flow, related Realtime guidance, and any SDK-specific auth
+  notes. Use targeted online search only if the official docs still leave an
+  implementation gap.
 - Define the interviewer as an SDK-managed Realtime voice agent and keep its
   instructions, tool policy, and model selection app-owned.
 - Let the SDK manage browser Realtime session creation and WebRTC transport.
@@ -72,5 +86,5 @@ the low-level Realtime transport.
 ## Dependencies
 
 - Depends on secure session bootstrap from US-02.
-- Blocks transcript UI and persistence stories because it is the source of all
-  live session state and transcript updates.
+- Blocks the modular UI implementation stories and persistence stories because
+  it is the source of all live session state and transcript updates.

@@ -7,6 +7,14 @@ practice in a focused environment without changing the current `Listen`
 behavior, while keeping the architecture reusable for playlists and later
 questions.
 
+## Status
+
+- `Status`: Complete
+- `Shipped`: The topic detail page links to `/topics/[slug]/mock-interview`,
+  the immersive route renders outside the site shell, scope loading stays
+  answer-safe, and unauthenticated users are redirected to login.
+- `Pending`: Playlist and question entry points remain intentionally deferred.
+
 ## Acceptance Criteria
 
 1. A new route exists at `/topics/[slug]/mock-interview`.

@@ -5,6 +5,16 @@
 As a user, I want my interview transcript, session outcome, and written debrief
 saved so that the session remains useful after the live voice conversation ends.
 
+## Status
+
+- `Status`: Partial
+- `Shipped`: Starting a session creates a local DB row immediately, and the
+  live client now patches session state through `ready`, `active`,
+  `completed`, `failed`, and `cancelled`.
+- `Pending`: Finalized transcript turn writes, `interview_messages`, abandon or
+  unload flush, completion metrics, and server-generated debrief content still
+  need implementation.
+
 ## Acceptance Criteria
 
 1. Starting a session creates a local DB record immediately.
@@ -72,8 +82,10 @@ saved so that the session remains useful after the live voice conversation ends.
   explain why the agent responded the way it did.
 - Treat transcript storage as foundation work for later scoring, not as a
   reason to expand V1 into a full evaluation system.
+- Attach debrief and persisted-session rendering to the modular shell and
+  transcript surfaces from US-04A and US-04B rather than rebuilding the page.
 
 ## Dependencies
 
 - Depends on live event handling from US-03.
-- Depends on stable UI transcript state from US-04.
+- Depends on stable transcript and control state from US-04B.

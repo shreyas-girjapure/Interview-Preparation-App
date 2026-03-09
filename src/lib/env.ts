@@ -13,8 +13,28 @@ const serverEnvSchema = publicEnvSchema.extend({
   SUPABASE_SERVICE_ROLE_KEY: requiredString,
 });
 
+const voiceInterviewEnvSchema = z.object({
+  OPENAI_API_KEY: requiredString,
+  OPENAI_REALTIME_MODEL: requiredString.default("gpt-realtime"),
+  OPENAI_REALTIME_TRANSCRIBE_MODEL: requiredString.default(
+    "gpt-4o-mini-transcribe",
+  ),
+  OPENAI_REALTIME_TRANSCRIBE_LANGUAGE: requiredString.default("en"),
+  OPENAI_REALTIME_NOISE_REDUCTION_TYPE: z
+    .enum(["near_field", "far_field"])
+    .default("near_field"),
+  OPENAI_REALTIME_VOICE: requiredString.default("marin"),
+  OPENAI_REALTIME_CLIENT_SECRET_TTL_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(10)
+    .max(7200)
+    .default(600),
+});
+
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
 export type ServerEnv = z.infer<typeof serverEnvSchema>;
+export type VoiceInterviewEnv = z.infer<typeof voiceInterviewEnvSchema>;
 
 function formatIssues(error: z.ZodError) {
   return error.issues
@@ -49,10 +69,20 @@ export function parseServerEnv(env: NodeJS.ProcessEnv): ServerEnv {
   return parseWithSchema(serverEnvSchema, env, "server");
 }
 
+export function parseVoiceInterviewEnv(
+  env: NodeJS.ProcessEnv,
+): VoiceInterviewEnv {
+  return parseWithSchema(voiceInterviewEnvSchema, env, "server");
+}
+
 export function getPublicEnv(): PublicEnv {
   return parsePublicEnv(process.env);
 }
 
 export function getServerEnv(): ServerEnv {
   return parseServerEnv(process.env);
+}
+
+export function getVoiceInterviewEnv(): VoiceInterviewEnv {
+  return parseVoiceInterviewEnv(process.env);
 }

@@ -32,7 +32,7 @@ import {
   getUserPlaylistsForQuestion,
   toggleQuestionInPlaylist,
   type PlaylistWithPresence,
-} from "@/app/playlists/playlist-actions";
+} from "@/app/(site)/playlists/playlist-actions";
 
 const PAGE_SIZE = 6;
 

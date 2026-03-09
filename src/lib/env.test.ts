@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { parsePublicEnv, parseServerEnv } from "@/lib/env";
+import {
+  parsePublicEnv,
+  parseServerEnv,
+  parseVoiceInterviewEnv,
+} from "@/lib/env";
 
 function asProcessEnv(values: Record<string, string | undefined>) {
   return values as NodeJS.ProcessEnv;
@@ -38,5 +42,28 @@ describe("env validation", () => {
         }),
       ),
     ).toThrowError(/SUPABASE_SERVICE_ROLE_KEY/);
+  });
+
+  it("parses voice interview env values with defaults", () => {
+    const parsed = parseVoiceInterviewEnv(
+      asProcessEnv({
+        OPENAI_API_KEY: "openai-key",
+      }),
+    );
+
+    expect(parsed.OPENAI_REALTIME_MODEL).toBe("gpt-realtime");
+    expect(parsed.OPENAI_REALTIME_TRANSCRIBE_MODEL).toBe(
+      "gpt-4o-mini-transcribe",
+    );
+    expect(parsed.OPENAI_REALTIME_TRANSCRIBE_LANGUAGE).toBe("en");
+    expect(parsed.OPENAI_REALTIME_NOISE_REDUCTION_TYPE).toBe("near_field");
+    expect(parsed.OPENAI_REALTIME_VOICE).toBe("marin");
+    expect(parsed.OPENAI_REALTIME_CLIENT_SECRET_TTL_SECONDS).toBe(600);
+  });
+
+  it("fails when the voice interview key is missing", () => {
+    expect(() => parseVoiceInterviewEnv(asProcessEnv({}))).toThrowError(
+      /OPENAI_API_KEY/,
+    );
   });
 });

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { type ExperienceLevel } from "@/lib/account/experience-level";
-import { PreferencesForm } from "@/app/account/preferences-form";
+import { PreferencesForm } from "@/app/(site)/account/preferences-form";
 
 export const dynamic = "force-dynamic";
 

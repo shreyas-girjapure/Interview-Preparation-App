@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Mic } from "lucide-react";
 
 import { QuestionCard } from "@/components/question-card";
 import { QuestionProgressProvider } from "@/contexts/question-progress-context";
@@ -146,23 +147,42 @@ export default async function TopicDetailsPage({
       <article className="mx-auto w-full max-w-7xl px-6 py-6 md:px-10 md:py-8">
         <div className="mx-auto w-full">
           <header className="page-copy-enter space-y-5">
-            <div className="flex flex-wrap items-center gap-2">
-              {topic.subcategory && (
-                <Badge variant="outline" className="capitalize">
-                  {topic.subcategory}
-                </Badge>
-              )}
-              <Badge variant="secondary">
-                {topic.questionCount} related question
-                {topic.questionCount === 1 ? "" : "s"}
-              </Badge>
+            <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+              <div className="space-y-5">
+                <div className="flex flex-wrap items-center gap-2">
+                  {topic.subcategory && (
+                    <Badge variant="outline" className="capitalize">
+                      {topic.subcategory}
+                    </Badge>
+                  )}
+                  <Badge variant="secondary">
+                    {topic.questionCount} related question
+                    {topic.questionCount === 1 ? "" : "s"}
+                  </Badge>
+                </div>
+                <div>
+                  <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
+                    {topic.name}
+                  </h1>
+                  <p className="mt-4 max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
+                    {topic.shortDescription}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="h-10 rounded-full px-4"
+                >
+                  <Link href={`/topics/${topic.slug}/mock-interview`}>
+                    <Mic className="size-4 stroke-[1.7]" />
+                    Mock interview
+                  </Link>
+                </Button>
+              </div>
             </div>
-            <h1 className="font-serif text-4xl leading-tight tracking-tight md:text-5xl">
-              {topic.name}
-            </h1>
-            <p className="max-w-4xl text-base leading-8 text-muted-foreground md:text-lg">
-              {topic.shortDescription}
-            </p>
           </header>
 
           <Separator className="my-6" />

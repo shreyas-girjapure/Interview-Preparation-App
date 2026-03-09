@@ -5,6 +5,16 @@
 As the app owner, I need the voice interview feature to be safe, observable,
 and release-ready before it becomes a normal part of the learner experience.
 
+## Status
+
+- `Status`: Partial
+- `Shipped`: Session routes validate payloads with `zod`, cleanup runs across
+  all client exit paths, and unit coverage exists for env parsing, prompt
+  guardrails, bootstrap flow, and transcript normalization.
+- `Pending`: Add persistence and PATCH route coverage, recent-changes policy
+  tests, broader manual QA, one-live-session enforcement, and richer
+  observability for production rollout.
+
 ## Acceptance Criteria
 
 1. OpenAI API keys never reach the browser.

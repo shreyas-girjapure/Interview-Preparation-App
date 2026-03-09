@@ -6,6 +6,15 @@ As an authenticated user, I want to start a live AI interview session securely
 so that the interviewer persona, active scope, and OpenAI usage are all
 controlled by the server.
 
+## Status
+
+- `Status`: Partial
+- `Shipped`: The server owns the prompt, model, voice, env validation, local
+  session row creation, safe scope resolution, and the bootstrap payload sent
+  to the browser. Runtime MCP remains disabled.
+- `Pending`: Scoped recent-changes search is not wired yet, and non-topic scope
+  loaders still need implementation on the same contract.
+
 ## Acceptance Criteria
 
 1. Starting an interview requires an authenticated user.

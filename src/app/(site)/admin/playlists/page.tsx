@@ -3,7 +3,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
-import { AdminPlaylistForms } from "@/app/admin/playlists/playlist-forms";
+import { AdminPlaylistForms } from "@/app/(site)/admin/playlists/playlist-forms";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";

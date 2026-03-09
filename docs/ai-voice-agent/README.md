@@ -35,9 +35,75 @@ interview feature.
 1. [US-01: Dedicated entry and immersive route](./stories/US-01-immersive-entry-route.md)
 2. [US-02: Secure session bootstrap](./stories/US-02-secure-session-bootstrap.md)
 3. [US-03: Browser Agents SDK client](./stories/US-03-browser-agents-sdk-client.md)
-4. [US-04: Immersive interview UI](./stories/US-04-immersive-interview-ui.md)
-5. [US-05: Transcript persistence and debrief](./stories/US-05-transcript-persistence-and-debrief.md)
-6. [US-06: Reliability, security, and testing](./stories/US-06-reliability-security-and-testing.md)
+4. [US-04: Interview experience mocks and approval](./stories/US-04-immersive-interview-ui.md)
+5. [US-04A: Immersive shell, voice stage, and briefing](./stories/US-04A-immersive-shell-voice-stage-and-briefing.md)
+6. [US-04B: Live transcript and session controls](./stories/US-04B-live-transcript-and-session-controls.md)
+7. [US-05: Transcript persistence and debrief](./stories/US-05-transcript-persistence-and-debrief.md)
+8. [US-06: Reliability, security, and testing](./stories/US-06-reliability-security-and-testing.md)
+
+## Implementation Status Snapshot
+
+- `US-01`: Complete. Topic detail CTA, immersive route group, safe scope
+  loader, and auth redirect are in place.
+- `US-02`: Partial. Server-owned bootstrap, prompt assembly, env validation,
+  and local session records ship today; scoped recent-changes search and
+  broader scope loaders do not.
+- `US-03`: Complete. The browser requests mic access only after user action,
+  connects through the OpenAI Agents SDK transport, auto-starts the interview,
+  and cleans up media plus session resources on exit paths.
+- `US-04`: Complete. The static review route and state fixtures exist and the
+  production UI split follows that approved mock structure.
+- `US-04A`: Complete. The immersive shell, voice stage, and briefing card are
+  now the live topic interview frame.
+- `US-04B`: Partial. Live transcript rendering, mute or end or retry controls,
+  and failure or completion treatments are implemented, but real recency-tool
+  citations are still placeholder-only because scoped search is not wired yet.
+- `US-05`: Partial. Session lifecycle rows are created and updated, but
+  finalized transcript persistence, completion debrief writes, and abandon
+  flush flows remain open.
+- `US-06`: Partial. Validation, cleanup paths, and core unit coverage exist,
+  but release-gate QA, broader route coverage, observability, and persistence
+  tests are still pending.
+
+## Pending Voice-Agent Backlog
+
+- Build the constrained recent-changes path so the main interviewer stays
+  single-scope while recency answers return grounded citations in the
+  transcript.
+- Add `interview_messages` persistence, batched finalized-turn writes, best
+  effort unload flush, and server-side debrief generation.
+- Enforce the default policy of one active live session per user before
+  allowing another bootstrap.
+- Add a server-owned sideband control path for prompt or tool updates and
+  richer observability without exposing sensitive logic to the browser.
+- Capture prompt or transport version metadata per session so regressions can
+  be tied back to a concrete runtime configuration.
+- Track latency and interruption metrics per stage so turn-detection tuning is
+  based on real session data rather than intuition.
+
+## Industry-Aligned Improvements
+
+- Keep the active interview job narrow: one scoped coaching task, one obvious
+  escape hatch, and one explicit recovery path instead of letting the voice
+  route drift into a general assistant.
+- Version prompts and tool policy explicitly so each shipped runtime can be
+  traced, replayed, and compared when coaching quality changes.
+- Treat interruption quality as a first-class metric by logging mic grant,
+  bootstrap, connect, first audio, end-of-turn, and retry timings for every
+  live session.
+- Add conversation repair rules for repeated silence, repeated off-topic asks,
+  and repeated transcription failures before the session feels broken.
+- Summarize long sessions incrementally so future transcript persistence does
+  not rely on an ever-growing realtime context window.
+- Keep recency answers separated behind a specialized search path with visible
+  citations and a clean handoff back to the scoped interviewer.
+
+## Delivery Gate
+
+- Build and review high-fidelity mocks before starting either UI implementation
+  story.
+- Confirm the mock layout, state treatment, and copy in-thread after mock
+  review and before starting US-04A or US-04B.
 
 ## Locked Architecture Decisions
 
@@ -122,6 +188,8 @@ interview feature.
 - Persist only finalized transcript turns.
 - Use the current Agents SDK voice-agent quickstart and current OpenAI docs at
   implementation time rather than relying on stale beta samples.
+- Treat the mock route as the approval surface for the UI before wiring the
+  live interview state into the page.
 - Design the UI around both voice and visible transcript, not an orb-only
   screen.
 - Release microphone, SDK session, and browser audio resources on every exit
@@ -132,6 +200,7 @@ interview feature.
 ## Primary Implementation Targets
 
 - `src/app/topics/[slug]/page.tsx`
+- `src/app/home-mocks/voice-interview/page.tsx`
 - `src/app/(immersive)/topics/[slug]/mock-interview/page.tsx`
 - `src/app/(immersive)/playlists/[slug]/mock-interview/page.tsx`
 - `src/app/api/interview/sessions/route.ts`

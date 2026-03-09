@@ -1,6 +1,6 @@
 # AI Voice Agent
 
-Status: Drafted for implementation
+Status: Implementation in progress
 
 This document is now the entry point for the AI voice interview feature.
 The implementation-ready story pack lives in `docs/ai-voice-agent/`.
@@ -35,6 +35,15 @@ The implementation-ready story pack lives in `docs/ai-voice-agent/`.
 - [US-04: Immersive interview UI](./ai-voice-agent/stories/US-04-immersive-interview-ui.md)
 - [US-05: Transcript persistence and debrief](./ai-voice-agent/stories/US-05-transcript-persistence-and-debrief.md)
 - [US-06: Reliability, security, and testing](./ai-voice-agent/stories/US-06-reliability-security-and-testing.md)
+
+## Delivery Snapshot
+
+- The current implementation has completed the immersive route, browser SDK
+  hookup, mock review surface, and the first production shell modules.
+- Remaining voice-agent work is concentrated in scoped recent-changes search,
+  finalized transcript persistence, written debrief generation, and release
+  hardening.
+- The live status ledger now lives in `docs/ai-voice-agent/README.md`.
 
 ## Official OpenAI References
 
