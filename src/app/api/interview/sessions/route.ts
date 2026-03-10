@@ -6,12 +6,15 @@ import {
   isVoiceInterviewBootstrapTimeoutError,
 } from "@/lib/ai/voice-agent";
 import type {
+  CreateVoiceInterviewSessionConflictResponse,
   CreateVoiceInterviewSessionRequest,
   CreateVoiceInterviewSessionResponse,
 } from "@/lib/interview/voice-interview-api";
 import {
   createInterviewSessionRecord,
   ensureInterviewSessionUserProfile,
+  getBlockingInterviewSessionForUser,
+  LiveInterviewSessionConflictError,
   markInterviewSessionFailed,
   markInterviewSessionReady,
 } from "@/lib/interview/voice-interview-sessions";
@@ -41,6 +44,20 @@ function roundDurationMs(durationMs: number) {
 
 function isMissingOpenAiEnvError(error: unknown) {
   return error instanceof Error && error.message.includes("OPENAI_API_KEY");
+}
+
+function createLiveSessionConflictResponse(
+  blockingSession: CreateVoiceInterviewSessionConflictResponse["blockingSession"],
+) {
+  return NextResponse.json(
+    {
+      blockingSession,
+      error:
+        "A live interview session is already in progress for this account. End the existing session or wait for it to expire.",
+      errorCode: "live_session_exists",
+    } satisfies CreateVoiceInterviewSessionConflictResponse,
+    { status: 409 },
+  );
 }
 
 export async function POST(request: Request) {
@@ -106,6 +123,25 @@ export async function POST(request: Request) {
     );
   }
 
+  try {
+    const blockingSession = await getBlockingInterviewSessionForUser({
+      supabase,
+      userId: user.id,
+    });
+
+    if (blockingSession) {
+      return createLiveSessionConflictResponse(blockingSession);
+    }
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: toErrorMessage(error),
+        errorCode: "live_session_guard_failed",
+      },
+      { status: 500 },
+    );
+  }
+
   let localSessionId: string | null = null;
   let localSessionCreateMs: number | undefined;
 
@@ -157,6 +193,40 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof LiveInterviewSessionConflictError) {
+      let blockingSession = error.blockingSession;
+
+      if (!blockingSession) {
+        try {
+          blockingSession = await getBlockingInterviewSessionForUser({
+            supabase,
+            userId: user.id,
+          });
+        } catch (guardError) {
+          return NextResponse.json(
+            {
+              error: toErrorMessage(guardError),
+              errorCode: "live_session_guard_failed",
+            },
+            { status: 500 },
+          );
+        }
+      }
+
+      if (blockingSession) {
+        return createLiveSessionConflictResponse(blockingSession);
+      }
+
+      return NextResponse.json(
+        {
+          error:
+            "A live interview session is already in progress for this account.",
+          errorCode: "live_session_exists",
+        },
+        { status: 409 },
+      );
+    }
+
     const isTimeout = isVoiceInterviewBootstrapTimeoutError(error);
     const errorCode = isMissingOpenAiEnvError(error)
       ? "openai_env_missing"

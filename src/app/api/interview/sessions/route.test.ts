@@ -3,6 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/interview/voice-interview-sessions", () => ({
   createInterviewSessionRecord: vi.fn(),
   ensureInterviewSessionUserProfile: vi.fn(),
+  getBlockingInterviewSessionForUser: vi.fn(),
+  LiveInterviewSessionConflictError: class LiveInterviewSessionConflictError extends Error {
+    blockingSession: unknown;
+
+    constructor(blockingSession: unknown) {
+      super("A live interview session already exists for this user.");
+      this.blockingSession = blockingSession;
+    }
+  },
   markInterviewSessionFailed: vi.fn(),
   markInterviewSessionReady: vi.fn(),
 }));
@@ -34,6 +43,8 @@ import {
 import {
   createInterviewSessionRecord,
   ensureInterviewSessionUserProfile,
+  getBlockingInterviewSessionForUser,
+  LiveInterviewSessionConflictError,
   markInterviewSessionFailed,
   markInterviewSessionReady,
 } from "@/lib/interview/voice-interview-sessions";
@@ -48,6 +59,9 @@ const mockedCreateInterviewSessionRecord = vi.mocked(
 );
 const mockedEnsureInterviewSessionUserProfile = vi.mocked(
   ensureInterviewSessionUserProfile,
+);
+const mockedGetBlockingInterviewSessionForUser = vi.mocked(
+  getBlockingInterviewSessionForUser,
 );
 const mockedMarkInterviewSessionFailed = vi.mocked(markInterviewSessionFailed);
 const mockedMarkInterviewSessionReady = vi.mocked(markInterviewSessionReady);
@@ -104,6 +118,7 @@ describe("POST /api/interview/sessions", () => {
     } as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>);
     mockedResolveVoiceInterviewScope.mockResolvedValue(scope);
     mockedEnsureInterviewSessionUserProfile.mockResolvedValue(undefined);
+    mockedGetBlockingInterviewSessionForUser.mockResolvedValue(null);
     mockedCreateInterviewSessionRecord.mockResolvedValue({
       id: "session-1",
     } as Awaited<ReturnType<typeof createInterviewSessionRecord>>);
@@ -198,6 +213,74 @@ describe("POST /api/interview/sessions", () => {
       expect.objectContaining({
         errorCode: "openai_bootstrap_timeout",
         sessionId: "session-1",
+      }),
+    );
+  });
+
+  it("returns 409 with blocking session metadata when an active live session exists", async () => {
+    mockedGetBlockingInterviewSessionForUser.mockResolvedValue({
+      id: "session-existing",
+      scopeSlug: "javascript",
+      scopeTitle: "JavaScript",
+      scopeType: "topic",
+      staleAt: "2026-03-10T12:00:00.000Z",
+      startedAt: "2026-03-10T11:45:00.000Z",
+      state: "active",
+    });
+
+    const response = await POST(
+      createRequest({
+        scopeSlug: scope.slug,
+        scopeType: scope.scopeType,
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body).toEqual(
+      expect.objectContaining({
+        blockingSession: expect.objectContaining({
+          id: "session-existing",
+          state: "active",
+        }),
+        errorCode: "live_session_exists",
+      }),
+    );
+    expect(mockedCreateInterviewSessionRecord).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 on a create-time live-session race conflict", async () => {
+    mockedGetBlockingInterviewSessionForUser
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        id: "session-race",
+        scopeSlug: "javascript",
+        scopeTitle: "JavaScript",
+        scopeType: "topic",
+        staleAt: "2026-03-10T12:00:00.000Z",
+        startedAt: "2026-03-10T11:55:00.000Z",
+        state: "ready",
+      });
+    mockedCreateInterviewSessionRecord.mockRejectedValue(
+      new LiveInterviewSessionConflictError(null),
+    );
+
+    const response = await POST(
+      createRequest({
+        scopeSlug: scope.slug,
+        scopeType: scope.scopeType,
+      }),
+    );
+    const body = await response.json();
+
+    expect(response.status).toBe(409);
+    expect(body).toEqual(
+      expect.objectContaining({
+        blockingSession: expect.objectContaining({
+          id: "session-race",
+          state: "ready",
+        }),
+        errorCode: "live_session_exists",
       }),
     );
   });

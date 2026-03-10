@@ -8,6 +8,17 @@ V1 is now the shipped baseline and archived in `docs/ai-voice-agent/`. V2 is
 the follow-on epic for the remaining work that was intentionally moved out of
 V1 on 2026-03-10.
 
+## Story Status Board
+
+1. `V2-US-01` Scoped documentation search orchestration: `Ready for implementation`
+2. `V2-US-02` Search safety, prompt injection, and exfiltration defenses: `Draft`
+3. `V2-US-03` Transcript persistence and server debriefs: `Implementation done; QA pending`
+4. `V2-US-04` Live-session policy and server-side controls: `Implementation done; rollout validation pending`
+5. `V2-US-05` Observability, tracing, and debug correlation: `Ready for implementation`
+6. `V2-US-06` Playlist-scoped voice interviews: `Ready for implementation`
+7. `V2-US-07` Realtime speech-to-speech quality hardening: `Draft`
+8. `V2-US-08` Chained `STT -> LLM -> TTS` voice runtime: `Draft`
+
 ## V2 Goals
 
 - Add grounded scoped official-documentation answers with visible citations.
@@ -53,12 +64,15 @@ V1 on 2026-03-10.
   runtime; DB-backed source policy is deferred.
 - `V2-US-02`: Draft. This is a release gate for V2-US-01; do not ship scoped
   search without the hardening controls.
-- `V2-US-03`: Ready for implementation. Durable transcript persistence,
-  server-generated debriefs, and a single-session read contract are now scoped
-  concretely enough to build.
-- `V2-US-04`: Ready for implementation. One-active-session enforcement, stale
-  session reclamation, runtime versioning, and bounded server-owned control
-  paths are now scoped concretely enough to build.
+- `V2-US-03`: Implementation done; QA pending. Core persistence, terminal write
+  routes, server debrief generation, single-session readback, and
+  ordering/idempotency test hardening are implemented in the active branch;
+  remaining work is final manual QA closeout before story completion.
+- `V2-US-04`: Implementation done; rollout validation pending.
+  One-active-session enforcement, stale-session reclamation, runtime version
+  persistence, bootstrap conflict responses, and server-owned
+  `force-end`/`heartbeat` endpoints are implemented in the active branch;
+  remaining work is caller-policy confirmation and staged concurrency checks.
 - `V2-US-05`: Ready for implementation. OpenAI tracing configuration,
   structured telemetry, redaction rules, and support correlation paths are now
   scoped concretely enough to build.
@@ -71,6 +85,42 @@ V1 on 2026-03-10.
   chained `STT -> text LLM -> TTS` architecture.
 - The runtime stories can be pulled forward if runtime stability and runtime
   routing become the immediate blocker for broader V2 rollout.
+
+## Manual Quick Checks (V2-US-03 and V2-US-04)
+
+1. V2-US-03 transcript/debrief persistence:
+start interview, speak a few finalized turns, end session, verify
+`POST /events` + `POST /complete` succeed, then reload via
+`GET /api/interview/sessions/{sessionId}` and confirm persisted transcript plus
+debrief.
+2. V2-US-03 cancel/failure persistence:
+cancel or fail a session after finalized turns and confirm transcript rows are
+still present while session is not marked `completed`.
+3. V2-US-04 one-live-session policy:
+keep a live session in tab A, start another in tab B (same user), expect
+`409 live_session_exists` with blocking-session metadata.
+4. V2-US-04 heartbeat and force-end:
+while live, confirm periodic `POST /heartbeat`; then call
+`POST /force-end` and verify state transitions to `cancelled`, after which a
+new session can start.
+
+## Next Session Handoff (2026-03-10)
+
+Completed today:
+- V2-US-03 core implementation plus ordering/idempotency hardening in tests.
+- V2-US-04 core implementation: one-live-session enforcement, stale reclaim,
+runtime version persistence, `409 live_session_exists`, and server-owned
+`force-end`/`heartbeat` endpoints.
+- Client wiring for conflict messaging and live-session heartbeat pings.
+- Test and build verification passing on current branch.
+
+Pending next:
+- Run manual QA checklist above for V2-US-03 and V2-US-04.
+- Finalize production caller policy for `force-end` endpoint (owner-only vs
+role-gated admin path).
+- Run staged concurrency checks on linked Supabase with real concurrent
+bootstrap attempts.
+- Start V2-US-05 (observability, tracing, and debug correlation).
 
 ## OpenAI Guidance Incorporated
 

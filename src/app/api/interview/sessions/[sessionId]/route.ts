@@ -2,7 +2,11 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import type { UpdateVoiceInterviewSessionRequest } from "@/lib/interview/voice-interview-api";
-import { updateInterviewSessionState } from "@/lib/interview/voice-interview-sessions";
+import {
+  getInterviewSessionDetail,
+  InterviewSessionNotFoundError,
+  updateInterviewSessionState,
+} from "@/lib/interview/voice-interview-sessions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const updateInterviewSessionSchema = z
@@ -18,6 +22,47 @@ type Params = Promise<{
 }>;
 
 export const dynamic = "force-dynamic";
+
+export async function GET(
+  _request: Request,
+  context: {
+    params: Params;
+  },
+) {
+  const supabase = await createSupabaseServerClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { sessionId } = await context.params;
+
+  try {
+    const detail = await getInterviewSessionDetail({
+      sessionId,
+      supabase,
+    });
+    return NextResponse.json(detail, { status: 200 });
+  } catch (error) {
+    if (error instanceof InterviewSessionNotFoundError) {
+      return NextResponse.json({ error: error.message }, { status: 404 });
+    }
+
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to read interview session detail.",
+      },
+      { status: 500 },
+    );
+  }
+}
 
 export async function PATCH(
   request: Request,

@@ -8,7 +8,7 @@ browser session ends.
 
 ## Status
 
-- `Status`: Ready for implementation
+- `Status`: Implementation done; QA pending (as of 2026-03-10)
 - `Why this exists`: V1 has reliable session lifecycle rows but not durable
   finalized-turn persistence or server-generated debrief content.
 - `Current baseline`: the browser already owns transcript assembly and the
@@ -16,6 +16,34 @@ browser session ends.
   existing flow rather than replace it.
 - `Scope note`: this story adds durable storage, finalization APIs, and a read
   path. A full session-history product surface can stay out of scope for now.
+
+### Implemented now (2026-03-10)
+
+- Added migration `20260310010000_interview_voice_persistence.sql` to:
+  extend `interview_sessions` with persistence and debrief fields, add
+  `interview_messages`, enforce `(session_id,item_id)` uniqueness, add ordering
+  index, and apply owner-based RLS policies.
+- Added persistence/debrief server modules:
+  `voice-interview-persistence.ts` and `voice-interview-debrief.ts`.
+- Extended session service layer with:
+  `persistInterviewSessionEvents`, `completeInterviewSession`,
+  `cancelInterviewSession`, and `getInterviewSessionDetail`.
+- Added API contracts and routes for:
+  `POST /events`, `POST /complete`, `POST /cancel`, and `GET /[sessionId]`.
+- Wired client flush flow in `use-voice-interview-agent.ts`:
+  debounced snapshot upserts for finalized items, terminal complete/cancel
+  calls, and best-effort unload flush (`sendBeacon` + keepalive fallback).
+- Added unit coverage for persistence/debrief helpers and route-level validation
+  and auth/session error handling for `events`, `complete`, and `cancel`.
+- Added idempotency and ordering-focused tests for:
+  snapshot re-flush re-position updates, duplicate complete handling on already
+  completed sessions, duplicate cancel handling on terminal sessions, and
+  session detail route read/update behavior.
+
+### Remaining before full close
+
+- Confirm end-to-end manual QA for unload/cancel behavior on target mobile
+  browsers.
 
 ## Acceptance Criteria
 

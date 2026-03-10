@@ -68,8 +68,9 @@ here for reference. All unfinished follow-on work moved into
   handling are in place. Durable transcript persistence, completion debrief
   writes, and abandon flush flows moved to V2.
 - `US-06`: Complete for the V1 baseline. Validation, cleanup paths, and core
-  unit coverage exist. Broader observability, persistence tests, and release
-  hardening moved to V2.
+  unit coverage exist. A 2026-03-10 hotfix widened bootstrap and VAD timing
+  windows and added disconnect grace handling in the live client. Broader
+  observability, persistence tests, and release hardening moved to V2.
 
 ## V2 Handoff
 

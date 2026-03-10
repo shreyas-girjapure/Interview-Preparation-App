@@ -10,8 +10,15 @@ import {
 import { useEffect, useRef, useState } from "react";
 
 import type {
+  CancelInterviewSessionRequest,
+  CompleteInterviewSessionRequest,
+  CompleteInterviewSessionResponse,
   CreateVoiceInterviewSessionResponse,
+  PersistInterviewEventsRequest,
+  PersistedVoiceInterviewDebrief,
   UpdateVoiceInterviewSessionRequest,
+  VoiceInterviewBlockingSession,
+  VoiceInterviewPersistedTranscriptItem,
 } from "@/lib/interview/voice-interview-api";
 import {
   activateVoiceInterviewSession,
@@ -31,6 +38,7 @@ import {
   upsertVoiceInterviewTranscriptItem,
 } from "@/lib/interview/voice-interview-runtime";
 import type {
+  VoiceInterviewCompletionSummary,
   VoiceInterviewSessionSnapshot,
   VoiceInterviewStage,
   VoiceInterviewTranscriptItem,
@@ -57,6 +65,7 @@ type VoiceInterviewAgentSession = {
 };
 
 type ApiErrorResponse = {
+  blockingSession?: VoiceInterviewBlockingSession;
   error?: string;
   errorCode?: string;
 };
@@ -71,6 +80,8 @@ class VoiceInterviewClientError extends Error {
   }
 }
 
+type BrowserTimeoutId = number;
+
 const MICROPHONE_CONSTRAINTS = {
   audio: {
     autoGainControl: true,
@@ -82,6 +93,12 @@ const MICROPHONE_CONSTRAINTS = {
   },
 } satisfies MediaStreamConstraints;
 
+const AGENT_SPEAKING_IDLE_MS = 500;
+const REALTIME_DISCONNECT_GRACE_MS = 3_500;
+const CONNECTION_INTERRUPTED_STATUS_ID = "connection-interrupted";
+const PERSIST_FLUSH_DEBOUNCE_MS = 900;
+const SESSION_HEARTBEAT_INTERVAL_MS = 45_000;
+
 type ExperimentalAudioTrackConstraints = MediaTrackConstraints & {
   voiceIsolation?: ConstrainBoolean;
 };
@@ -90,12 +107,120 @@ type ExperimentalSupportedAudioConstraints = MediaTrackSupportedConstraints & {
   voiceIsolation?: boolean;
 };
 
+function isPersistableSystemTranscriptItem(item: VoiceInterviewTranscriptItem) {
+  if (item.id === CONNECTION_INTERRUPTED_STATUS_ID) {
+    return false;
+  }
+
+  if (item.id.startsWith("transcription-failed-")) {
+    return true;
+  }
+
+  if (item.id === "session-failure") {
+    return true;
+  }
+
+  return item.tone === "error" || item.tone === "search";
+}
+
+function buildPersistableFinalizedItems(
+  transcript: VoiceInterviewTranscriptItem[],
+  finalizedAtById: Record<string, string>,
+): VoiceInterviewPersistedTranscriptItem[] {
+  const persisted: VoiceInterviewPersistedTranscriptItem[] = [];
+
+  for (const item of transcript) {
+    if (item.status === "streaming") {
+      continue;
+    }
+
+    if (item.speaker === "system" && !isPersistableSystemTranscriptItem(item)) {
+      continue;
+    }
+
+    const text = item.text.trim();
+
+    if (!text) {
+      continue;
+    }
+
+    finalizedAtById[item.id] ??= new Date().toISOString();
+    const previousItemId =
+      persisted.length > 0 ? persisted[persisted.length - 1].itemId : null;
+    persisted.push({
+      citations: item.citations?.map((citation) => ({
+        label: citation.label,
+        source: citation.source,
+        title: citation.label,
+        url: citation.href,
+      })),
+      clientSequence: persisted.length,
+      finalizedAt: finalizedAtById[item.id],
+      itemId: item.id,
+      label: item.label,
+      metaLabel: item.meta,
+      previousItemId,
+      source:
+        item.speaker === "system"
+          ? item.tone === "search"
+            ? "search"
+            : "system"
+          : "realtime",
+      speaker: item.speaker,
+      text,
+      tone: item.tone,
+    });
+  }
+
+  return persisted;
+}
+
+function buildPersistedTranscriptSignature(
+  persistedItems: VoiceInterviewPersistedTranscriptItem[],
+) {
+  return JSON.stringify(
+    persistedItems.map((item) => ({
+      citations: item.citations,
+      clientSequence: item.clientSequence,
+      itemId: item.itemId,
+      previousItemId: item.previousItemId ?? null,
+      source: item.source,
+      text: item.text,
+      tone: item.tone ?? null,
+    })),
+  );
+}
+
+function mapDebriefToCompletionSummary(
+  debrief: PersistedVoiceInterviewDebrief | null,
+): VoiceInterviewCompletionSummary | undefined {
+  if (!debrief) {
+    return undefined;
+  }
+
+  return {
+    nextDrill: debrief.nextDrill,
+    sharpen: debrief.sharpen,
+    strengths: debrief.strengths,
+    summary: debrief.summary,
+  };
+}
+
 function isAbortError(error: unknown) {
   return error instanceof DOMException && error.name === "AbortError";
 }
 
 function stopMediaStream(mediaStream: MediaStream | null) {
   mediaStream?.getTracks().forEach((track) => track.stop());
+}
+
+function clearTimeoutRef(timeoutRef: { current: BrowserTimeoutId | null }) {
+  if (timeoutRef.current === null) {
+    return;
+  }
+
+  window.clearTimeout(timeoutRef.current);
+  timeoutRef.current = null;
 }
 
 async function optimizeMicrophoneStreamForSpeech(mediaStream: MediaStream) {
@@ -185,6 +310,23 @@ function toErrorMessage(error: unknown, fallback: string) {
   return fallback;
 }
 
+function buildLiveSessionConflictMessage(
+  blockingSession: VoiceInterviewBlockingSession | undefined,
+) {
+  if (!blockingSession) {
+    return "A live interview session is already in progress. End the existing session or wait for it to expire before retrying.";
+  }
+
+  const startedAtSegment = blockingSession.startedAt
+    ? ` Started at ${blockingSession.startedAt}.`
+    : "";
+  const staleAtSegment = blockingSession.staleAt
+    ? ` Expected stale cutoff: ${blockingSession.staleAt}.`
+    : "";
+
+  return `A live interview is already in progress for ${blockingSession.scopeTitle}.${startedAtSegment}${staleAtSegment} End that session or wait before starting another.`;
+}
+
 function normalizeClientError(error: unknown) {
   if (error instanceof VoiceInterviewClientError) {
     return error;
@@ -248,9 +390,17 @@ async function createInterviewSessionBootstrap(
     !("realtime" in body)
   ) {
     const errorResponse = toApiErrorResponse(body);
+    const errorCode = errorResponse?.errorCode ?? "bootstrap_failed";
+
+    if (errorCode === "live_session_exists") {
+      throw new VoiceInterviewClientError(
+        "live_session_exists",
+        buildLiveSessionConflictMessage(errorResponse?.blockingSession),
+      );
+    }
 
     throw new VoiceInterviewClientError(
-      errorResponse?.errorCode ?? "bootstrap_failed",
+      errorCode,
       errorResponse?.error ?? "Unable to create the interview session.",
     );
   }
@@ -264,32 +414,42 @@ export function useVoiceInterviewAgent({
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const assistantTranscriptRef = useRef<Record<string, string>>({});
   const bootstrapAbortRef = useRef<AbortController | null>(null);
+  const conversationItemsRef = useRef<VoiceInterviewTranscriptItem[]>([]);
   const clientTimingsRef = useRef<VoiceInterviewClientTimingsMs>({});
+  const elapsedSecondsRef = useRef(0);
+  const finalizedAtByTranscriptIdRef = useRef<Record<string, string>>({});
   const isMutedRef = useRef(false);
   const lastPatchedStateRef = useRef<
     UpdateVoiceInterviewSessionRequest["state"] | null
   >(null);
+  const lastPersistedSignatureRef = useRef("");
   const localSessionIdRef = useRef<string | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const pendingTranscriptPreviousItemRef = useRef<
     Record<string, string | null | undefined>
   >({});
+  const persistFlushTimeoutRef = useRef<BrowserTimeoutId | null>(null);
   const serverTimingsRef = useRef<
     CreateVoiceInterviewSessionResponse["timingsMs"] | undefined
   >(undefined);
   const stageRef = useRef<VoiceInterviewStage>("ready");
+  const statusItemsRef = useRef<VoiceInterviewTranscriptItem[]>([]);
   const startTimestampRef = useRef<number | null>(null);
   const startupStartedAtRef = useRef<number | null>(null);
   const transcriptMetaRef = useRef<Record<string, string>>({});
   const transportCleanupRef = useRef<(() => void) | null>(null);
   const transportRef = useRef<OpenAIRealtimeWebRTC | null>(null);
   const attemptIdRef = useRef(0);
-  const agentSpeakingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const agentSpeakingTimeoutRef = useRef<BrowserTimeoutId | null>(null);
+  const disconnectFailureTimeoutRef = useRef<BrowserTimeoutId | null>(null);
 
   const [connectionLabel, setConnectionLabel] = useState<string | undefined>();
   const [conversationItems, setConversationItems] = useState<
     VoiceInterviewTranscriptItem[]
   >([]);
+  const [completionSummary, setCompletionSummary] = useState<
+    VoiceInterviewCompletionSummary | undefined
+  >();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [isMuted, setIsMuted] = useState(false);
@@ -306,8 +466,20 @@ export function useVoiceInterviewAgent({
   }, [stage]);
 
   useEffect(() => {
+    conversationItemsRef.current = conversationItems;
+  }, [conversationItems]);
+
+  useEffect(() => {
+    elapsedSecondsRef.current = elapsedSeconds;
+  }, [elapsedSeconds]);
+
+  useEffect(() => {
     isMutedRef.current = isMuted;
   }, [isMuted]);
+
+  useEffect(() => {
+    statusItemsRef.current = statusItems;
+  }, [statusItems]);
 
   useEffect(() => {
     if (stage !== "connecting" && stage !== "live") {
@@ -333,6 +505,79 @@ export function useVoiceInterviewAgent({
     return () => window.clearInterval(intervalId);
   }, [stage]);
 
+  useEffect(() => {
+    if (
+      stage !== "connecting" &&
+      stage !== "live"
+    ) {
+      return;
+    }
+
+    if (!localSessionIdRef.current) {
+      return;
+    }
+
+    const finalizedItems = buildPersistableFinalizedItems(
+      [...statusItems, ...conversationItems],
+      finalizedAtByTranscriptIdRef.current,
+    );
+    const signature = buildPersistedTranscriptSignature(finalizedItems);
+
+    if (signature === lastPersistedSignatureRef.current) {
+      return;
+    }
+
+    clearTimeoutRef(persistFlushTimeoutRef);
+    persistFlushTimeoutRef.current = window.setTimeout(() => {
+      void persistInterviewEvents({
+        finalizedItems,
+      }).catch((error) => {
+        console.error(
+          "Unable to persist finalized interview transcript snapshot",
+          error,
+        );
+      });
+    }, PERSIST_FLUSH_DEBOUNCE_MS);
+
+    return () => {
+      clearTimeoutRef(persistFlushTimeoutRef);
+    };
+  }, [conversationItems, stage, statusItems]);
+
+  useEffect(() => {
+    if (stage !== "live") {
+      return;
+    }
+
+    const sessionId = localSessionIdRef.current;
+
+    if (!sessionId) {
+      return;
+    }
+
+    let didDispose = false;
+    const sendHeartbeat = () => {
+      void postInterviewSessionHeartbeat(sessionId).catch((error) => {
+        if (didDispose) {
+          return;
+        }
+
+        console.error("Unable to send interview session heartbeat", error);
+      });
+    };
+
+    sendHeartbeat();
+    const intervalId = window.setInterval(
+      sendHeartbeat,
+      SESSION_HEARTBEAT_INTERVAL_MS,
+    );
+
+    return () => {
+      didDispose = true;
+      window.clearInterval(intervalId);
+    };
+  }, [stage]);
+
   function getMetaLabel() {
     if (!startTimestampRef.current) {
       return "00:00";
@@ -356,15 +601,207 @@ export function useVoiceInterviewAgent({
     });
   }
 
+  function getTranscriptSnapshot() {
+    return [...statusItemsRef.current, ...conversationItemsRef.current];
+  }
+
+  function getPersistableFinalizedItems() {
+    return buildPersistableFinalizedItems(
+      getTranscriptSnapshot(),
+      finalizedAtByTranscriptIdRef.current,
+    );
+  }
+
+  async function persistInterviewEvents(options?: {
+    finalizedItems?: VoiceInterviewPersistedTranscriptItem[];
+    force?: boolean;
+    keepalive?: boolean;
+  }) {
+    const sessionId = localSessionIdRef.current;
+
+    if (!sessionId) {
+      return;
+    }
+
+    const finalizedItems = options?.finalizedItems ?? getPersistableFinalizedItems();
+    const signature = buildPersistedTranscriptSignature(finalizedItems);
+
+    if (!options?.force && signature === lastPersistedSignatureRef.current) {
+      return;
+    }
+
+    const payload: PersistInterviewEventsRequest = {
+      finalizedItems,
+    };
+    const response = await fetch(
+      `/api/interview/sessions/${sessionId}/events`,
+      {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        keepalive: options?.keepalive ?? false,
+        method: "POST",
+      },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const errorResponse = toApiErrorResponse(body);
+
+      throw new VoiceInterviewClientError(
+        errorResponse?.errorCode ?? "persist_events_failed",
+        errorResponse?.error ?? "Unable to persist finalized interview transcript items.",
+      );
+    }
+
+    lastPersistedSignatureRef.current = signature;
+  }
+
+  async function cancelInterviewSession(
+    sessionId: string,
+    reason: CancelInterviewSessionRequest["reason"],
+    options?: {
+      keepalive?: boolean;
+      preferBeacon?: boolean;
+    },
+  ) {
+    const finalizedItems = getPersistableFinalizedItems();
+    const signature = buildPersistedTranscriptSignature(finalizedItems);
+    const payload: CancelInterviewSessionRequest = {
+      finalizedItems,
+      reason,
+    };
+
+    if (
+      options?.preferBeacon &&
+      typeof navigator !== "undefined" &&
+      typeof navigator.sendBeacon === "function"
+    ) {
+      const beaconBody = new Blob([JSON.stringify(payload)], {
+        type: "application/json",
+      });
+      const beaconSent = navigator.sendBeacon(
+        `/api/interview/sessions/${sessionId}/cancel`,
+        beaconBody,
+      );
+
+      if (beaconSent) {
+        lastPersistedSignatureRef.current = signature;
+        return;
+      }
+    }
+
+    const response = await fetch(
+      `/api/interview/sessions/${sessionId}/cancel`,
+      {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        keepalive: options?.keepalive ?? false,
+        method: "POST",
+      },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const errorResponse = toApiErrorResponse(body);
+
+      throw new VoiceInterviewClientError(
+        errorResponse?.errorCode ?? "session_cancel_failed",
+        errorResponse?.error ??
+          "Unable to persist interview cancellation with the final transcript snapshot.",
+      );
+    }
+
+    lastPersistedSignatureRef.current = signature;
+  }
+
+  async function completeInterviewSession(sessionId: string) {
+    const finalizedItems = getPersistableFinalizedItems();
+    const assistantTurnCount = finalizedItems.filter(
+      (item) => item.speaker === "assistant",
+    ).length;
+    const userTurnCount = finalizedItems.filter(
+      (item) => item.speaker === "user",
+    ).length;
+    const finalizedTurnCount = assistantTurnCount + userTurnCount;
+    const searchTurnCount = finalizedItems.filter(
+      (item) => item.source === "search" || item.tone === "search",
+    ).length;
+    const payload: CompleteInterviewSessionRequest = {
+      completionReason: "user_end",
+      finalizedItems,
+      metrics: {
+        assistantTurnCount,
+        elapsedSeconds: elapsedSecondsRef.current,
+        finalizedTurnCount,
+        persistedMessageCount: finalizedItems.length,
+        searchTurnCount,
+        userTurnCount,
+      },
+    };
+    const response = await fetch(
+      `/api/interview/sessions/${sessionId}/complete`,
+      {
+        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const errorResponse = toApiErrorResponse(body);
+
+      throw new VoiceInterviewClientError(
+        errorResponse?.errorCode ?? "session_complete_failed",
+        errorResponse?.error ??
+          "Unable to complete interview session with persisted transcript and debrief.",
+      );
+    }
+
+    const body = (await response.json()) as
+      | CompleteInterviewSessionResponse
+      | ApiErrorResponse;
+    const completeResponse = body as CompleteInterviewSessionResponse;
+
+    if (!("ok" in completeResponse) || completeResponse.ok !== true) {
+      const errorResponse = toApiErrorResponse(body);
+
+      throw new VoiceInterviewClientError(
+        errorResponse?.errorCode ?? "session_complete_failed",
+        errorResponse?.error ??
+          "The interview session completion response was invalid.",
+      );
+    }
+
+    setCompletionSummary(mapDebriefToCompletionSummary(completeResponse.debrief));
+    lastPersistedSignatureRef.current =
+      buildPersistedTranscriptSignature(finalizedItems);
+  }
+
   function resetRuntimeState() {
+    clearTimeoutRef(agentSpeakingTimeoutRef);
+    clearTimeoutRef(disconnectFailureTimeoutRef);
+    clearTimeoutRef(persistFlushTimeoutRef);
     assistantTranscriptRef.current = {};
     bootstrapAbortRef.current = null;
     clientTimingsRef.current = {};
+    conversationItemsRef.current = [];
+    elapsedSecondsRef.current = 0;
+    finalizedAtByTranscriptIdRef.current = {};
     lastPatchedStateRef.current = null;
+    lastPersistedSignatureRef.current = "";
     localSessionIdRef.current = null;
     serverTimingsRef.current = undefined;
+    statusItemsRef.current = [];
     pendingTranscriptPreviousItemRef.current = {};
     setConnectionLabel(undefined);
+    setCompletionSummary(undefined);
     setConversationItems([]);
     setElapsedSeconds(0);
     setErrorMessage(undefined);
@@ -380,6 +817,8 @@ export function useVoiceInterviewAgent({
   }
 
   function releaseMediaAndTransportResources() {
+    clearTimeoutRef(agentSpeakingTimeoutRef);
+    clearTimeoutRef(disconnectFailureTimeoutRef);
     transportCleanupRef.current?.();
     transportCleanupRef.current = null;
     transportRef.current = null;
@@ -396,30 +835,49 @@ export function useVoiceInterviewAgent({
   useEffect(() => {
     return () => {
       const sessionId = localSessionIdRef.current;
-      const shouldCancel =
-        stageRef.current === "connecting" || stageRef.current === "live";
+      const stageAtUnmount = stageRef.current;
+      const shouldCancel = stageAtUnmount === "connecting" || stageAtUnmount === "live";
+
+      if (shouldCancel && sessionId) {
+        const reason: CancelInterviewSessionRequest["reason"] =
+          stageAtUnmount === "live" ? "page_unload" : "setup_abort";
+
+        void cancelInterviewSession(sessionId, reason, {
+          keepalive: true,
+          preferBeacon: true,
+        }).catch((error) => {
+          console.error(
+            "Unable to persist cancel interview session on page unload",
+            error,
+          );
+        });
+      }
 
       attemptIdRef.current += 1;
       bootstrapAbortRef.current?.abort();
       bootstrapAbortRef.current = null;
       releaseMediaAndTransportResources();
-
-      if (!shouldCancel || !sessionId) {
-        return;
-      }
-
-      void fetch(`/api/interview/sessions/${sessionId}`, {
-        body: JSON.stringify({
-          state: "cancelled",
-        } satisfies UpdateVoiceInterviewSessionRequest),
-        headers: {
-          "Content-Type": "application/json",
-        },
-        keepalive: true,
-        method: "PATCH",
-      });
     };
   }, []);
+
+  async function postInterviewSessionHeartbeat(sessionId: string) {
+    const response = await fetch(
+      `/api/interview/sessions/${sessionId}/heartbeat`,
+      {
+        method: "POST",
+      },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const errorResponse = toApiErrorResponse(body);
+
+      throw new VoiceInterviewClientError(
+        errorResponse?.errorCode ?? "session_heartbeat_failed",
+        errorResponse?.error ?? "Unable to update interview heartbeat.",
+      );
+    }
+  }
 
   async function patchSessionState(
     sessionId: string,
@@ -466,6 +924,9 @@ export function useVoiceInterviewAgent({
 
     setConnectionLabel("Interview session failed");
     setErrorMessage(error.message);
+    setIsAgentSpeaking(false);
+    setIsMuted(false);
+    setIsUserSpeaking(false);
     setMicLabel("Released after failure");
     setStage("failed");
     setStatusItems((current) =>
@@ -486,6 +947,17 @@ export function useVoiceInterviewAgent({
 
     if (!sessionId) {
       return;
+    }
+
+    try {
+      await persistInterviewEvents({
+        force: true,
+      });
+    } catch (persistError) {
+      console.error(
+        "Unable to persist finalized transcript snapshot before failed state",
+        persistError,
+      );
     }
 
     try {
@@ -564,11 +1036,10 @@ export function useVoiceInterviewAgent({
 
       // Mark agent as speaking
       setIsAgentSpeaking(true);
-      if (agentSpeakingTimeoutRef.current)
-        clearTimeout(agentSpeakingTimeoutRef.current);
-      agentSpeakingTimeoutRef.current = setTimeout(() => {
+      clearTimeoutRef(agentSpeakingTimeoutRef);
+      agentSpeakingTimeoutRef.current = window.setTimeout(() => {
         setIsAgentSpeaking(false);
-      }, 500);
+      }, AGENT_SPEAKING_IDLE_MS);
 
       const nextDelta = `${assistantTranscriptRef.current[itemId] ?? ""}${delta}`;
       assistantTranscriptRef.current[itemId] = nextDelta;
@@ -605,19 +1076,59 @@ export function useVoiceInterviewAgent({
       }
 
       if (status === "connected") {
+        clearTimeoutRef(disconnectFailureTimeoutRef);
         setConnectionLabel("Realtime session connected");
+        setStatusItems((current) =>
+          removeVoiceInterviewTranscriptItem(
+            current,
+            CONNECTION_INTERRUPTED_STATUS_ID,
+          ),
+        );
         return;
       }
 
-      if (stageRef.current === "connecting" || stageRef.current === "live") {
+      if (stageRef.current !== "connecting" && stageRef.current !== "live") {
+        return;
+      }
+
+      setConnectionLabel("Connection unstable. Waiting briefly to recover");
+      setStatusItems((current) =>
+        upsertStatusTranscriptItem(
+          current,
+          buildVoiceInterviewSystemTranscriptItem({
+            id: CONNECTION_INTERRUPTED_STATUS_ID,
+            label: "Connection",
+            meta: getMetaLabel(),
+            text: `Realtime transport dropped. Waiting ${(
+              REALTIME_DISCONNECT_GRACE_MS / 1000
+            ).toFixed(1)} seconds for recovery before ending the interview.`,
+            tone: "error",
+          }),
+        ),
+      );
+
+      if (disconnectFailureTimeoutRef.current !== null) {
+        return;
+      }
+
+      disconnectFailureTimeoutRef.current = window.setTimeout(() => {
+        disconnectFailureTimeoutRef.current = null;
+
+        if (
+          attemptId !== attemptIdRef.current ||
+          (stageRef.current !== "connecting" && stageRef.current !== "live")
+        ) {
+          return;
+        }
+
         void failSession(
           new VoiceInterviewClientError(
             "realtime_disconnected",
-            "The realtime session disconnected unexpectedly. Retry the interview.",
+            "The realtime session disconnected unexpectedly and did not recover. Retry the interview.",
           ),
           attemptId,
         );
-      }
+      }, REALTIME_DISCONNECT_GRACE_MS);
     };
 
     const onTurnStarted = () => {
@@ -832,14 +1343,14 @@ export function useVoiceInterviewAgent({
 
       if (attemptId !== attemptIdRef.current) {
         stopMediaStream(mediaStream);
-        void patchSessionState(bootstrap.localSession.id, {
-          state: "cancelled",
-        }).catch((stateSyncError) => {
+        void cancelInterviewSession(bootstrap.localSession.id, "setup_abort").catch(
+          (stateSyncError) => {
           console.error(
             "Unable to cancel stale interview session bootstrap",
             stateSyncError,
           );
-        });
+          },
+        );
         return;
       }
 
@@ -876,14 +1387,14 @@ export function useVoiceInterviewAgent({
 
       if (attemptId !== attemptIdRef.current) {
         releaseMediaAndTransportResources();
-        void patchSessionState(bootstrap.localSession.id, {
-          state: "cancelled",
-        }).catch((stateSyncError) => {
+        void cancelInterviewSession(bootstrap.localSession.id, "setup_abort").catch(
+          (stateSyncError) => {
           console.error(
             "Unable to cancel stale interview session",
             stateSyncError,
           );
-        });
+          },
+        );
         return;
       }
 
@@ -993,9 +1504,7 @@ export function useVoiceInterviewAgent({
       return;
     }
 
-    void patchSessionState(sessionId, {
-      state: "cancelled",
-    }).catch((error) => {
+    void cancelInterviewSession(sessionId, "setup_abort").catch((error) => {
       console.error(
         "Unable to persist cancelled interview session state",
         error,
@@ -1022,8 +1531,10 @@ export function useVoiceInterviewAgent({
     const sessionId = localSessionIdRef.current;
     attemptIdRef.current += 1;
     releaseActiveResources();
+    setIsAgentSpeaking(false);
     setConnectionLabel("Session closed cleanly");
     setIsMuted(false);
+    setIsUserSpeaking(false);
     setMicLabel("Released");
     setStage("completed");
     setStatusItems((current) =>
@@ -1043,9 +1554,7 @@ export function useVoiceInterviewAgent({
       return;
     }
 
-    void patchSessionState(sessionId, {
-      state: "completed",
-    }).catch((error) => {
+    void completeInterviewSession(sessionId).catch((error) => {
       console.error(
         "Unable to persist completed interview session state",
         error,
@@ -1071,14 +1580,13 @@ export function useVoiceInterviewAgent({
       return;
     }
 
-    void patchSessionState(sessionId, {
-      state: "cancelled",
-    }).catch((error) => {
+    void cancelInterviewSession(sessionId, "retry").catch((error) => {
       console.error("Unable to persist reset interview session state", error);
     });
   }
 
   const session = buildVoiceInterviewRuntimeSnapshot({
+    completionSummary,
     connectionLabel,
     elapsedSeconds,
     errorMessage,

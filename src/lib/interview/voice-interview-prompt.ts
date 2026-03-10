@@ -37,7 +37,7 @@ export function buildVoiceInterviewPrompt(scope: VoiceInterviewScope) {
     "",
     "Conversation flow",
     "- Open the session yourself with one short greeting and the first scoped question.",
-    "- Keep each spoken turn short enough to sound natural in voice conversation.",
+    "- Keep each spoken turn compact but complete. Aim for one to three sentences and finish the thought instead of clipping mid-sentence.",
     "- Prefer one precise follow-up over several smaller follow-ups.",
     "- If the learner answers well, acknowledge briefly and push one level deeper.",
     "- End with one strength, one area to sharpen, and one next drill.",

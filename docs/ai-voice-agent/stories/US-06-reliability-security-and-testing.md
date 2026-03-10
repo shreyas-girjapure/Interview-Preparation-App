@@ -11,6 +11,11 @@ and release-ready before it becomes a normal part of the learner experience.
 - `Shipped`: Session routes validate payloads with `zod`, cleanup runs across
   all client exit paths, and unit coverage exists for env parsing, prompt
   guardrails, bootstrap flow, and transcript normalization.
+- `Post-close hotfix`: On 2026-03-10 the live runtime was hardened to reduce
+  premature mid-answer stops and avoid avoidable setup failures by widening the
+  server-owned bootstrap timeout, using a more patient `server_vad` silence
+  window, and adding a short client-side disconnect grace period before the UI
+  marks an interview as failed.
 - `Moved to V2`: Persistence and PATCH route coverage, recent-changes policy
   tests, broader manual QA, one-live-session enforcement, tracing, and richer
   observability moved into the V2 epic.
@@ -40,6 +45,8 @@ V1 was closed on 2026-03-10.
 - Keep logs secret-safe: no API keys, no raw OpenAI headers, and no full prompt
   dumps in normal logs.
 - Add a bounded upstream timeout to voice-session bootstrap calls.
+- Keep voice quality controls server-owned and tunable through env-backed
+  defaults so timeout and VAD adjustments do not require browser changes.
 - Gate session start behind authentication and keep one active live session per
   user as the default policy.
 - Prefer explicit restart over hidden reconnect loops once a live session is

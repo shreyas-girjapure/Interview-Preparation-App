@@ -15,7 +15,19 @@ const serverEnvSchema = publicEnvSchema.extend({
 
 const voiceInterviewEnvSchema = z.object({
   OPENAI_API_KEY: requiredString,
+  OPENAI_REALTIME_BOOTSTRAP_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(5_000)
+    .max(60_000)
+    .default(20_000),
   OPENAI_REALTIME_MODEL: requiredString.default("gpt-realtime"),
+  OPENAI_REALTIME_MAX_OUTPUT_TOKENS: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(4_096)
+    .default(640),
   OPENAI_REALTIME_TRANSCRIBE_MODEL: requiredString.default(
     "gpt-4o-mini-transcribe",
   ),
@@ -23,6 +35,23 @@ const voiceInterviewEnvSchema = z.object({
   OPENAI_REALTIME_NOISE_REDUCTION_TYPE: z
     .enum(["near_field", "far_field"])
     .default("near_field"),
+  OPENAI_REALTIME_SERVER_VAD_PREFIX_PADDING_MS: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(2_000)
+    .default(450),
+  OPENAI_REALTIME_SERVER_VAD_SILENCE_DURATION_MS: z.coerce
+    .number()
+    .int()
+    .min(400)
+    .max(4_000)
+    .default(1_200),
+  OPENAI_REALTIME_SERVER_VAD_THRESHOLD: z.coerce
+    .number()
+    .min(0.1)
+    .max(0.95)
+    .default(0.72),
   OPENAI_REALTIME_VOICE: requiredString.default("marin"),
   OPENAI_REALTIME_CLIENT_SECRET_TTL_SECONDS: z.coerce
     .number()

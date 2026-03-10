@@ -8,7 +8,7 @@ app policy.
 
 ## Status
 
-- `Status`: Ready for implementation
+- `Status`: Implementation done; rollout validation pending (as of 2026-03-10)
 - `Why this exists`: V1 tracks lifecycle state, but it does not yet enforce a
   single active session policy or provide a stronger server-owned control path
   for runtime changes and shutdown.
@@ -18,6 +18,34 @@ app policy.
 - `Implementation note`: this story should stay compatible with the current
   browser-bootstrap model. It does not require moving media transport into a
   server proxy.
+
+### Implemented now (2026-03-10)
+
+- Added migration `20260310020000_interview_session_policy.sql` with:
+  runtime version fields, stale and heartbeat tracking, forced-end fields,
+  blocking-session indexes, and a partial unique index that enforces one
+  blocking live session per user.
+- Added server policy/runtime constants and stale window logic in
+  `voice-interview-sessions.ts`.
+- Added server-owned blocking guard + stale reclaim flow via
+  `getBlockingInterviewSessionForUser`, including stale auto-cancellation.
+- Added structured conflict path for bootstrap:
+  `409 live_session_exists` with blocking session metadata.
+- Added bounded server-owned control helpers and routes:
+  `POST /api/interview/sessions/[id]/force-end`
+  `POST /api/interview/sessions/[id]/heartbeat`
+- Persisted runtime version metadata on session create and ready transitions.
+- Added client handling for duplicate-session conflicts and active heartbeat
+  pings while live.
+- Added route/service tests for conflict detection, stale reclaim, force-end,
+  and heartbeat behavior.
+
+### Remaining before full close
+
+- Confirm operational policy for who can call `force-end` in production
+  (currently any authenticated owner-scoped caller under existing RLS).
+- Run final staged rollout checks with real concurrent clients against a linked
+  Supabase environment.
 
 ## Acceptance Criteria
 

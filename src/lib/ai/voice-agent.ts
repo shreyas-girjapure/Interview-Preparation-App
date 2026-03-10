@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 
-import { getVoiceInterviewEnv } from "@/lib/env";
+import {
+  getVoiceInterviewEnv,
+  type VoiceInterviewEnv,
+} from "@/lib/env";
 import type { VoiceInterviewBootstrapTimingsMs } from "@/lib/interview/voice-interview-api";
 import { buildVoiceInterviewPrompt } from "@/lib/interview/voice-interview-prompt";
 import type { VoiceInterviewScope } from "@/lib/interview/voice-scope";
@@ -24,10 +27,6 @@ type RealtimeClientSecretSessionConfig = NonNullable<
 >;
 
 let openAiClientSingleton: OpenAI | null = null;
-const VOICE_INTERVIEW_BOOTSTRAP_TIMEOUT_MS = 10_000;
-const VOICE_INTERVIEW_MAX_OUTPUT_TOKENS = 220;
-const VOICE_INTERVIEW_SERVER_VAD_THRESHOLD = 0.72;
-const VOICE_INTERVIEW_SERVER_VAD_SILENCE_DURATION_MS = 650;
 
 export class VoiceInterviewBootstrapTimeoutError extends Error {
   readonly timeoutMs: number;
@@ -83,19 +82,20 @@ function getOpenAiClient() {
   return openAiClientSingleton;
 }
 
-export async function createVoiceInterviewBrowserBootstrap(
-  scope: VoiceInterviewScope,
-): Promise<VoiceInterviewBrowserBootstrap> {
-  const env = getVoiceInterviewEnv();
-  const client = getOpenAiClient();
+export function buildVoiceInterviewRealtimeSessionConfig({
+  env,
+  scope,
+}: {
+  env: VoiceInterviewEnv;
+  scope: VoiceInterviewScope;
+}): RealtimeClientSecretSessionConfig {
   const sessionPrompt = buildVoiceInterviewPrompt(scope);
-  const totalStartedAt = nowMs();
-  const openAiBootstrapStartedAt = nowMs();
-  const sessionConfig: RealtimeClientSecretSessionConfig = {
+
+  return {
     type: "realtime",
     model: env.OPENAI_REALTIME_MODEL,
     instructions: sessionPrompt,
-    max_output_tokens: VOICE_INTERVIEW_MAX_OUTPUT_TOKENS,
+    max_output_tokens: env.OPENAI_REALTIME_MAX_OUTPUT_TOKENS,
     output_modalities: ["audio"],
     audio: {
       input: {
@@ -116,9 +116,11 @@ export async function createVoiceInterviewBrowserBootstrap(
           type: "server_vad",
           create_response: true,
           interrupt_response: false,
-          prefix_padding_ms: 300,
-          silence_duration_ms: VOICE_INTERVIEW_SERVER_VAD_SILENCE_DURATION_MS,
-          threshold: VOICE_INTERVIEW_SERVER_VAD_THRESHOLD,
+          prefix_padding_ms:
+            env.OPENAI_REALTIME_SERVER_VAD_PREFIX_PADDING_MS,
+          silence_duration_ms:
+            env.OPENAI_REALTIME_SERVER_VAD_SILENCE_DURATION_MS,
+          threshold: env.OPENAI_REALTIME_SERVER_VAD_THRESHOLD,
         },
       },
       output: {
@@ -134,6 +136,19 @@ export async function createVoiceInterviewBrowserBootstrap(
     tool_choice: "auto",
     tracing: null,
   };
+}
+
+export async function createVoiceInterviewBrowserBootstrap(
+  scope: VoiceInterviewScope,
+): Promise<VoiceInterviewBrowserBootstrap> {
+  const env = getVoiceInterviewEnv();
+  const client = getOpenAiClient();
+  const totalStartedAt = nowMs();
+  const openAiBootstrapStartedAt = nowMs();
+  const sessionConfig = buildVoiceInterviewRealtimeSessionConfig({
+    env,
+    scope,
+  });
 
   const session = await withTimeout(
     client.realtime.clientSecrets.create({
@@ -143,7 +158,7 @@ export async function createVoiceInterviewBrowserBootstrap(
       },
       session: sessionConfig,
     }),
-    VOICE_INTERVIEW_BOOTSTRAP_TIMEOUT_MS,
+    env.OPENAI_REALTIME_BOOTSTRAP_TIMEOUT_MS,
   );
   const openAiBootstrapMs = roundDurationMs(nowMs() - openAiBootstrapStartedAt);
 

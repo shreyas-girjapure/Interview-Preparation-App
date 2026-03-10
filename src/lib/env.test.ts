@@ -51,14 +51,39 @@ describe("env validation", () => {
       }),
     );
 
+    expect(parsed.OPENAI_REALTIME_BOOTSTRAP_TIMEOUT_MS).toBe(20_000);
     expect(parsed.OPENAI_REALTIME_MODEL).toBe("gpt-realtime");
+    expect(parsed.OPENAI_REALTIME_MAX_OUTPUT_TOKENS).toBe(640);
     expect(parsed.OPENAI_REALTIME_TRANSCRIBE_MODEL).toBe(
       "gpt-4o-mini-transcribe",
     );
     expect(parsed.OPENAI_REALTIME_TRANSCRIBE_LANGUAGE).toBe("en");
     expect(parsed.OPENAI_REALTIME_NOISE_REDUCTION_TYPE).toBe("near_field");
+    expect(parsed.OPENAI_REALTIME_SERVER_VAD_PREFIX_PADDING_MS).toBe(450);
+    expect(parsed.OPENAI_REALTIME_SERVER_VAD_SILENCE_DURATION_MS).toBe(1200);
+    expect(parsed.OPENAI_REALTIME_SERVER_VAD_THRESHOLD).toBe(0.72);
     expect(parsed.OPENAI_REALTIME_VOICE).toBe("marin");
     expect(parsed.OPENAI_REALTIME_CLIENT_SECRET_TTL_SECONDS).toBe(600);
+  });
+
+  it("rejects out-of-range voice interview timing values", () => {
+    expect(() =>
+      parseVoiceInterviewEnv(
+        asProcessEnv({
+          OPENAI_API_KEY: "openai-key",
+          OPENAI_REALTIME_BOOTSTRAP_TIMEOUT_MS: "4000",
+        }),
+      ),
+    ).toThrowError(/OPENAI_REALTIME_BOOTSTRAP_TIMEOUT_MS/);
+
+    expect(() =>
+      parseVoiceInterviewEnv(
+        asProcessEnv({
+          OPENAI_API_KEY: "openai-key",
+          OPENAI_REALTIME_SERVER_VAD_SILENCE_DURATION_MS: "200",
+        }),
+      ),
+    ).toThrowError(/OPENAI_REALTIME_SERVER_VAD_SILENCE_DURATION_MS/);
   });
 
   it("fails when the voice interview key is missing", () => {

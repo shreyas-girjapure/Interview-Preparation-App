@@ -60,7 +60,7 @@ describe("voice interview prompt", () => {
       "Recent-changes browsing is not enabled directly in this session.",
     );
     expect(prompt).toContain(
-      "Keep each spoken turn short enough to sound natural in voice conversation.",
+      "Keep each spoken turn compact but complete. Aim for one to three sentences and finish the thought instead of clipping mid-sentence.",
     );
     expect(prompt).toContain(
       'Rambling example: "Pause there. Give me the thirty-second version: point, example, tradeoff."',
