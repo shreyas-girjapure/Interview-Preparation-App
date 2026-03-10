@@ -110,8 +110,7 @@ export const voiceInterviewMockScenarios: VoiceInterviewMockScenario[] = [
     title: "The route is staged, but nothing starts until the learner does.",
     description:
       "This state previews the interview shell before microphone access or browser session setup. The transcript stays visible, the scope is already clear, and the CTA remains deliberate.",
-    stateNote:
-      "Mic permission should be requested only after the explicit start action.",
+    stateNote: "Ready to begin.",
     stageQuote:
       "Start when you are ready. We will stay inside JavaScript closures.",
     stageSupport:

@@ -7,13 +7,17 @@ and release-ready before it becomes a normal part of the learner experience.
 
 ## Status
 
-- `Status`: Partial
+- `Status`: Complete for V1 baseline
 - `Shipped`: Session routes validate payloads with `zod`, cleanup runs across
   all client exit paths, and unit coverage exists for env parsing, prompt
   guardrails, bootstrap flow, and transcript normalization.
-- `Pending`: Add persistence and PATCH route coverage, recent-changes policy
-  tests, broader manual QA, one-live-session enforcement, and richer
-  observability for production rollout.
+- `Moved to V2`: Persistence and PATCH route coverage, recent-changes policy
+  tests, broader manual QA, one-live-session enforcement, tracing, and richer
+  observability moved into the V2 epic.
+
+Historical note: the acceptance criteria below capture the original broader
+story intent. The unfinished stretch items were intentionally moved to V2 when
+V1 was closed on 2026-03-10.
 
 ## Acceptance Criteria
 

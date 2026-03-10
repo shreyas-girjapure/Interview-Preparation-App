@@ -1,7 +1,13 @@
-# AI Voice Agent Story Pack
+# AI Voice Agent V1 Story Pack
 
 This folder is the implementation-ready planning set for the AI voice
 interview feature.
+
+Status: Closed on 2026-03-10
+
+This folder is now the archived V1 story pack. The shipped V1 baseline lives
+here for reference. All unfinished follow-on work moved into
+`docs/ai-voice-agent-v2/`.
 
 ## Scope
 
@@ -45,9 +51,9 @@ interview feature.
 
 - `US-01`: Complete. Topic detail CTA, immersive route group, safe scope
   loader, and auth redirect are in place.
-- `US-02`: Partial. Server-owned bootstrap, prompt assembly, env validation,
-  and local session records ship today; scoped recent-changes search and
-  broader scope loaders do not.
+- `US-02`: Complete for the V1 baseline. Server-owned bootstrap, prompt
+  assembly, env validation, and local session records ship today. Scoped
+  recent-changes search and broader scope loaders moved to V2.
 - `US-03`: Complete. The browser requests mic access only after user action,
   connects through the OpenAI Agents SDK transport, auto-starts the interview,
   and cleans up media plus session resources on exit paths.
@@ -55,31 +61,26 @@ interview feature.
   production UI split follows that approved mock structure.
 - `US-04A`: Complete. The immersive shell, voice stage, and briefing card are
   now the live topic interview frame.
-- `US-04B`: Partial. Live transcript rendering, mute or end or retry controls,
-  and failure or completion treatments are implemented, but real recency-tool
-  citations are still placeholder-only because scoped search is not wired yet.
-- `US-05`: Partial. Session lifecycle rows are created and updated, but
-  finalized transcript persistence, completion debrief writes, and abandon
-  flush flows remain open.
-- `US-06`: Partial. Validation, cleanup paths, and core unit coverage exist,
-  but release-gate QA, broader route coverage, observability, and persistence
-  tests are still pending.
+- `US-04B`: Complete for the V1 baseline. Live transcript rendering, mute or
+  end or retry controls, and failure or completion treatments are implemented.
+  Real recency-tool citations moved to V2.
+- `US-05`: Complete for the V1 baseline. Session lifecycle rows and end-state
+  handling are in place. Durable transcript persistence, completion debrief
+  writes, and abandon flush flows moved to V2.
+- `US-06`: Complete for the V1 baseline. Validation, cleanup paths, and core
+  unit coverage exist. Broader observability, persistence tests, and release
+  hardening moved to V2.
 
-## Pending Voice-Agent Backlog
+## V2 Handoff
 
-- Build the constrained recent-changes path so the main interviewer stays
-  single-scope while recency answers return grounded citations in the
-  transcript.
-- Add `interview_messages` persistence, batched finalized-turn writes, best
-  effort unload flush, and server-side debrief generation.
-- Enforce the default policy of one active live session per user before
-  allowing another bootstrap.
-- Add a server-owned sideband control path for prompt or tool updates and
-  richer observability without exposing sensitive logic to the browser.
-- Capture prompt or transport version metadata per session so regressions can
-  be tied back to a concrete runtime configuration.
-- Track latency and interruption metrics per stage so turn-detection tuning is
-  based on real session data rather than intuition.
+The remaining follow-on work is now tracked in `docs/ai-voice-agent-v2/`:
+
+- Grounded scoped recent-changes search with visible citations.
+- Prompt-injection and exfiltration hardening for web-backed answers.
+- Durable transcript persistence and server-generated debriefs.
+- One-active-session policy, server-side controls, and runtime versioning.
+- Tracing, observability, and debug correlation across local and OpenAI ids.
+- Playlist-scoped voice interviews on the same contract.
 
 ## Industry-Aligned Improvements
 
@@ -108,7 +109,7 @@ interview feature.
 ## Locked Architecture Decisions
 
 - Primary V1 route: `/topics/[slug]/mock-interview`
-- Next planned route on the same contract: `/playlists/[slug]/mock-interview`
+- V2 planned route on the same contract: `/playlists/[slug]/mock-interview`
 - Deferred route: `/questions/[slug]/mock-interview`
 - Session scope contract: `{ scopeType, scopeSlug }`
 - Voice runtime: OpenAI Agents SDK for TypeScript

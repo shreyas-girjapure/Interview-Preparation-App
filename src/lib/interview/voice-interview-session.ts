@@ -331,7 +331,7 @@ export function buildVoiceInterviewSessionSnapshot({
               : "Failure preserves context, explains the problem, and keeps a retry path visible.",
     stateNote:
       stage === "ready"
-        ? "Microphone permission is requested only after the explicit start action."
+        ? "Ready to begin."
         : stage === "connecting"
           ? "Connection copy reassures the learner without exposing transport details."
           : stage === "live"

@@ -1,8 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 type VoiceInterviewShellProps = {
@@ -10,9 +9,7 @@ type VoiceInterviewShellProps = {
   description: string;
   scopeLabel: string;
   scopeTitle: string;
-  stageLabel: string;
   transcript: ReactNode;
-  briefing: ReactNode;
   stage: ReactNode;
   previewLabel?: string;
   runtimeLabel?: string;
@@ -23,9 +20,7 @@ export function VoiceInterviewShell({
   description,
   scopeLabel,
   scopeTitle,
-  stageLabel,
   transcript,
-  briefing,
   stage,
   previewLabel,
   runtimeLabel = "Local voice-state adapter",
@@ -39,50 +34,31 @@ export function VoiceInterviewShell({
         <div className="absolute inset-0 bg-[linear-gradient(to_bottom,transparent,oklch(0.983_0.004_95)_80%)]" />
       </div>
 
-      <section className="relative mx-auto w-full max-w-[96rem] px-4 py-6 md:px-8 md:py-8">
-        <header className="rounded-[2rem] border border-border/70 bg-background/88 p-5 shadow-[0_24px_80px_-40px_rgba(67,53,32,0.45)] backdrop-blur md:p-7">
-          <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
-            <div className="max-w-4xl">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge variant="outline">Immersive route</Badge>
-                <Badge variant="secondary">{scopeLabel}</Badge>
-                <Badge variant="outline">{stageLabel}</Badge>
-                {previewLabel ? (
-                  <Badge variant="outline">{previewLabel}</Badge>
-                ) : null}
-              </div>
+      <section className="relative z-10 mx-auto w-full max-w-[88rem] px-4 pt-12 pb-6 md:px-8 md:pb-8">
+        <Button
+          asChild
+          variant="ghost"
+          size="sm"
+          className="absolute left-4 top-4 z-20 gap-2 text-muted-foreground hover:text-foreground md:left-8 md:top-8"
+        >
+          <Link href={backHref}>
+            <ArrowLeft className="size-4" />
+            Back to topic
+          </Link>
+        </Button>
 
-              <h1 className="mt-4 max-w-4xl font-serif text-4xl leading-tight tracking-tight md:text-6xl">
-                {scopeTitle} mock interview
-              </h1>
-              <p className="mt-4 max-w-3xl text-base leading-8 text-muted-foreground md:text-lg">
-                {description}
-              </p>
-            </div>
-
-            <div className="flex shrink-0 flex-wrap items-center gap-3">
-              <Button asChild variant="ghost" size="lg">
-                <Link href={backHref}>
-                  <ArrowLeft className="size-4" />
-                  Back to topic
-                </Link>
-              </Button>
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-card/75 px-4 py-2 text-sm text-muted-foreground">
-                <Sparkles className="size-4" />
-                {runtimeLabel}
-              </div>
-            </div>
-          </div>
+        <header className="mb-8 text-center md:mb-12">
+          <h1 className="font-serif text-4xl tracking-tight text-foreground md:text-5xl">
+            {scopeTitle} mock interview
+          </h1>
+          <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
+            {description}
+          </p>
         </header>
 
-        <div className="mt-6 grid gap-6 xl:grid-cols-[18.5rem_minmax(0,1fr)_24rem]">
-          <aside className="order-3 xl:order-1 xl:sticky xl:top-6 xl:self-start">
-            {briefing}
-          </aside>
-          <div className="order-1 xl:order-2">{stage}</div>
-          <aside className="order-2 xl:order-3 xl:sticky xl:top-6 xl:self-start">
-            {transcript}
-          </aside>
+        <div className="mx-auto max-w-4xl space-y-4">
+          <div>{stage}</div>
+          <div>{transcript}</div>
         </div>
       </section>
     </main>

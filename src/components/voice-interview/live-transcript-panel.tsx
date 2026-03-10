@@ -1,19 +1,16 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { AudioLines, Bot, Sparkles, User } from "lucide-react";
+import { useEffect, useId, useRef, useState } from "react";
+import { AudioLines, Bot, ChevronDown, Sparkles, User } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import type {
-  VoiceInterviewCompletionSummary,
+  VoiceInterviewSessionSnapshot,
   VoiceInterviewTranscriptItem,
 } from "@/lib/interview/voice-interview-session";
 
 type LiveTranscriptPanelProps = {
-  completionSummary?: VoiceInterviewCompletionSummary;
-  errorMessage?: string;
-  transcript: VoiceInterviewTranscriptItem[];
+  session: VoiceInterviewSessionSnapshot;
 };
 
 function TranscriptBubble({ item }: { item: VoiceInterviewTranscriptItem }) {
@@ -23,7 +20,7 @@ function TranscriptBubble({ item }: { item: VoiceInterviewTranscriptItem }) {
   return (
     <article
       className={cn(
-        "rounded-[1.45rem] border p-4 shadow-sm",
+        "rounded-[1.35rem] border p-4 shadow-sm",
         isSystem &&
           item.tone === "error" &&
           "border-rose-200/80 bg-rose-50/90 text-rose-950",
@@ -102,94 +99,179 @@ function TranscriptBubble({ item }: { item: VoiceInterviewTranscriptItem }) {
   );
 }
 
-export function LiveTranscriptPanel({
-  completionSummary,
-  errorMessage,
-  transcript,
-}: LiveTranscriptPanelProps) {
+const transcriptTitleMap = {
+  ready: "Transcript preview",
+  connecting: "Connection log",
+  live: "Live transcript",
+  completed: "Interview wrap-up",
+  failed: "Session log",
+} satisfies Record<VoiceInterviewSessionSnapshot["stage"], string>;
+
+function TranscriptStateBlock({
+  session,
+}: {
+  session: VoiceInterviewSessionSnapshot;
+}) {
+  if (session.stage === "completed" && session.completionSummary) {
+    return (
+      <div className="rounded-[1.45rem] border border-lime-200/80 bg-lime-50/90 p-4 text-lime-950">
+        <p className="text-sm font-medium">Completion summary</p>
+        <p className="mt-2 text-sm leading-6 text-lime-950/85">
+          {session.completionSummary.summary}
+        </p>
+        <div className="mt-4 space-y-3 text-sm leading-6 text-lime-950/80">
+          <p>
+            <span className="font-medium text-lime-950">Strengths:</span>{" "}
+            {session.completionSummary.strengths}
+          </p>
+          <p>
+            <span className="font-medium text-lime-950">Sharpen:</span>{" "}
+            {session.completionSummary.sharpen}
+          </p>
+          <p>
+            <span className="font-medium text-lime-950">Next drill:</span>{" "}
+            {session.completionSummary.nextDrill}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (session.stage === "failed" && session.errorMessage) {
+    return (
+      <div className="rounded-[1.45rem] border border-rose-200/80 bg-rose-50/90 p-4 text-rose-950">
+        <p className="text-sm font-medium">Session issue</p>
+        <p className="mt-2 text-sm leading-6 text-rose-950/85">
+          {session.errorMessage}
+        </p>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+export function LiveTranscriptPanel({ session }: LiveTranscriptPanelProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const panelId = useId();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const endRef = useRef<HTMLDivElement>(null);
+  const pinnedToBottomRef = useRef(true);
+  const latestTranscriptItem =
+    session.transcript[session.transcript.length - 1];
 
   useEffect(() => {
+    if (!isOpen) {
+      return;
+    }
+
     const container = scrollRef.current;
 
     if (!container) {
       return;
     }
 
-    const distanceFromBottom =
-      container.scrollHeight - container.scrollTop - container.clientHeight;
+    const updatePinnedState = () => {
+      const distanceFromBottom =
+        container.scrollHeight - container.scrollTop - container.clientHeight;
+      pinnedToBottomRef.current = distanceFromBottom < 72;
+    };
 
-    if (distanceFromBottom > 96) {
+    updatePinnedState();
+    container.addEventListener("scroll", updatePinnedState, { passive: true });
+
+    return () => {
+      container.removeEventListener("scroll", updatePinnedState);
+    };
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) {
       return;
     }
 
-    container.scrollTo({
-      top: container.scrollHeight,
-      behavior: "smooth",
+    if (!pinnedToBottomRef.current) {
+      return;
+    }
+
+    endRef.current?.scrollIntoView({
+      block: "end",
+      behavior:
+        latestTranscriptItem?.status === "streaming" ? "auto" : "smooth",
     });
-  }, [transcript]);
+  }, [
+    latestTranscriptItem?.id,
+    latestTranscriptItem?.status,
+    latestTranscriptItem?.text,
+    isOpen,
+    session.stage,
+    session.transcript.length,
+  ]);
 
   return (
-    <section className="rounded-[1.9rem] border border-border/70 bg-background/92 p-5 shadow-sm backdrop-blur">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <section className="rounded-[1.7rem] border border-border/70 bg-background/92 p-2 shadow-sm backdrop-blur">
+      <button
+        type="button"
+        aria-controls={panelId}
+        aria-expanded={isOpen}
+        className="flex w-full flex-col gap-3 rounded-[1.35rem] px-4 py-3 text-left transition-colors hover:bg-accent/35 md:flex-row md:items-center md:justify-between"
+        onClick={() => setIsOpen((current) => !current)}
+      >
         <div>
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <AudioLines className="size-4" />
-            Live transcript
+            Transcript
           </div>
-          <h2 className="mt-2 font-serif text-3xl tracking-tight">
-            Supporting context
-          </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            The transcript stays visible so the experience never relies on audio
-            alone.
+            {isOpen
+              ? "Hide the transcript and return full attention to the voice stage."
+              : "Open the transcript only when you want to review turns, citations, or connection state."}
           </p>
         </div>
-        <Badge variant="outline">Auto-scroll</Badge>
-      </div>
 
-      {completionSummary ? (
-        <div className="mt-5 rounded-[1.5rem] border border-lime-200/80 bg-lime-50/90 p-4">
-          <p className="text-sm font-medium text-lime-950">
-            Completion summary
-          </p>
-          <p className="mt-2 text-sm leading-6 text-lime-950/85">
-            {completionSummary.summary}
-          </p>
-          <div className="mt-4 space-y-3 text-sm leading-6 text-lime-950/80">
-            <p>
-              <span className="font-medium text-lime-950">Strengths:</span>{" "}
-              {completionSummary.strengths}
-            </p>
-            <p>
-              <span className="font-medium text-lime-950">Sharpen:</span>{" "}
-              {completionSummary.sharpen}
-            </p>
-            <p>
-              <span className="font-medium text-lime-950">Next drill:</span>{" "}
-              {completionSummary.nextDrill}
-            </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-2 text-sm font-medium text-foreground">
+            {isOpen ? "Hide transcript" : "Show transcript"}
+            <ChevronDown
+              className={cn(
+                "size-4 transition-transform",
+                isOpen && "rotate-180",
+              )}
+            />
+          </span>
+        </div>
+      </button>
+
+      {isOpen ? (
+        <div id={panelId} className="border-t border-border/60 px-4 pb-4 pt-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-serif text-3xl tracking-tight">
+                {transcriptTitleMap[session.stage]}
+              </h2>
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                One transcript surface adapts from setup to live turns to
+                wrap-up without crowding the stage by default.
+              </p>
+            </div>
+          </div>
+
+          <div
+            ref={scrollRef}
+            className="mt-5 h-[28rem] overflow-y-auto pr-1 md:h-[34rem]"
+          >
+            <div className="space-y-4">
+              <TranscriptStateBlock session={session} />
+
+              {session.transcript.map((item) => (
+                <TranscriptBubble key={item.id} item={item} />
+              ))}
+
+              <div ref={endRef} />
+            </div>
           </div>
         </div>
       ) : null}
-
-      {errorMessage ? (
-        <div className="mt-5 rounded-[1.5rem] border border-rose-200/80 bg-rose-50/90 p-4">
-          <p className="text-sm font-medium text-rose-950">Failure message</p>
-          <p className="mt-2 text-sm leading-6 text-rose-950/85">
-            {errorMessage}
-          </p>
-        </div>
-      ) : null}
-
-      <div
-        ref={scrollRef}
-        className="mt-5 max-h-[34rem] space-y-4 overflow-y-auto pr-1"
-      >
-        {transcript.map((item) => (
-          <TranscriptBubble key={item.id} item={item} />
-        ))}
-      </div>
     </section>
   );
 }

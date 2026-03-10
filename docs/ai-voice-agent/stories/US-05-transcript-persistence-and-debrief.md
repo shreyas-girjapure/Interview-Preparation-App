@@ -7,13 +7,17 @@ saved so that the session remains useful after the live voice conversation ends.
 
 ## Status
 
-- `Status`: Partial
+- `Status`: Complete for V1 baseline
 - `Shipped`: Starting a session creates a local DB row immediately, and the
-  live client now patches session state through `ready`, `active`,
-  `completed`, `failed`, and `cancelled`.
-- `Pending`: Finalized transcript turn writes, `interview_messages`, abandon or
-  unload flush, completion metrics, and server-generated debrief content still
-  need implementation.
+  live client patches session state through `ready`, `active`, `completed`,
+  `failed`, and `cancelled`, which gives V1 a reliable baseline session ledger.
+- `Moved to V2`: Finalized transcript turn writes, `interview_messages`,
+  abandon or unload flush, completion metrics, and server-generated debrief
+  content now belong to the V2 epic.
+
+Historical note: the acceptance criteria below capture the original broader
+story intent. The unfinished stretch items were intentionally moved to V2 when
+V1 was closed on 2026-03-10.
 
 ## Acceptance Criteria
 

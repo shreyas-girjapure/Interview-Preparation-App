@@ -1,15 +1,17 @@
+import { useState, useEffect } from "react";
 import {
   AudioLines,
-  CheckCircle2,
   Clock3,
   LoaderCircle,
   Mic,
+  MicOff,
   PhoneOff,
-  Radio,
-  Waves,
+  RotateCcw,
+  User,
+  Bot,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type {
   VoiceInterviewSessionSnapshot,
@@ -17,204 +19,436 @@ import type {
 } from "@/lib/interview/voice-interview-session";
 
 type VoiceStageProps = {
-  scopeLabel: string;
+  isMuted?: boolean;
+  isUserSpeaking?: boolean;
+  isAgentSpeaking?: boolean;
+  onCancelSetup: () => void;
+  onEnd: () => void;
+  onRetry: () => void;
+  onStart: () => void;
+  onToggleMute: () => void;
   session: VoiceInterviewSessionSnapshot;
+  stage: VoiceInterviewStage;
 };
 
-const stageToneMap: Record<
-  VoiceInterviewStage,
+type VisualState =
+  | "ready"
+  | "connecting"
+  | "completed"
+  | "failed"
+  | "listening"
+  | "user-speaking"
+  | "agent-speaking"
+  | "agent-speaking-muted"
+  | "muted";
+
+const visualToneMap: Record<
+  VisualState,
   {
-    badgeClassName: string;
-    innerClassName: string;
-    ringClassNames: [string, string, string];
+    bg: string;
+    innerBg: string;
+    rings: [string, string, string];
+    button: string;
+    primaryText: string;
+    secondaryText: string;
+    endButtonHover: string;
+    endButtonIcon: string;
+    iconBg: string;
   }
 > = {
+  // --- NON-LIVE STAGES ---
   ready: {
-    badgeClassName: "border-sky-200 bg-sky-50 text-sky-900",
-    innerClassName:
-      "bg-[linear-gradient(180deg,oklch(0.36_0.03_240),oklch(0.28_0.022_240))] text-white",
-    ringClassNames: [
-      "border-sky-200/80",
-      "border-sky-300/70",
-      "border-sky-400/55",
-    ],
+    bg: "bg-sky-50 shadow-sky-900/5 border-sky-100",
+    innerBg: "bg-sky-100/40",
+    rings: ["bg-sky-200/40", "bg-sky-300/40", "bg-sky-400/30"],
+    button:
+      "bg-gradient-to-br from-sky-400 to-sky-600 shadow-sky-500/30 text-white",
+    primaryText: "text-sky-900",
+    secondaryText: "text-sky-600",
+    endButtonHover: "hover:bg-rose-100 text-rose-600",
+    endButtonIcon: "text-rose-500",
+    iconBg: "bg-sky-100 text-sky-700",
   },
   connecting: {
-    badgeClassName: "border-amber-200 bg-amber-50 text-amber-950",
-    innerClassName:
-      "bg-[linear-gradient(180deg,oklch(0.52_0.11_73),oklch(0.42_0.08_71))] text-white",
-    ringClassNames: [
-      "border-amber-300/80 motion-safe:animate-pulse",
-      "border-amber-400/60 motion-safe:animate-pulse [animation-delay:180ms]",
-      "border-orange-400/45 motion-safe:animate-pulse [animation-delay:320ms]",
-    ],
-  },
-  live: {
-    badgeClassName: "border-emerald-200 bg-emerald-50 text-emerald-950",
-    innerClassName:
-      "bg-[linear-gradient(180deg,oklch(0.33_0.04_160),oklch(0.24_0.028_164))] text-white",
-    ringClassNames: [
-      "border-emerald-300/80 motion-safe:animate-pulse",
-      "border-emerald-400/65 motion-safe:animate-pulse [animation-delay:180ms]",
-      "border-teal-400/45 motion-safe:animate-pulse [animation-delay:320ms]",
-    ],
+    bg: "bg-amber-50 shadow-amber-900/5 border-amber-100",
+    innerBg: "bg-amber-100/40",
+    rings: ["bg-amber-300/40", "bg-amber-400/40", "bg-amber-500/30"],
+    button:
+      "bg-gradient-to-br from-amber-400 to-amber-600 shadow-amber-500/30 text-white",
+    primaryText: "text-amber-950",
+    secondaryText: "text-amber-700",
+    endButtonHover: "hover:bg-rose-100 text-rose-600",
+    endButtonIcon: "text-rose-500",
+    iconBg: "bg-amber-200 text-amber-800",
   },
   completed: {
-    badgeClassName: "border-lime-200 bg-lime-50 text-lime-950",
-    innerClassName:
-      "bg-[linear-gradient(180deg,oklch(0.44_0.05_134),oklch(0.33_0.038_132))] text-white",
-    ringClassNames: [
-      "border-lime-300/80",
-      "border-lime-400/60",
-      "border-emerald-400/45",
-    ],
+    bg: "bg-lime-50 shadow-lime-900/5 border-lime-100",
+    innerBg: "bg-lime-100/40",
+    rings: ["bg-lime-200/40", "bg-lime-300/40", "bg-lime-400/30"],
+    button:
+      "bg-gradient-to-br from-lime-400 to-lime-600 shadow-lime-500/30 text-white",
+    primaryText: "text-lime-950",
+    secondaryText: "text-lime-700",
+    endButtonHover: "hover:bg-rose-100 text-rose-600",
+    endButtonIcon: "text-rose-500",
+    iconBg: "bg-lime-200 text-lime-800",
   },
   failed: {
-    badgeClassName: "border-rose-200 bg-rose-50 text-rose-950",
-    innerClassName:
-      "bg-[linear-gradient(180deg,oklch(0.52_0.18_25),oklch(0.42_0.15_25))] text-white",
-    ringClassNames: [
-      "border-rose-300/80",
-      "border-rose-400/65",
-      "border-red-400/45",
-    ],
+    bg: "bg-rose-50 shadow-rose-900/5 border-rose-100",
+    innerBg: "bg-rose-100/40",
+    rings: ["bg-rose-200/40", "bg-rose-300/40", "bg-rose-400/30"],
+    button:
+      "bg-gradient-to-br from-rose-400 to-rose-600 shadow-rose-500/30 text-white",
+    primaryText: "text-rose-950",
+    secondaryText: "text-rose-700",
+    endButtonHover: "hover:bg-rose-200 text-rose-700",
+    endButtonIcon: "text-rose-600",
+    iconBg: "bg-rose-200 text-rose-800",
+  },
+
+  // --- LIVE VAD STAGES ---
+  listening: {
+    bg: "bg-emerald-50 shadow-emerald-900/5 border-emerald-100",
+    innerBg: "bg-emerald-100/40",
+    rings: ["bg-emerald-200/30", "bg-emerald-300/30", "bg-emerald-400/30"],
+    button:
+      "bg-gradient-to-br from-emerald-400 to-emerald-600 shadow-emerald-500/30 text-white",
+    primaryText: "text-emerald-900",
+    secondaryText: "text-emerald-600",
+    endButtonHover: "hover:bg-rose-100 text-rose-600",
+    endButtonIcon: "text-rose-500",
+    iconBg: "bg-emerald-100 text-emerald-700",
+  },
+  "user-speaking": {
+    bg: "bg-teal-50 shadow-teal-900/10 border-teal-100",
+    innerBg: "bg-teal-100/60",
+    rings: ["bg-teal-300/50", "bg-teal-400/50", "bg-teal-500/40"],
+    button:
+      "bg-gradient-to-br from-teal-500 to-teal-700 shadow-teal-600/60 text-white",
+    primaryText: "text-teal-950",
+    secondaryText: "text-teal-700",
+    endButtonHover: "hover:bg-rose-100 text-rose-600",
+    endButtonIcon: "text-rose-600",
+    iconBg: "bg-teal-200 text-teal-800",
+  },
+  "agent-speaking": {
+    bg: "bg-indigo-50 shadow-indigo-900/10 border-indigo-100",
+    innerBg: "bg-indigo-100/60",
+    rings: ["bg-indigo-300/50", "bg-indigo-400/50", "bg-indigo-500/40"],
+    button:
+      "bg-gradient-to-br from-indigo-500 to-indigo-700 shadow-indigo-600/60 text-white",
+    primaryText: "text-indigo-950",
+    secondaryText: "text-indigo-700",
+    endButtonHover: "hover:bg-rose-100 text-rose-600",
+    endButtonIcon: "text-rose-600",
+    iconBg: "bg-indigo-200 text-indigo-800",
+  },
+  "agent-speaking-muted": {
+    bg: "bg-indigo-50/50 shadow-indigo-900/5 border-indigo-100/50",
+    innerBg: "bg-indigo-100/30",
+    rings: ["bg-indigo-200/30", "bg-indigo-300/30", "bg-indigo-400/20"],
+    button:
+      "bg-gradient-to-br from-indigo-300 to-indigo-500 shadow-indigo-500/30 text-white",
+    primaryText: "text-indigo-900/80",
+    secondaryText: "text-indigo-600/80",
+    endButtonHover: "hover:bg-rose-100 text-rose-600",
+    endButtonIcon: "text-rose-500",
+    iconBg: "bg-indigo-100 text-indigo-700/80",
+  },
+  muted: {
+    bg: "bg-slate-50 shadow-slate-900/5 border-slate-100",
+    innerBg: "bg-slate-100/50",
+    rings: ["bg-slate-200/40", "bg-slate-300/40", "bg-slate-400/40"],
+    button:
+      "bg-gradient-to-br from-slate-400 to-slate-600 shadow-slate-500/30 text-white",
+    primaryText: "text-slate-900",
+    secondaryText: "text-slate-600",
+    endButtonHover: "hover:bg-rose-100 text-rose-600",
+    endButtonIcon: "text-rose-500",
+    iconBg: "bg-slate-200 text-slate-700",
   },
 };
 
-const stageIconMap = {
-  ready: Mic,
-  connecting: LoaderCircle,
-  live: Waves,
-  completed: CheckCircle2,
-  failed: PhoneOff,
-} satisfies Record<VoiceInterviewStage, typeof Waves>;
-
-function StageDetail({
+function StatusRow({
+  icon: Icon,
   label,
   value,
-  icon: Icon,
+  iconClassName,
+  textClassName,
 }: {
+  icon: React.ElementType;
   label: string;
   value: string;
-  icon: typeof AudioLines;
+  iconClassName?: string;
+  textClassName?: string;
 }) {
   return (
-    <div className="rounded-[1.4rem] border border-border/60 bg-background/82 p-4">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="flex items-start gap-3">
+      <span
+        className={cn(
+          "inline-flex size-9 shrink-0 items-center justify-center border-none text-muted-foreground",
+          iconClassName,
+        )}
+        style={{ borderRadius: "100%" }}
+      >
         <Icon className="size-4" />
-        {label}
+      </span>
+      <div className="min-w-0">
+        <p className="text-xs font-medium uppercase tracking-[0.12em] opacity-70">
+          {label}
+        </p>
+        <p
+          className={cn(
+            "mt-1 text-sm leading-6 font-medium transition-colors duration-500 ease-in-out",
+            textClassName,
+          )}
+        >
+          {value}
+        </p>
       </div>
-      <p className="mt-2 text-sm font-medium leading-6 text-foreground">
-        {value}
-      </p>
     </div>
   );
 }
 
-export function VoiceStage({ scopeLabel, session }: VoiceStageProps) {
-  const stageTone = stageToneMap[session.stage];
-  const StageIcon = stageIconMap[session.stage];
+export function VoiceStage({
+  isMuted,
+  isUserSpeaking,
+  isAgentSpeaking,
+  onCancelSetup,
+  onEnd,
+  onRetry,
+  onStart,
+  onToggleMute,
+  session,
+  stage,
+}: VoiceStageProps) {
+  const [audioLevel, setAudioLevel] = useState(0);
+
+  // Audio waveform simulation driven by actual event states
+  useEffect(() => {
+    if (isUserSpeaking || isAgentSpeaking) {
+      const interval = setInterval(() => {
+        // Generate a random audio level spike between 0.2 and 1.0 representing active audio volume
+        setAudioLevel(0.2 + Math.random() * 0.8);
+      }, 120);
+      return () => clearInterval(interval);
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setAudioLevel(0);
+    }
+  }, [isUserSpeaking, isAgentSpeaking]);
+
+  let activeState: VisualState = stage === "live" ? "listening" : stage;
+  if (stage === "live") {
+    if (isMuted && isAgentSpeaking) activeState = "agent-speaking-muted";
+    else if (isMuted) activeState = "muted";
+    else if (isUserSpeaking) activeState = "user-speaking";
+    else if (isAgentSpeaking) activeState = "agent-speaking";
+    else activeState = "listening";
+  }
+
+  const tone = visualToneMap[activeState];
+  const showQuickEnd = stage === "connecting" || stage === "live";
+
+  let CenterIcon = Mic;
+  if (activeState === "ready") CenterIcon = Mic;
+  else if (activeState === "connecting") CenterIcon = LoaderCircle;
+  else if (activeState === "completed" || activeState === "failed")
+    CenterIcon = RotateCcw;
+  else if (activeState === "listening") CenterIcon = AudioLines;
+  else if (activeState === "user-speaking") CenterIcon = User;
+  else if (activeState === "agent-speaking") CenterIcon = Bot;
+  else if (activeState === "agent-speaking-muted" || activeState === "muted")
+    CenterIcon = MicOff;
+
+  const handleCenterAction = () => {
+    if (stage === "ready" || stage === "completed") {
+      onStart();
+      return;
+    }
+    if (stage === "live") {
+      onToggleMute();
+      return;
+    }
+    if (stage === "failed") {
+      onRetry();
+    }
+  };
+
+  const PrimaryText = tone.primaryText;
+  const SecondaryText = tone.secondaryText;
+
+  // Audio driven scale mappings
+  const shouldAnimateBreathing =
+    activeState === "user-speaking" ||
+    activeState === "agent-speaking" ||
+    activeState === "agent-speaking-muted";
+  const getScale = (multiplier: number) => {
+    if (activeState === "muted") return 0.95;
+    if (shouldAnimateBreathing) return 1 + audioLevel * multiplier;
+    return 1;
+  };
 
   return (
-    <section className="overflow-hidden rounded-[2rem] border border-border/70 bg-[linear-gradient(165deg,rgba(255,252,248,0.97),rgba(246,241,233,0.97))] shadow-[0_26px_90px_-54px_rgba(70,45,26,0.55)]">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/60 px-5 py-4 md:px-6">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="secondary">Voice stage</Badge>
-            <Badge variant="outline">{scopeLabel}</Badge>
-            <span
-              className={cn(
-                "rounded-full border px-3 py-1 text-sm",
-                stageTone.badgeClassName,
-              )}
-            >
-              {session.stageLabel}
-            </span>
+    <section
+      className={cn(
+        "overflow-hidden rounded-[2rem] border transition-all duration-500 ease-in-out shadow-xl",
+        tone.bg,
+      )}
+    >
+      <div className="grid gap-0 xl:grid-cols-[minmax(0,1.48fr)_17rem]">
+        <div
+          className={cn(
+            "px-6 py-7 text-center transition-colors duration-500 ease-in-out md:px-8 md:py-10",
+            tone.innerBg,
+          )}
+        >
+          <div className="flex justify-end relative z-10 min-h-8">
+            {showQuickEnd && (
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                className={cn(
+                  "rounded-2xl bg-white/50 transition-colors",
+                  tone.endButtonHover,
+                  tone.endButtonIcon,
+                )}
+                aria-label={stage === "live" ? "End interview" : "Cancel setup"}
+                onClick={stage === "live" ? onEnd : onCancelSetup}
+              >
+                <PhoneOff className="size-4" />
+              </Button>
+            )}
           </div>
-          <h2 className="mt-2 font-serif text-3xl tracking-tight">
-            {session.title}
-          </h2>
-          <p className="mt-2 max-w-3xl text-sm leading-7 text-muted-foreground md:text-base">
-            {session.description}
-          </p>
-        </div>
 
-        <div className="rounded-full border border-border/70 bg-background/80 px-3 py-1.5 text-sm text-muted-foreground">
-          {session.stateNote}
-        </div>
-      </div>
-
-      <div className="rounded-[1.8rem] px-5 py-6 text-center md:px-6">
-        <div className="rounded-[1.8rem] border border-border/60 bg-background/80 px-6 py-8">
-          <div className="relative mx-auto flex size-64 items-center justify-center md:size-72">
-            <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(205,143,82,0.19)_0%,rgba(205,143,82,0)_68%)] blur-xl" />
+          <div className="relative mx-auto mt-8 flex size-72 items-center justify-center md:size-[22rem] xl:size-[25rem]">
+            {/* Outer ring wrapper for scale */}
             <div
-              className={cn(
-                "absolute size-[92%] rounded-full border",
-                stageTone.ringClassNames[0],
-              )}
-            />
-            <div
-              className={cn(
-                "absolute size-[74%] rounded-full border",
-                stageTone.ringClassNames[1],
-              )}
-            />
-            <div
-              className={cn(
-                "absolute size-[56%] rounded-full border",
-                stageTone.ringClassNames[2],
-              )}
-            />
-            <div
-              className={cn(
-                "relative flex size-[42%] items-center justify-center rounded-full shadow-[0_18px_50px_-20px_rgba(46,32,18,0.85)]",
-                session.stage === "connecting" &&
-                  "motion-safe:animate-spin [animation-duration:2.8s]",
-                stageTone.innerClassName,
-              )}
+              className="absolute size-[92%] transition-all duration-300 ease-in-out"
+              style={{ transform: `scale(${getScale(0.15)})` }}
             >
-              <StageIcon className="size-14" />
+              <div
+                className={cn(
+                  "size-full animate-spin [animation-duration:8s] rounded-[40%_60%_70%_30%/40%_50%_60%_50%]",
+                  tone.rings[0],
+                )}
+              />
             </div>
+
+            {/* Middle ring wrapper for scale */}
+            <div
+              className="absolute size-[74%] transition-all duration-300 ease-in-out"
+              style={{ transform: `scale(${getScale(0.08)})` }}
+            >
+              <div
+                className={cn(
+                  "size-full animate-spin [animation-duration:12s] [animation-direction:reverse] rounded-[60%_40%_30%_70%/60%_30%_70%_40%]",
+                  tone.rings[1],
+                )}
+              />
+            </div>
+
+            {/* Inner ring wrapper for scale */}
+            <div
+              className="absolute size-[56%] transition-all duration-300 ease-in-out"
+              style={{ transform: `scale(${getScale(0.04)})` }}
+            >
+              <div
+                className={cn(
+                  "size-full animate-spin [animation-duration:10s] rounded-[40%_60%_70%_30%/50%_60%_30%_60%]",
+                  tone.rings[2],
+                )}
+              />
+            </div>
+
+            <button
+              onClick={handleCenterAction}
+              disabled={stage === "connecting"}
+              className={cn(
+                "relative flex size-[42%] items-center justify-center rounded-[50%_50%_40%_60%/60%_40%_60%_40%] shadow-[0_10px_20px_-10px_currentColor] transition-all duration-300 ease-in-out outline-none focus-visible:ring-4 focus-visible:ring-ring/40",
+                stage !== "connecting" &&
+                  "hover:brightness-110 active:brightness-90 cursor-pointer",
+                stage === "connecting" && "cursor-wait opacity-80",
+                tone.button,
+              )}
+              style={{ transform: `scale(${getScale(0.02)})` }}
+            >
+              <CenterIcon
+                className={cn(
+                  "size-14",
+                  activeState === "connecting" &&
+                    "motion-safe:animate-spin [animation-duration:2.8s]",
+                )}
+              />
+            </button>
+          </div>
+        </div>
+
+        <div className="bg-white/60 p-6 md:p-8 xl:rounded-bl-[3rem] xl:rounded-tl-none border-t border-black/5 xl:border-t-0 xl:border-l relative overflow-hidden">
+          {/* Decorative background ping for active states */}
+          {(activeState === "user-speaking" ||
+            activeState === "agent-speaking" ||
+            activeState === "agent-speaking-muted") && (
+            <div
+              className={cn(
+                "absolute top-0 right-0 size-32 opacity-20 blur-3xl rounded-full transition-colors duration-1000",
+                activeState === "user-speaking"
+                  ? "bg-teal-500"
+                  : "bg-indigo-500",
+              )}
+            />
+          )}
+
+          <div className="relative z-10">
+            <p
+              className={cn(
+                "text-sm font-medium transition-colors duration-500 ease-in-out",
+                PrimaryText,
+              )}
+            >
+              Session status
+            </p>
+            <p
+              className={cn(
+                "mt-1 text-sm leading-6 transition-colors duration-500 ease-in-out",
+                SecondaryText,
+              )}
+            >
+              {session.connectionLabel}
+            </p>
           </div>
 
-          <p className="mt-6 font-serif text-3xl tracking-tight">
-            &ldquo;{session.stageQuote}&rdquo;
-          </p>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-muted-foreground md:text-base">
-            {session.stageSupport}
-          </p>
-
-          <div className="mt-6 grid gap-3 text-left sm:grid-cols-2">
-            <StageDetail
+          <div className="mt-8 space-y-6 relative z-10">
+            <StatusRow
+              icon={Mic}
               label="Microphone"
               value={session.micLabel}
-              icon={Mic}
+              iconClassName={cn(
+                "transition-colors duration-500 ease-in-out rounded-[40%_60%_70%_30%/50%_60%_30%_60%]",
+                tone.iconBg,
+              )}
+              textClassName={PrimaryText}
             />
-            <StageDetail
-              label="Connection"
-              value={session.connectionLabel}
-              icon={Radio}
-            />
-            <StageDetail
+            <StatusRow
+              icon={Clock3}
               label="Elapsed"
               value={session.elapsedLabel}
-              icon={Clock3}
+              iconClassName={cn(
+                "transition-colors duration-500 ease-in-out rounded-[50%_50%_40%_60%/60%_40%_60%_40%]",
+                tone.iconBg,
+              )}
+              textClassName={PrimaryText}
             />
-            <StageDetail
+            <StatusRow
+              icon={AudioLines}
               label="Transcript"
               value={session.transcriptCountLabel}
-              icon={AudioLines}
+              iconClassName={cn(
+                "transition-colors duration-500 ease-in-out rounded-[60%_40%_30%_70%/60%_30%_70%_40%]",
+                tone.iconBg,
+              )}
+              textClassName={PrimaryText}
             />
-          </div>
-
-          <div className="mt-6 rounded-[1.5rem] border border-amber-200/80 bg-amber-50/90 p-4 text-left">
-            <p className="text-sm font-medium text-amber-950">
-              Recency handling
-            </p>
-            <p className="mt-2 text-sm leading-6 text-amber-950/80">
-              {session.recencyModeLabel}
-            </p>
           </div>
         </div>
       </div>

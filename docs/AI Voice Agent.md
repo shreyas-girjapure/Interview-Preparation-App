@@ -1,9 +1,12 @@
 # AI Voice Agent
 
-Status: Implementation in progress
+Status: V1 closed, V2 planning in progress
 
-This document is now the entry point for the AI voice interview feature.
-The implementation-ready story pack lives in `docs/ai-voice-agent/`.
+This document is the entry point for the AI voice interview feature.
+
+- V1 archive and shipped baseline: `docs/ai-voice-agent/`
+- V2 epic and follow-on implementation stories: `docs/ai-voice-agent-v2/`
+- Cost optimization epic: `docs/ai-voice-agent-cost/`
 
 ## Core Decisions
 
@@ -15,12 +18,16 @@ The implementation-ready story pack lives in `docs/ai-voice-agent/`.
 - Keep the current `Listen` button untouched.
 - Use the OpenAI Agents SDK for TypeScript as the primary voice-agent runtime.
 - Let the Agents SDK manage browser Realtime transport over WebRTC.
+- Keep Realtime speech-to-speech as a premium runtime lane, but harden it
+  explicitly instead of assuming the current baseline is production-stable.
+- Add a second server-owned chained voice runtime:
+  `gpt-4o-transcribe -> gpt-4.1 / gpt-4.1-mini -> gpt-4o-mini-tts`.
 - Do not build or use a runtime MCP server in V1.
 - Require sign-in to start a live interview session.
 - Persist finalized transcript turns and a written debrief, but not raw audio.
 - Defer formal user scoring and cross-session analytics from V1.
-- Default to `gpt-realtime-mini`, keep `gpt-realtime` as the premium upgrade
-  path, and use `gpt-4o-mini-transcribe` for transcription.
+- Keep runtime choice server-owned. The browser should not directly pick raw
+  Realtime vs chained voice paths.
 - The agent must stay inside the active session scope and redirect unrelated
   requests back to the current topic, playlist, or question.
 - Add a controlled "recent changes" web-search capability, but only for the
@@ -28,22 +35,22 @@ The implementation-ready story pack lives in `docs/ai-voice-agent/`.
 
 ## Story Pack
 
-- [Overview and implementation order](./ai-voice-agent/README.md)
-- [US-01: Dedicated entry and immersive route](./ai-voice-agent/stories/US-01-immersive-entry-route.md)
-- [US-02: Secure session bootstrap](./ai-voice-agent/stories/US-02-secure-session-bootstrap.md)
-- [US-03: Browser Agents SDK client](./ai-voice-agent/stories/US-03-browser-agents-sdk-client.md)
-- [US-04: Immersive interview UI](./ai-voice-agent/stories/US-04-immersive-interview-ui.md)
-- [US-05: Transcript persistence and debrief](./ai-voice-agent/stories/US-05-transcript-persistence-and-debrief.md)
-- [US-06: Reliability, security, and testing](./ai-voice-agent/stories/US-06-reliability-security-and-testing.md)
+- [V1 archive and story pack](./ai-voice-agent/README.md)
+- [V2 epic overview and implementation order](./ai-voice-agent-v2/README.md)
+- [Cost optimization epic overview and story order](./ai-voice-agent-cost/README.md)
 
 ## Delivery Snapshot
 
-- The current implementation has completed the immersive route, browser SDK
-  hookup, mock review surface, and the first production shell modules.
-- Remaining voice-agent work is concentrated in scoped recent-changes search,
-  finalized transcript persistence, written debrief generation, and release
-  hardening.
-- The live status ledger now lives in `docs/ai-voice-agent/README.md`.
+- V1 is now treated as the shipped baseline for topic-scoped voice interviews:
+  immersive route, secure bootstrap, browser SDK hookup, live shell,
+  transcript, controls, and lifecycle state handling.
+- Follow-on work now belongs to V2:
+  grounded recent-changes search, prompt-injection hardening, durable
+  transcript persistence, server-generated debriefs, active-session policy,
+  tracing and observability, playlist scope rollout, Realtime runtime
+  hardening, and a chained STT -> LLM -> TTS runtime.
+- The V1 archive lives in `docs/ai-voice-agent/README.md`.
+- The active planning ledger now lives in `docs/ai-voice-agent-v2/README.md`.
 
 ## Official OpenAI References
 
@@ -52,6 +59,9 @@ The implementation-ready story pack lives in `docs/ai-voice-agent/`.
 - Voice agents guide: <https://developers.openai.com/api/docs/guides/voice-agents/>
 - Realtime server controls: <https://developers.openai.com/api/docs/guides/realtime-server-controls/>
 - Realtime API reference: <https://developers.openai.com/api/reference/resources/realtime/>
+- Agent-builder safety guide: <https://developers.openai.com/api/docs/guides/agent-builder-safety/>
+- Deep research prompt-injection guidance:
+  <https://developers.openai.com/api/docs/guides/deep-research/#prompt-injection-and-exfiltration>
 - MCP guide: <https://developers.openai.com/api/docs/mcp/>
 
 ## Notes
@@ -70,4 +80,9 @@ The implementation-ready story pack lives in `docs/ai-voice-agent/`.
 - Ignore suggestions from `docs/2026-03-08-current-git-review.md` for this
   feature for now. That review document is out of scope for the voice-agent V1
   plan unless explicitly revisited later.
-- The new source of truth is the story pack linked above.
+- V1 was closed on 2026-03-10 as the baseline release scope. All unfinished
+  stretch goals were moved into the new V2 epic instead of remaining as
+  ambiguous "partial" work inside the V1 ledger.
+- The current source of truth is the V2 epic linked above, with the V1 story
+  pack retained as an archive of the shipped baseline and earlier design
+  decisions.

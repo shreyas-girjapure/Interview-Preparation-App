@@ -44,6 +44,8 @@ type UseVoiceInterviewAgentOptions = {
 type VoiceInterviewAgentSession = {
   audioElementRef: React.RefObject<HTMLAudioElement | null>;
   isMuted: boolean;
+  isUserSpeaking: boolean;
+  isAgentSpeaking: boolean;
   session: VoiceInterviewSessionSnapshot;
   stage: VoiceInterviewStage;
   start: () => void;
@@ -282,6 +284,7 @@ export function useVoiceInterviewAgent({
   const transportCleanupRef = useRef<(() => void) | null>(null);
   const transportRef = useRef<OpenAIRealtimeWebRTC | null>(null);
   const attemptIdRef = useRef(0);
+  const agentSpeakingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [connectionLabel, setConnectionLabel] = useState<string | undefined>();
   const [conversationItems, setConversationItems] = useState<
@@ -290,6 +293,8 @@ export function useVoiceInterviewAgent({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [isMuted, setIsMuted] = useState(false);
+  const [isUserSpeaking, setIsUserSpeaking] = useState(false);
+  const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const [micLabel, setMicLabel] = useState<string | undefined>();
   const [stage, setStage] = useState<VoiceInterviewStage>("ready");
   const [statusItems, setStatusItems] = useState<
@@ -364,6 +369,8 @@ export function useVoiceInterviewAgent({
     setElapsedSeconds(0);
     setErrorMessage(undefined);
     setIsMuted(false);
+    setIsUserSpeaking(false);
+    setIsAgentSpeaking(false);
     setMicLabel(undefined);
     setStage("ready");
     setStatusItems([]);
@@ -555,6 +562,14 @@ export function useVoiceInterviewAgent({
         return;
       }
 
+      // Mark agent as speaking
+      setIsAgentSpeaking(true);
+      if (agentSpeakingTimeoutRef.current)
+        clearTimeout(agentSpeakingTimeoutRef.current);
+      agentSpeakingTimeoutRef.current = setTimeout(() => {
+        setIsAgentSpeaking(false);
+      }, 500);
+
       const nextDelta = `${assistantTranscriptRef.current[itemId] ?? ""}${delta}`;
       assistantTranscriptRef.current[itemId] = nextDelta;
 
@@ -638,12 +653,14 @@ export function useVoiceInterviewAgent({
       }
 
       if (event.type === "input_audio_buffer.speech_started") {
+        setIsUserSpeaking(true);
         transcriptMetaRef.current[event.item_id] ??= getMetaLabel();
         setMicLabel("Listening to your answer");
         return;
       }
 
       if (event.type === "input_audio_buffer.committed") {
+        setIsUserSpeaking(false);
         pendingTranscriptPreviousItemRef.current[event.item_id] =
           event.previous_item_id;
         transcriptMetaRef.current[event.item_id] ??= getMetaLabel();
@@ -652,6 +669,7 @@ export function useVoiceInterviewAgent({
       }
 
       if (event.type === "input_audio_buffer.speech_stopped") {
+        setIsUserSpeaking(false);
         transcriptMetaRef.current[event.item_id] ??= getMetaLabel();
         setMicLabel("Transcribing your answer");
         return;
@@ -1076,6 +1094,8 @@ export function useVoiceInterviewAgent({
     cancelSetup,
     end,
     isMuted,
+    isUserSpeaking,
+    isAgentSpeaking,
     reset,
     retry,
     session,

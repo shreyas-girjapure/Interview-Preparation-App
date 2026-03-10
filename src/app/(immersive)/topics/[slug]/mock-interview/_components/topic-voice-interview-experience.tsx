@@ -1,8 +1,6 @@
 "use client";
 
-import { InterviewBriefingCard } from "@/components/voice-interview/interview-briefing-card";
 import { LiveTranscriptPanel } from "@/components/voice-interview/live-transcript-panel";
-import { SessionControlBar } from "@/components/voice-interview/session-control-bar";
 import { VoiceInterviewShell } from "@/components/voice-interview/voice-interview-shell";
 import { VoiceStage } from "@/components/voice-interview/voice-stage";
 import { useVoiceInterviewAgent } from "@/hooks/use-voice-interview-agent";
@@ -31,11 +29,12 @@ export function TopicVoiceInterviewExperience({
   const {
     audioElementRef,
     isMuted,
+    isUserSpeaking,
+    isAgentSpeaking,
     session,
     stage,
     cancelSetup,
     end,
-    reset,
     retry,
     start,
     toggleMute,
@@ -52,40 +51,28 @@ export function TopicVoiceInterviewExperience({
     <>
       <VoiceInterviewShell
         backHref={backHref}
-        description={
-          previewMode
-            ? "Preview mode keeps the immersive shell and static stage states available without requesting microphone access."
-            : "This route starts a secure browser voice interview scoped to a single topic while keeping the transcript and controls visible at all times."
-        }
+        description={scope.summary}
         runtimeLabel={
           previewMode ? "Preview adapter" : "Realtime browser session"
         }
         scopeLabel={scope.scopeLabel}
         scopeTitle={scope.title}
-        stageLabel={session.stageLabel}
         previewLabel={previewLabel}
-        briefing={<InterviewBriefingCard scope={scope} />}
-        stage={<VoiceStage scopeLabel={scope.scopeLabel} session={session} />}
-        transcript={
-          <div className="space-y-4">
-            <SessionControlBar
-              backHref={backHref}
-              isMuted={isMuted}
-              stage={stage}
-              onCancelSetup={cancelSetup}
-              onEnd={end}
-              onReset={reset}
-              onRetry={retry}
-              onStart={start}
-              onToggleMute={toggleMute}
-            />
-            <LiveTranscriptPanel
-              completionSummary={session.completionSummary}
-              errorMessage={session.errorMessage}
-              transcript={session.transcript}
-            />
-          </div>
+        stage={
+          <VoiceStage
+            isMuted={isMuted}
+            isUserSpeaking={isUserSpeaking}
+            isAgentSpeaking={isAgentSpeaking}
+            onCancelSetup={cancelSetup}
+            onEnd={end}
+            onRetry={retry}
+            onStart={start}
+            onToggleMute={toggleMute}
+            session={session}
+            stage={stage}
+          />
         }
+        transcript={<LiveTranscriptPanel session={session} />}
       />
       {!previewMode ? (
         <audio ref={audioElementRef} autoPlay playsInline className="hidden" />

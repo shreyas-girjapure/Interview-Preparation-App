@@ -8,12 +8,16 @@ without losing context.
 
 ## Status
 
-- `Status`: Partial
+- `Status`: Complete for V1 baseline
 - `Shipped`: The transcript remains visible, assistant deltas and finalized
   turns are normalized into a stable order, and the control tray supports mute,
   cancel, end, reset, and retry flows across desktop and mobile layouts.
-- `Pending`: Real search-backed recency answers with grounded citation rows
-  still depend on the scoped recent-changes tool path from US-02.
+- `Moved to V2`: Real search-backed recency answers with grounded citation rows
+  moved into the V2 search and safety stories.
+
+Historical note: the acceptance criteria below capture the original broader
+story intent. The unfinished stretch items were intentionally moved to V2 when
+V1 was closed on 2026-03-10.
 
 ## Acceptance Criteria
 

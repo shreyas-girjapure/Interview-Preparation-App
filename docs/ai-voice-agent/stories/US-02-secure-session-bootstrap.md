@@ -8,12 +8,16 @@ controlled by the server.
 
 ## Status
 
-- `Status`: Partial
+- `Status`: Complete for V1 baseline
 - `Shipped`: The server owns the prompt, model, voice, env validation, local
   session row creation, safe scope resolution, and the bootstrap payload sent
   to the browser. Runtime MCP remains disabled.
-- `Pending`: Scoped recent-changes search is not wired yet, and non-topic scope
-  loaders still need implementation on the same contract.
+- `Moved to V2`: Scoped recent-changes search and non-topic scope loaders now
+  live in the V2 epic instead of remaining inside V1.
+
+Historical note: the acceptance criteria below capture the original broader
+story intent. The unfinished stretch items were intentionally moved to V2 when
+V1 was closed on 2026-03-10.
 
 ## Acceptance Criteria
 

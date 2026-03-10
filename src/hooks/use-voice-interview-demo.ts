@@ -18,6 +18,8 @@ type UseVoiceInterviewDemoOptions = {
 
 type VoiceInterviewDemoSession = {
   isMuted: boolean;
+  isUserSpeaking: boolean;
+  isAgentSpeaking: boolean;
   previewLocked: boolean;
   session: VoiceInterviewSessionSnapshot;
   stage: VoiceInterviewStage;
@@ -123,6 +125,8 @@ export function useVoiceInterviewDemo({
 
   return {
     isMuted,
+    isUserSpeaking: false,
+    isAgentSpeaking: false,
     previewLocked,
     session,
     stage,
