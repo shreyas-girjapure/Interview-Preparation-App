@@ -506,10 +506,7 @@ export function useVoiceInterviewAgent({
   }, [stage]);
 
   useEffect(() => {
-    if (
-      stage !== "connecting" &&
-      stage !== "live"
-    ) {
+    if (stage !== "connecting" && stage !== "live") {
       return;
     }
 
@@ -623,7 +620,8 @@ export function useVoiceInterviewAgent({
       return;
     }
 
-    const finalizedItems = options?.finalizedItems ?? getPersistableFinalizedItems();
+    const finalizedItems =
+      options?.finalizedItems ?? getPersistableFinalizedItems();
     const signature = buildPersistedTranscriptSignature(finalizedItems);
 
     if (!options?.force && signature === lastPersistedSignatureRef.current) {
@@ -651,7 +649,8 @@ export function useVoiceInterviewAgent({
 
       throw new VoiceInterviewClientError(
         errorResponse?.errorCode ?? "persist_events_failed",
-        errorResponse?.error ?? "Unable to persist finalized interview transcript items.",
+        errorResponse?.error ??
+          "Unable to persist finalized interview transcript items.",
       );
     }
 
@@ -779,7 +778,9 @@ export function useVoiceInterviewAgent({
       );
     }
 
-    setCompletionSummary(mapDebriefToCompletionSummary(completeResponse.debrief));
+    setCompletionSummary(
+      mapDebriefToCompletionSummary(completeResponse.debrief),
+    );
     lastPersistedSignatureRef.current =
       buildPersistedTranscriptSignature(finalizedItems);
   }
@@ -836,7 +837,8 @@ export function useVoiceInterviewAgent({
     return () => {
       const sessionId = localSessionIdRef.current;
       const stageAtUnmount = stageRef.current;
-      const shouldCancel = stageAtUnmount === "connecting" || stageAtUnmount === "live";
+      const shouldCancel =
+        stageAtUnmount === "connecting" || stageAtUnmount === "live";
 
       if (shouldCancel && sessionId) {
         const reason: CancelInterviewSessionRequest["reason"] =
@@ -1343,14 +1345,15 @@ export function useVoiceInterviewAgent({
 
       if (attemptId !== attemptIdRef.current) {
         stopMediaStream(mediaStream);
-        void cancelInterviewSession(bootstrap.localSession.id, "setup_abort").catch(
-          (stateSyncError) => {
+        void cancelInterviewSession(
+          bootstrap.localSession.id,
+          "setup_abort",
+        ).catch((stateSyncError) => {
           console.error(
             "Unable to cancel stale interview session bootstrap",
             stateSyncError,
           );
-          },
-        );
+        });
         return;
       }
 
@@ -1387,14 +1390,15 @@ export function useVoiceInterviewAgent({
 
       if (attemptId !== attemptIdRef.current) {
         releaseMediaAndTransportResources();
-        void cancelInterviewSession(bootstrap.localSession.id, "setup_abort").catch(
-          (stateSyncError) => {
+        void cancelInterviewSession(
+          bootstrap.localSession.id,
+          "setup_abort",
+        ).catch((stateSyncError) => {
           console.error(
             "Unable to cancel stale interview session",
             stateSyncError,
           );
-          },
-        );
+        });
         return;
       }
 

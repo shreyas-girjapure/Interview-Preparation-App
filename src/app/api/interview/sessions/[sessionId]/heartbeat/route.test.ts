@@ -45,9 +45,12 @@ describe("POST /api/interview/sessions/[sessionId]/heartbeat", () => {
 
   it("records session heartbeat", async () => {
     const response = await POST(
-      new Request("http://localhost:3000/api/interview/sessions/session-1/heartbeat", {
-        method: "POST",
-      }),
+      new Request(
+        "http://localhost:3000/api/interview/sessions/session-1/heartbeat",
+        {
+          method: "POST",
+        },
+      ),
       {
         params: Promise.resolve({
           sessionId: "session-1",
@@ -77,9 +80,12 @@ describe("POST /api/interview/sessions/[sessionId]/heartbeat", () => {
     } as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>);
 
     const response = await POST(
-      new Request("http://localhost:3000/api/interview/sessions/session-1/heartbeat", {
-        method: "POST",
-      }),
+      new Request(
+        "http://localhost:3000/api/interview/sessions/session-1/heartbeat",
+        {
+          method: "POST",
+        },
+      ),
       {
         params: Promise.resolve({
           sessionId: "session-1",
@@ -96,9 +102,12 @@ describe("POST /api/interview/sessions/[sessionId]/heartbeat", () => {
     );
 
     const response = await POST(
-      new Request("http://localhost:3000/api/interview/sessions/session-1/heartbeat", {
-        method: "POST",
-      }),
+      new Request(
+        "http://localhost:3000/api/interview/sessions/session-1/heartbeat",
+        {
+          method: "POST",
+        },
+      ),
       {
         params: Promise.resolve({
           sessionId: "session-1",

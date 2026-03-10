@@ -221,7 +221,9 @@ export async function listInterviewMessages({
     .order("created_at", { ascending: true });
 
   if (error) {
-    throw new Error(`Unable to read interview transcript rows: ${error.message}`);
+    throw new Error(
+      `Unable to read interview transcript rows: ${error.message}`,
+    );
   }
 
   return (data ?? []) as InterviewMessageRow[];

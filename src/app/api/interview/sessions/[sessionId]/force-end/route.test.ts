@@ -20,13 +20,16 @@ const mockedForceEndInterviewSession = vi.mocked(forceEndInterviewSession);
 const mockedCreateSupabaseServerClient = vi.mocked(createSupabaseServerClient);
 
 function createRequest(body: object) {
-  return new Request("http://localhost:3000/api/interview/sessions/session-1/force-end", {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
+  return new Request(
+    "http://localhost:3000/api/interview/sessions/session-1/force-end",
+    {
+      body: JSON.stringify(body),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "POST",
     },
-    method: "POST",
-  });
+  );
 }
 
 describe("POST /api/interview/sessions/[sessionId]/force-end", () => {

@@ -1,9 +1,6 @@
 import OpenAI from "openai";
 
-import {
-  getVoiceInterviewEnv,
-  type VoiceInterviewEnv,
-} from "@/lib/env";
+import { getVoiceInterviewEnv, type VoiceInterviewEnv } from "@/lib/env";
 import type { VoiceInterviewBootstrapTimingsMs } from "@/lib/interview/voice-interview-api";
 import { buildVoiceInterviewPrompt } from "@/lib/interview/voice-interview-prompt";
 import type { VoiceInterviewScope } from "@/lib/interview/voice-scope";
@@ -116,8 +113,7 @@ export function buildVoiceInterviewRealtimeSessionConfig({
           type: "server_vad",
           create_response: true,
           interrupt_response: false,
-          prefix_padding_ms:
-            env.OPENAI_REALTIME_SERVER_VAD_PREFIX_PADDING_MS,
+          prefix_padding_ms: env.OPENAI_REALTIME_SERVER_VAD_PREFIX_PADDING_MS,
           silence_duration_ms:
             env.OPENAI_REALTIME_SERVER_VAD_SILENCE_DURATION_MS,
           threshold: env.OPENAI_REALTIME_SERVER_VAD_THRESHOLD,

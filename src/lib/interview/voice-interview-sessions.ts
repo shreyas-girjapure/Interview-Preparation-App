@@ -111,8 +111,7 @@ const INTERVIEW_SESSION_ONE_LIVE_INDEX =
 
 export const VOICE_INTERVIEW_PROMPT_VERSION = "voice-prompt-v2-2026-03-10";
 export const VOICE_INTERVIEW_SEARCH_POLICY_VERSION = "docs-search-v1";
-export const VOICE_INTERVIEW_PERSISTENCE_VERSION =
-  "transcript-persistence-v1";
+export const VOICE_INTERVIEW_PERSISTENCE_VERSION = "transcript-persistence-v1";
 export const VOICE_INTERVIEW_TRANSPORT_VERSION = "agents-webrtc-v1";
 
 function getUserProfileSeed(user: User) {
@@ -207,7 +206,9 @@ function computeInterviewSessionStaleAtMs(
 
     const policyWindowMs =
       startedAtMs + INTERVIEW_SESSION_POLICY_STALE_WINDOWS_MS.ready;
-    const secretExpiresAtMs = toEpochMs(session.openai_client_secret_expires_at);
+    const secretExpiresAtMs = toEpochMs(
+      session.openai_client_secret_expires_at,
+    );
 
     return minEpochMs(policyWindowMs, secretExpiresAtMs);
   }
@@ -283,9 +284,7 @@ function isLiveSessionUniqueViolation(error: unknown) {
   return detailText.includes(INTERVIEW_SESSION_ONE_LIVE_INDEX);
 }
 
-function parseDebrief(
-  value: unknown,
-): PersistedVoiceInterviewDebrief | null {
+function parseDebrief(value: unknown): PersistedVoiceInterviewDebrief | null {
   if (!value || typeof value !== "object") {
     return null;
   }
@@ -453,10 +452,9 @@ async function forceEndInterviewSessionInternal({
 
   const { data, error } = await query
     .select("state, forced_end_reason, forced_end_at")
-    .maybeSingle<Pick<
-      InterviewSessionRow,
-      "state" | "forced_end_reason" | "forced_end_at"
-    >>();
+    .maybeSingle<
+      Pick<InterviewSessionRow, "state" | "forced_end_reason" | "forced_end_at">
+    >();
 
   if (error) {
     throw new Error(`Unable to force end interview session: ${error.message}`);
@@ -500,7 +498,9 @@ export async function getBlockingInterviewSessionForUser({
   for (const row of rows) {
     const staleAtMs = computeInterviewSessionStaleAtMs(row);
     const staleAt =
-      staleAtMs === null ? computeInterviewSessionStaleAt(row) : toIsoFromMs(staleAtMs);
+      staleAtMs === null
+        ? computeInterviewSessionStaleAt(row)
+        : toIsoFromMs(staleAtMs);
 
     if (staleAtMs !== null && staleAtMs <= nowMs) {
       await forceEndInterviewSessionInternal({
@@ -652,8 +652,7 @@ export async function markInterviewSessionReady({
       last_error_message: null,
       last_client_flush_at: null,
       persisted_turn_count: 0,
-      stale_at:
-        readyStaleAtMs === null ? null : toIsoFromMs(readyStaleAtMs),
+      stale_at: readyStaleAtMs === null ? null : toIsoFromMs(readyStaleAtMs),
     })
     .eq("id", sessionId);
 
@@ -979,7 +978,9 @@ export async function recordInterviewSessionHeartbeat({
     .eq("id", sessionId)
     .eq("state", "active")
     .select("state, last_client_heartbeat_at")
-    .maybeSingle<Pick<InterviewSessionRow, "state" | "last_client_heartbeat_at">>();
+    .maybeSingle<
+      Pick<InterviewSessionRow, "state" | "last_client_heartbeat_at">
+    >();
 
   if (error) {
     throw new Error(`Unable to update interview heartbeat: ${error.message}`);

@@ -20,7 +20,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const mockedCreateSupabaseServerClient = vi.mocked(createSupabaseServerClient);
 const mockedGetInterviewSessionDetail = vi.mocked(getInterviewSessionDetail);
-const mockedUpdateInterviewSessionState = vi.mocked(updateInterviewSessionState);
+const mockedUpdateInterviewSessionState = vi.mocked(
+  updateInterviewSessionState,
+);
 
 function createPatchRequest(body: object) {
   return new Request("http://localhost:3000/api/interview/sessions/session-1", {

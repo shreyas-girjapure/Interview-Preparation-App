@@ -89,37 +89,39 @@ V1 on 2026-03-10.
 ## Manual Quick Checks (V2-US-03 and V2-US-04)
 
 1. V2-US-03 transcript/debrief persistence:
-start interview, speak a few finalized turns, end session, verify
-`POST /events` + `POST /complete` succeed, then reload via
-`GET /api/interview/sessions/{sessionId}` and confirm persisted transcript plus
-debrief.
+   start interview, speak a few finalized turns, end session, verify
+   `POST /events` + `POST /complete` succeed, then reload via
+   `GET /api/interview/sessions/{sessionId}` and confirm persisted transcript plus
+   debrief.
 2. V2-US-03 cancel/failure persistence:
-cancel or fail a session after finalized turns and confirm transcript rows are
-still present while session is not marked `completed`.
+   cancel or fail a session after finalized turns and confirm transcript rows are
+   still present while session is not marked `completed`.
 3. V2-US-04 one-live-session policy:
-keep a live session in tab A, start another in tab B (same user), expect
-`409 live_session_exists` with blocking-session metadata.
+   keep a live session in tab A, start another in tab B (same user), expect
+   `409 live_session_exists` with blocking-session metadata.
 4. V2-US-04 heartbeat and force-end:
-while live, confirm periodic `POST /heartbeat`; then call
-`POST /force-end` and verify state transitions to `cancelled`, after which a
-new session can start.
+   while live, confirm periodic `POST /heartbeat`; then call
+   `POST /force-end` and verify state transitions to `cancelled`, after which a
+   new session can start.
 
 ## Next Session Handoff (2026-03-10)
 
 Completed today:
+
 - V2-US-03 core implementation plus ordering/idempotency hardening in tests.
 - V2-US-04 core implementation: one-live-session enforcement, stale reclaim,
-runtime version persistence, `409 live_session_exists`, and server-owned
-`force-end`/`heartbeat` endpoints.
+  runtime version persistence, `409 live_session_exists`, and server-owned
+  `force-end`/`heartbeat` endpoints.
 - Client wiring for conflict messaging and live-session heartbeat pings.
 - Test and build verification passing on current branch.
 
 Pending next:
+
 - Run manual QA checklist above for V2-US-03 and V2-US-04.
 - Finalize production caller policy for `force-end` endpoint (owner-only vs
-role-gated admin path).
+  role-gated admin path).
 - Run staged concurrency checks on linked Supabase with real concurrent
-bootstrap attempts.
+  bootstrap attempts.
 - Start V2-US-05 (observability, tracing, and debug correlation).
 
 ## OpenAI Guidance Incorporated
