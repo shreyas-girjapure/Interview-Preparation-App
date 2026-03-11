@@ -15,17 +15,32 @@ V1 on 2026-03-10.
 3. `V2-US-03` Transcript persistence and server debriefs: `Closed`
 4. `V2-US-04` Live-session policy and server-side controls: `Closed with follow-up in V2-US-09`
 5. `V2-US-05` Observability, tracing, debug correlation, and session cost accounting: `Ready for implementation`
-6. `V2-US-06` Playlist-scoped voice interviews: `Ready for implementation; implementation pending`
-7. `V2-US-07` Realtime speech-to-speech quality hardening: `Partially implemented`
-8. `V2-US-08` Chained `STT -> LLM -> TTS` voice runtime: `Draft with contract groundwork`
+6. `V2-US-06` Playlist-scoped voice interviews: `Deferred for current implementation window`
+7. `V2-US-07` Realtime speech-to-speech quality hardening: `Deferred for current implementation window; partially implemented`
+8. `V2-US-08` Chained `STT -> LLM -> TTS` voice runtime: `Prioritized for implementation; draft with contract groundwork`
 9. `V2-US-09` Cross-device session revocation and takeover recovery: `Draft`
-10. `V2-US-10` Salesforce documentation grounding for voice agent: `Ready for implementation; not started`
+10. `V2-US-10` Salesforce documentation grounding for voice agent: `Prioritized for implementation; ready for implementation`
+11. `V2-US-11` Structured conversation prompt tuning and grounded turn steering: `Prioritized for implementation; ready for implementation`
+
+## Current Implementation Priority
+
+1. `V2-US-08` Chained `STT -> LLM -> TTS` voice runtime
+2. `V2-US-10` Salesforce documentation grounding for voice agent
+3. `V2-US-11` Structured conversation prompt tuning and grounded turn steering
+
+Deferred for this planning window:
+
+- `V2-US-06` Playlist-scoped voice interviews
+- `V2-US-07` Realtime speech-to-speech quality hardening
 
 ## V2 Goals
 
 - Add grounded scoped official-documentation answers with visible citations.
 - Add explicit prompt-injection and exfiltration defenses for search-backed
   answers.
+- Make interviewer turns more structured and adaptive by grounding each turn in
+  scope, transcript state, and evidence instead of relying on one mostly static
+  prompt.
 - Keep a hardened Realtime speech-to-speech runtime as the low-latency live
   lane.
 - Add a second server-owned chained voice runtime:
@@ -64,7 +79,7 @@ V1 on 2026-03-10.
 - No question-scoped interview route unless V2 scope is explicitly expanded
   later.
 
-## Story Order
+## Story Catalog
 
 1. [V2-US-01: Scoped documentation search orchestration](./stories/V2-US-01-scoped-recent-changes-search-orchestration.md)
 2. [V2-US-02: Search safety, prompt injection, and exfiltration defenses](./stories/V2-US-02-search-safety-prompt-injection-and-exfiltration-defenses.md)
@@ -76,6 +91,7 @@ V1 on 2026-03-10.
 8. [V2-US-08: Chained STT -> LLM -> TTS voice runtime](./stories/V2-US-08-chained-stt-llm-tts-runtime.md)
 9. [V2-US-09: Cross-device session revocation and takeover recovery](./stories/V2-US-09-cross-device-session-revocation-and-takeover-recovery.md)
 10. [V2-US-10: Salesforce documentation grounding for voice agent](./stories/V2-US-10-salesforce-documentation-grounding.md)
+11. [V2-US-11: Structured conversation prompt tuning and grounded turn steering](./stories/V2-US-11-structured-conversation-prompt-tuning-and-grounded-turn-steering.md)
 
 ## Current Planning Snapshot
 
@@ -93,31 +109,36 @@ V1 on 2026-03-10.
   responses, and server-owned `force-end`/`heartbeat` are complete. The
   remaining cross-browser and cross-device revocation gap is now treated as a
   separate follow-up story rather than unfinished core scope.
-- `V2-US-05`: Ready for implementation and now the next infrastructure story.
-  OpenAI tracing configuration, structured telemetry, session-level cost
+- `V2-US-05`: Ready for implementation, but not the current product-priority
+  lane. OpenAI tracing configuration, structured telemetry, session-level cost
   accounting, redaction rules, and support correlation paths are scoped
-  concretely enough to build.
-- `V2-US-06`: Still ready for implementation, but still not started. The
-  shared session contract and playlist detail data are already in place; the
-  remaining work is playlist scope resolution, route wiring, topic-literal
-  cleanup, and the playlist launch CTA.
-- `V2-US-07`: Partially implemented. Server-owned Realtime tuning, prompt
-  shaping, trace metadata, and session observability are now in code, but the
-  normalized runtime-profile contract and fuller quality diagnostics are still
-  open.
-- `V2-US-08`: Still draft, but not from zero. Shared observability types,
-  usage-event schemas, and cost rollups already reserve a `chained_voice`
-  runtime lane; the actual chained runtime, turn endpoint, and routing policy
-  are still unbuilt. Keep this behind `V2-US-07` in implementation order.
+  concretely enough to build when infrastructure focus returns.
+- `V2-US-06`: Deferred for the current planning window. The shared session
+  contract and playlist detail data are already in place, but playlist scope
+  expansion is not the current product bottleneck.
+- `V2-US-07`: Deferred for the current planning window. Server-owned Realtime
+  tuning, prompt shaping, trace metadata, and session observability are now in
+  code, but the normalized runtime-profile contract and fuller quality
+  diagnostics remain follow-up work rather than the next active lane.
+- `V2-US-08`: Prioritized for implementation and not from zero. Shared
+  observability types, usage-event schemas, and cost rollups already reserve a
+  `chained_voice` runtime lane; the actual chained runtime, turn endpoint, and
+  routing policy are still unbuilt. This is now the first runtime story to pull
+  forward.
 - `V2-US-09`: Draft. This closes the remaining recovery gap after `V2-US-04`
   for refreshes, takeovers, and cross-browser or cross-device revocation. The
   recommended first pass is row-level revocation delivery plus heartbeat and
   visibility fallback. The long-term story must remain compatible with a
   two-runtime product where hard remote kill is strongest on the chained lane.
-- `V2-US-10`: Ready for implementation and not started. Citation plumbing is
-  already in place, but there is no scoped documentation-search orchestrator,
-  no Salesforce domain policy, and no grounding step in the live voice runtime
-  yet.
+- `V2-US-10`: Prioritized for implementation and not started. Citation plumbing
+  is already in place, but there is no scoped documentation-search
+  orchestrator, no Salesforce domain policy, and no grounding step in the live
+  voice runtime yet.
+- `V2-US-11`: Prioritized for implementation and not started. The current voice
+  prompt is intentionally strict and compact, but it does not yet have a
+  server-owned turn brief or answer-interpretation layer that makes the
+  interviewer flexible when learner responses are partial, indirect, or
+  clarifying.
 - The runtime stories can be pulled forward if runtime stability and runtime
   routing become the immediate blocker for broader V2 rollout.
 
@@ -147,9 +168,9 @@ V1 on 2026-03-10.
    state offers takeover or quick recovery without waiting for a long stale
    window.
 
-## Next Session Handoff (2026-03-10)
+## Next Session Handoff (updated 2026-03-12)
 
-Completed today:
+Previously completed:
 
 - V2-US-03 core implementation plus ordering/idempotency hardening in tests.
 - V2-US-04 core implementation: one-live-session enforcement, stale reclaim,
@@ -160,11 +181,14 @@ Completed today:
 
 Pending next:
 
-- Start `V2-US-05` (observability, tracing, debug correlation, and session cost
-  accounting).
-- Keep `V2-US-06` ready but behind `V2-US-05` in implementation order.
-- Pull `V2-US-09` when cross-browser or cross-device takeover recovery becomes
-  the immediate product gap to close.
+- Start `V2-US-08` (chained `STT -> LLM -> TTS` runtime) as the active runtime
+  implementation lane.
+- Pull `V2-US-10` immediately after or alongside the runtime turn pipeline so
+  grounded Salesforce answers can plug into the first chained path.
+- Follow with `V2-US-11` to make the interviewer more adaptive and structured
+  once chained runtime control and grounding inputs are in place.
+- Keep `V2-US-06` and `V2-US-07` deferred unless playlist expansion or
+  additional Realtime hardening becomes the immediate blocker again.
 
 ## OpenAI Guidance Incorporated
 
@@ -193,11 +217,12 @@ Pending next:
 
 ## Delivery Rules
 
-- Implement one story at a time in the order above.
+- Implement one active story at a time following the `Current Implementation
+Priority` section above unless priorities are changed again explicitly.
 - Do not ship `V2-US-01` without the security controls in `V2-US-02`.
-- Do not start implementation of `V2-US-08` until `V2-US-07` is complete
-  enough to serve as the stable primary live lane, unless the runtime order is
-  explicitly re-prioritized later.
+- `V2-US-08` has now been explicitly re-prioritized ahead of the remaining
+  `V2-US-07` hardening work. Keep the shared runtime descriptor and support
+  model aligned, but do not treat full `V2-US-07` completion as a blocker.
 - Keep the browser thin. Prompt policy, tool policy, search policy, runtime
   versioning, and tracing config stay server-owned.
 - Treat search results as untrusted input all the way through the pipeline.
