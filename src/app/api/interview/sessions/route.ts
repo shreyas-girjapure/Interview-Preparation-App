@@ -4,10 +4,21 @@ import {
   createVoiceInterviewBrowserBootstrap,
   isVoiceInterviewBootstrapTimeoutError,
 } from "@/lib/ai/voice-agent";
+import {
+  buildChainedVoiceRuntimeDescriptor,
+  buildChainedVoiceTransport,
+  createChainedVoiceOpeningTurn,
+  getDefaultChainedVoiceRuntimeProfile,
+  supportsChainedVoiceMimeType,
+} from "@/lib/ai/voice-runtimes/chained-voice";
+import { getVoiceInterviewEnv } from "@/lib/env";
 import type {
   CreateVoiceInterviewSessionConflictResponse,
   CreateVoiceInterviewSessionRequest,
   CreateVoiceInterviewSessionResponse,
+  VoiceInterviewBrowserCapabilityReport,
+  VoiceInterviewRuntimeDescriptor,
+  VoiceInterviewRuntimePreference,
 } from "@/lib/interview/voice-interview-api";
 import { buildVoiceInterviewTraceConfig } from "@/lib/interview/voice-interview-observability";
 import {
@@ -17,6 +28,7 @@ import {
   LiveInterviewSessionConflictError,
   markInterviewSessionFailed,
   markInterviewSessionReady,
+  persistInterviewSessionEvents,
   VOICE_INTERVIEW_PERSISTENCE_VERSION,
   VOICE_INTERVIEW_PROMPT_VERSION,
   VOICE_INTERVIEW_SEARCH_POLICY_VERSION,
@@ -58,6 +70,32 @@ function createLiveSessionConflictResponse(
       errorCode: "live_session_exists",
     } satisfies CreateVoiceInterviewSessionConflictResponse,
     { status: 409 },
+  );
+}
+
+function resolveRequestedRuntimePreference(
+  requestedPreference: VoiceInterviewRuntimePreference | undefined,
+) {
+  const env = getVoiceInterviewEnv();
+  const defaultPreference = env.VOICE_INTERVIEW_DEFAULT_RUNTIME_PREFERENCE;
+
+  if (!requestedPreference || requestedPreference === "auto") {
+    return defaultPreference === "auto" ? "realtime_sts" : defaultPreference;
+  }
+
+  return requestedPreference;
+}
+
+function browserSupportsChainedVoice(
+  capabilities: VoiceInterviewBrowserCapabilityReport | undefined,
+) {
+  if (!capabilities?.hasMediaRecorder || !capabilities.hasAudioContext) {
+    return false;
+  }
+
+  const profile = getDefaultChainedVoiceRuntimeProfile();
+  return capabilities.supportedMimeTypes.some((mimeType) =>
+    supportsChainedVoiceMimeType(profile, mimeType),
   );
 }
 
@@ -159,9 +197,26 @@ export async function POST(request: Request) {
     localSessionCreateMs = roundDurationMs(
       nowMs() - localSessionCreateStartedAt,
     );
+
+    const requestedPreference = resolveRequestedRuntimePreference(
+      payload.runtimePreference,
+    );
+    const selectedRuntime =
+      requestedPreference === "chained_voice" &&
+      browserSupportsChainedVoice(payload.capabilities)
+        ? "chained_voice"
+        : "realtime_sts";
+    const selectionSource: VoiceInterviewRuntimeDescriptor["selectionSource"] =
+      selectedRuntime !== requestedPreference
+        ? "fallback"
+        : payload.runtimePreference && payload.runtimePreference !== "auto"
+          ? "user_preference"
+          : "auto_policy";
+
     const trace = buildVoiceInterviewTraceConfig({
       persistenceVersion: VOICE_INTERVIEW_PERSISTENCE_VERSION,
       promptVersion: VOICE_INTERVIEW_PROMPT_VERSION,
+      runtimeKind: selectedRuntime,
       scopeSlug: scope.slug,
       scopeType: scope.scopeType,
       searchPolicyVersion: VOICE_INTERVIEW_SEARCH_POLICY_VERSION,
@@ -169,28 +224,71 @@ export async function POST(request: Request) {
       transportVersion: VOICE_INTERVIEW_TRANSPORT_VERSION,
     });
 
-    const bootstrap = await createVoiceInterviewBrowserBootstrap({
-      scope,
-      traceConfig: {
-        group_id: trace.groupId ?? undefined,
-        metadata: trace.metadata,
-        workflow_name: trace.workflowName ?? undefined,
-      },
-    });
+    const bootstrap =
+      selectedRuntime === "chained_voice"
+        ? await (async () => {
+            const profile = getDefaultChainedVoiceRuntimeProfile();
+            const openingTurn = await createChainedVoiceOpeningTurn({
+              profile,
+              scope,
+              sessionStartedAt: null,
+            });
+
+            return {
+              openingTurn: {
+                assistantAudio: openingTurn.assistantAudio,
+                assistantTranscriptItem: openingTurn.assistantTranscriptItem,
+                timingsMs: openingTurn.timingsMs,
+              },
+              openingUsageEvents: openingTurn.usageEvents,
+              runtime: buildChainedVoiceRuntimeDescriptor({
+                profile,
+                selectionSource,
+              }),
+              timingsMs: {
+                total: openingTurn.timingsMs.total,
+              },
+              transport: buildChainedVoiceTransport({
+                profile,
+                sessionId: localSession.id,
+              }),
+            };
+          })()
+        : await createVoiceInterviewBrowserBootstrap({
+            scope,
+            traceConfig: {
+              group_id: trace.groupId ?? undefined,
+              metadata: trace.metadata,
+              workflow_name: trace.workflowName ?? undefined,
+            },
+          }).then((result) => ({
+            ...result,
+            openingTurn: undefined,
+            openingUsageEvents: undefined,
+            runtime: {
+              ...result.runtime,
+              selectionSource,
+            },
+          }));
 
     const markReadyStartedAt = nowMs();
     await markInterviewSessionReady({
-      clientSecretExpiresAt: new Date(
-        bootstrap.clientSecret.expiresAt * 1000,
-      ).toISOString(),
-      model: bootstrap.realtime.model,
-      openAiSessionId: bootstrap.realtime.openAiSessionId,
+      runtime: bootstrap.runtime,
       sessionId: localSession.id,
       supabase,
       trace,
-      transcriptionModel: bootstrap.realtime.transcriptionModel,
-      voice: bootstrap.realtime.voice,
+      transport: bootstrap.transport,
     });
+
+    if (bootstrap.openingTurn) {
+      await persistInterviewSessionEvents({
+        finalizedItems: [bootstrap.openingTurn.assistantTranscriptItem],
+        sessionId: localSession.id,
+        supabase,
+        usageEvents: bootstrap.openingUsageEvents,
+      });
+    }
+
     const markReadyMs = roundDurationMs(nowMs() - markReadyStartedAt);
 
     return NextResponse.json(
@@ -201,7 +299,8 @@ export async function POST(request: Request) {
           scopeTitle: scope.title,
           scopeType: scope.scopeType,
         },
-        ...bootstrap,
+        openingTurn: bootstrap.openingTurn,
+        runtime: bootstrap.runtime,
         timingsMs: {
           ...bootstrap.timingsMs,
           localSessionCreate: localSessionCreateMs,
@@ -209,6 +308,7 @@ export async function POST(request: Request) {
           profileSync: profileSyncMs,
           total: roundDurationMs(nowMs() - requestStartedAt),
         },
+        transport: bootstrap.transport,
       } satisfies CreateVoiceInterviewSessionResponse,
       { status: 201 },
     );

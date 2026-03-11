@@ -8,18 +8,11 @@ browser session ends.
 
 ## Status
 
-- `Status`: Closed (as of 2026-03-11)
-- `Why this exists`: V1 has reliable session lifecycle rows but not durable
-  finalized-turn persistence or server-generated debrief content.
-- `Current baseline`: the browser already owns transcript assembly and the
-  server already owns session lifecycle state, so this story should extend the
-  existing flow rather than replace it.
-- `Scope note`: this story adds durable storage, finalization APIs, and a read
-  path. A full session-history product surface can stay out of scope for now.
-- `Closure note`: local QA validated the happy path, transcript persistence,
-  debrief generation, readback contract, and terminal flows. Any future hard
-  edge cases around cross-browser revocation or runtime control belong to
-  `V2-US-04` and `V2-US-09`, not this persistence story.
+## Status
+
+- `Status`: Complete
+- `Shipped`: Finalized transcript turn writes, debrief generation, and `interview_messages` persistence are all fully implemented via `voice-interview-persistence.ts` and `voice-interview-debrief.ts` as of 2026-03-10.
+- `Why this exists`: V1 had reliable session lifecycle rows but not durable finalized-turn persistence or server-generated debrief content. This story extended the baseline.
 
 ### Implemented now (2026-03-10)
 

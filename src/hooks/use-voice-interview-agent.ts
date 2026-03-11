@@ -13,6 +13,7 @@ import type {
   CancelInterviewSessionRequest,
   CompleteInterviewSessionRequest,
   CompleteInterviewSessionResponse,
+  CreateInterviewTurnResponse,
   CreateVoiceInterviewSessionResponse,
   ForceEndInterviewSessionReason,
   PersistInterviewEventsRequest,
@@ -20,6 +21,8 @@ import type {
   UpdateVoiceInterviewSessionRequest,
   VoiceInterviewBlockingSession,
   VoiceInterviewPersistedTranscriptItem,
+  VoiceInterviewRuntimeDescriptor,
+  VoiceInterviewRuntimePreference,
   VoiceInterviewSessionHeartbeatResponse,
 } from "@/lib/interview/voice-interview-api";
 import {
@@ -41,6 +44,7 @@ import {
   buildVoiceInterviewScopedCitations,
   buildVoiceInterviewSystemTranscriptItem,
   buildVoiceInterviewUserTranscriptItem,
+  mapPersistedTranscriptItemToRuntimeItem,
   mapRealtimeItemToTranscriptItem,
   removeVoiceInterviewTranscriptItem,
   upsertVoiceInterviewTranscriptItem,
@@ -55,25 +59,30 @@ import type {
 import type { VoiceInterviewScope } from "@/lib/interview/voice-scope";
 
 type UseVoiceInterviewAgentOptions = {
+  runtimePreference: VoiceInterviewRuntimePreference;
   scope: VoiceInterviewScope;
 };
 
 type VoiceInterviewAgentSession = {
   audioElementRef: React.RefObject<HTMLAudioElement | null>;
+  canCommitTurn: boolean;
   canRecoverBlockingSession: boolean;
-  isRecoveringBlockingSession: boolean;
-  isMuted: boolean;
-  isUserSpeaking: boolean;
+  cancelSetup: () => void;
+  commitTurn: () => void;
+  end: () => void;
   isAgentSpeaking: boolean;
+  isMuted: boolean;
+  isProcessingTurn: boolean;
+  isRecoveringBlockingSession: boolean;
+  isUserSpeaking: boolean;
   recoverBlockingSession: () => void;
+  reset: () => void;
+  retry: () => void;
+  runtime: VoiceInterviewRuntimeDescriptor | null;
   session: VoiceInterviewSessionSnapshot;
   stage: VoiceInterviewStage;
   start: () => void;
-  cancelSetup: () => void;
   toggleMute: () => void;
-  end: () => void;
-  retry: () => void;
-  reset: () => void;
 };
 
 type ApiErrorResponse = {
@@ -117,6 +126,8 @@ const CONNECTION_INTERRUPTED_STATUS_ID = "connection-interrupted";
 const PERSIST_FLUSH_DEBOUNCE_MS = 900;
 const SESSION_HEARTBEAT_INTERVAL_MS = 45_000;
 const VOICE_INTERVIEW_CONTROL_CHANNEL = "voice-interview-control";
+const CHAINED_AUDIO_LEVEL_THRESHOLD = 0.02;
+const CHAINED_ANALYSIS_INTERVAL_MS = 120;
 
 type VoiceInterviewControlMessage = {
   reason: ForceEndInterviewSessionReason;
@@ -131,6 +142,62 @@ type ExperimentalAudioTrackConstraints = MediaTrackConstraints & {
 type ExperimentalSupportedAudioConstraints = MediaTrackSupportedConstraints & {
   voiceIsolation?: boolean;
 };
+
+function getBrowserCapabilityReport() {
+  const hasMediaRecorder =
+    typeof window !== "undefined" && typeof MediaRecorder !== "undefined";
+  const supportedMimeTypes = hasMediaRecorder
+    ? [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/ogg;codecs=opus",
+      ].filter((mimeType) => MediaRecorder.isTypeSupported(mimeType))
+    : [];
+  const hasAudioContext =
+    typeof window !== "undefined" &&
+    (() => {
+      const windowWithLegacyAudio = window as typeof window & {
+        webkitAudioContext?: typeof AudioContext;
+      };
+
+      return (
+        typeof windowWithLegacyAudio.AudioContext !== "undefined" ||
+        typeof windowWithLegacyAudio.webkitAudioContext !== "undefined"
+      );
+    })();
+
+  return {
+    hasAudioContext,
+    hasMediaRecorder,
+    supportedMimeTypes,
+  };
+}
+
+function readAverageAudioLevel(analyser: AnalyserNode) {
+  const samples = new Uint8Array(analyser.fftSize);
+  analyser.getByteTimeDomainData(samples);
+  let sumSquares = 0;
+
+  for (const sample of samples) {
+    const centered = sample / 128 - 1;
+    sumSquares += centered * centered;
+  }
+
+  return Math.sqrt(sumSquares / samples.length);
+}
+
+function pickSupportedRecordingMimeType(acceptedMimeTypes: string[]) {
+  if (typeof MediaRecorder === "undefined") {
+    return null;
+  }
+
+  return (
+    acceptedMimeTypes.find((mimeType) =>
+      MediaRecorder.isTypeSupported(mimeType),
+    ) ?? null
+  );
+}
 
 function isPersistableSystemTranscriptItem(item: VoiceInterviewTranscriptItem) {
   if (item.id === CONNECTION_INTERRUPTED_STATUS_ID) {
@@ -186,11 +253,12 @@ function buildPersistableFinalizedItems(
       metaLabel: item.meta,
       previousItemId,
       source:
-        item.speaker === "system"
+        item.source ??
+        (item.speaker === "system"
           ? item.tone === "search"
             ? "search"
             : "system"
-          : "realtime",
+          : "realtime"),
       speaker: item.speaker,
       text,
       tone: item.tone,
@@ -422,11 +490,14 @@ function logVoiceInterviewFailure({
 }
 
 async function createInterviewSessionBootstrap(
+  runtimePreference: VoiceInterviewRuntimePreference,
   scope: VoiceInterviewScope,
   signal: AbortSignal,
 ) {
   const response = await fetch("/api/interview/sessions", {
     body: JSON.stringify({
+      capabilities: getBrowserCapabilityReport(),
+      runtimePreference,
       scopeSlug: scope.slug,
       scopeType: scope.scopeType,
     }),
@@ -443,8 +514,8 @@ async function createInterviewSessionBootstrap(
   if (
     !response.ok ||
     !("localSession" in body) ||
-    !("clientSecret" in body) ||
-    !("realtime" in body)
+    !("runtime" in body) ||
+    !("transport" in body)
   ) {
     const errorResponse = toApiErrorResponse(body);
     const errorCode = errorResponse?.errorCode ?? "bootstrap_failed";
@@ -467,9 +538,14 @@ async function createInterviewSessionBootstrap(
 }
 
 export function useVoiceInterviewAgent({
+  runtimePreference,
   scope,
 }: UseVoiceInterviewAgentOptions): VoiceInterviewAgentSession {
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
+  const assistantAudioStopRef = useRef<(() => void) | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const analyserSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
   const assistantTranscriptRef = useRef<Record<string, string>>({});
   const bootstrapAbortRef = useRef<AbortController | null>(null);
   const controlChannelRef = useRef<BroadcastChannel | null>(null);
@@ -483,7 +559,18 @@ export function useVoiceInterviewAgent({
   >(null);
   const lastPersistedSignatureRef = useRef("");
   const localSessionIdRef = useRef<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const realtimeModelRef = useRef<string | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const recordingMimeTypeRef = useRef<string | null>(null);
+  const runtimeDescriptorRef = useRef<VoiceInterviewRuntimeDescriptor | null>(
+    null,
+  );
+  const serverTurnsTransportRef = useRef<Extract<
+    CreateVoiceInterviewSessionResponse["transport"],
+    { type: "server_turns" }
+  > | null>(null);
+  const chainedTurnAbortRef = useRef<AbortController | null>(null);
   const transcriptionModelRef = useRef<string | null>(null);
   const serviceTierRef = useRef<string>(VOICE_INTERVIEW_DEFAULT_SERVICE_TIER);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -512,6 +599,12 @@ export function useVoiceInterviewAgent({
   const transcriptMetaRef = useRef<Record<string, string>>({});
   const transportCleanupRef = useRef<(() => void) | null>(null);
   const transportRef = useRef<OpenAIRealtimeWebRTC | null>(null);
+  const turnAnalysisIntervalRef = useRef<BrowserTimeoutId | null>(null);
+  const turnHasSpokenRef = useRef(false);
+  const turnLastVoiceAtRef = useRef<number | null>(null);
+  const turnStartedAtRef = useRef<number | null>(null);
+  const turnShouldCommitRef = useRef(false);
+  const isProcessingTurnRef = useRef(false);
   const attemptIdRef = useRef(0);
   const agentSpeakingTimeoutRef = useRef<BrowserTimeoutId | null>(null);
   const handleHeartbeatStateMismatchRef = useRef<
@@ -544,12 +637,15 @@ export function useVoiceInterviewAgent({
   >();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [isProcessingTurn, setIsProcessingTurn] = useState(false);
   const [isRecoveringBlockingSession, setIsRecoveringBlockingSession] =
     useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
   const [micLabel, setMicLabel] = useState<string | undefined>();
+  const [runtimeDescriptor, setRuntimeDescriptor] =
+    useState<VoiceInterviewRuntimeDescriptor | null>(null);
   const [stage, setStage] = useState<VoiceInterviewStage>("ready");
   const [statusItems, setStatusItems] = useState<
     VoiceInterviewTranscriptItem[]
@@ -566,6 +662,10 @@ export function useVoiceInterviewAgent({
   useEffect(() => {
     elapsedSecondsRef.current = elapsedSeconds;
   }, [elapsedSeconds]);
+
+  useEffect(() => {
+    runtimeDescriptorRef.current = runtimeDescriptor;
+  }, [runtimeDescriptor]);
 
   useEffect(() => {
     isMutedRef.current = isMuted;
@@ -702,6 +802,95 @@ export function useVoiceInterviewAgent({
       getTranscriptSnapshot(),
       finalizedAtByTranscriptIdRef.current,
     );
+  }
+
+  function setProcessingTurnState(next: boolean) {
+    isProcessingTurnRef.current = next;
+    setIsProcessingTurn(next);
+  }
+
+  function disconnectChainedAudioAnalyser() {
+    analyserSourceRef.current?.disconnect();
+    analyserSourceRef.current = null;
+    analyserRef.current?.disconnect();
+    analyserRef.current = null;
+  }
+
+  function stopAssistantAudioPlayback() {
+    const audioElement = audioElementRef.current;
+
+    assistantAudioStopRef.current?.();
+    assistantAudioStopRef.current = null;
+
+    if (!audioElement) {
+      return;
+    }
+
+    audioElement.onended = null;
+    audioElement.onerror = null;
+    audioElement.pause();
+    audioElement.removeAttribute("src");
+    audioElement.load();
+  }
+
+  async function ensureChainedAudioAnalyser(mediaStream: MediaStream) {
+    const AudioContextCtor =
+      window.AudioContext ||
+      (window as typeof window & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
+
+    if (!AudioContextCtor) {
+      throw new VoiceInterviewClientError(
+        "audio_context_unavailable",
+        "This browser cannot analyse microphone input for chained voice mode.",
+      );
+    }
+
+    let audioContext = audioContextRef.current;
+
+    if (!audioContext || (audioContext.state as string) === "closed") {
+      disconnectChainedAudioAnalyser();
+      audioContext = new AudioContextCtor();
+      audioContextRef.current = audioContext;
+    }
+
+    if ((audioContext.state as string) !== "running") {
+      try {
+        await audioContext.resume();
+      } catch (error) {
+        console.warn("Unable to resume chained voice audio context", error);
+      }
+    }
+
+    if ((audioContext.state as string) !== "running") {
+      disconnectChainedAudioAnalyser();
+      void audioContext.close().catch(() => {});
+      audioContext = new AudioContextCtor();
+      audioContextRef.current = audioContext;
+
+      try {
+        await audioContext.resume();
+      } catch (error) {
+        console.warn("Unable to restart chained voice audio context", error);
+      }
+    }
+
+    if ((audioContext.state as string) !== "running") {
+      throw new VoiceInterviewClientError(
+        "audio_context_unavailable",
+        "This browser cannot analyse microphone input for chained voice mode.",
+      );
+    }
+
+    disconnectChainedAudioAnalyser();
+    const analyser = audioContext.createAnalyser();
+    analyser.fftSize = 1024;
+    const sourceNode = audioContext.createMediaStreamSource(mediaStream);
+    sourceNode.connect(analyser);
+    analyserSourceRef.current = sourceNode;
+    analyserRef.current = analyser;
+
+    return analyser;
   }
 
   function hasPendingObservabilityPayload() {
@@ -999,6 +1188,432 @@ export function useVoiceInterviewAgent({
       buildPersistedTranscriptSignature(finalizedItems);
   }
 
+  async function postChainedInterviewTurn(
+    blob: Blob,
+    mimeType: string,
+    signal?: AbortSignal,
+  ) {
+    const sessionId = localSessionIdRef.current;
+    const transport = serverTurnsTransportRef.current;
+
+    if (!sessionId || !transport) {
+      throw new VoiceInterviewClientError(
+        "chained_turn_unavailable",
+        "The chained voice turn transport is not available.",
+      );
+    }
+
+    const clientTurnId =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `turn-${Date.now()}`;
+    const formData = new FormData();
+    formData.append(
+      "audio",
+      new File([blob], `${clientTurnId}.webm`, { type: mimeType }),
+    );
+    formData.append("clientTurnId", clientTurnId);
+    formData.append("mimeType", mimeType);
+
+    const response = await fetch(transport.turnsPath, {
+      body: formData,
+      method: "POST",
+      signal,
+    });
+    const body = (await response.json().catch(() => null)) as
+      | ApiErrorResponse
+      | CreateInterviewTurnResponse
+      | null;
+
+    if (!response.ok || !body || !("ok" in body) || body.ok !== true) {
+      const errorResponse = toApiErrorResponse(body);
+
+      throw new VoiceInterviewClientError(
+        errorResponse?.errorCode ?? "chained_turn_failed",
+        errorResponse?.error ?? "Unable to execute the chained voice turn.",
+      );
+    }
+
+    return body;
+  }
+
+  async function playAssistantAudio(base64: string) {
+    const audioElement = audioElementRef.current;
+
+    if (!audioElement) {
+      return;
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      const cleanup = () => {
+        if (assistantAudioStopRef.current === stopPlayback) {
+          assistantAudioStopRef.current = null;
+        }
+        audioElement.onended = null;
+        audioElement.onerror = null;
+      };
+
+      const stopPlayback = () => {
+        cleanup();
+        audioElement.pause();
+        audioElement.removeAttribute("src");
+        audioElement.load();
+        resolve();
+      };
+
+      audioElement.onended = () => {
+        cleanup();
+        resolve();
+      };
+      audioElement.onerror = () => {
+        cleanup();
+        reject(
+          new VoiceInterviewClientError(
+            "assistant_audio_failed",
+            "The interviewer reply audio could not be played.",
+          ),
+        );
+      };
+      assistantAudioStopRef.current = stopPlayback;
+      audioElement.src = `data:audio/mpeg;base64,${base64}`;
+      void audioElement.play().catch((error) => {
+        cleanup();
+        reject(error);
+      });
+    });
+  }
+
+  async function submitChainedTurn(blob: Blob, mimeType: string) {
+    const turnAttemptId = attemptIdRef.current;
+    const controller = new AbortController();
+
+    chainedTurnAbortRef.current?.abort();
+    chainedTurnAbortRef.current = controller;
+    setProcessingTurnState(true);
+    setConnectionLabel("Processing your answer");
+    setIsUserSpeaking(false);
+    setMicLabel("Transcribing your answer");
+
+    try {
+      const result = await postChainedInterviewTurn(
+        blob,
+        mimeType,
+        controller.signal,
+      );
+
+      if (controller.signal.aborted || turnAttemptId !== attemptIdRef.current) {
+        return;
+      }
+
+      const userItem = mapPersistedTranscriptItemToRuntimeItem(
+        result.userTranscriptItem,
+      );
+      const assistantItem = mapPersistedTranscriptItemToRuntimeItem(
+        result.assistantTranscriptItem,
+      );
+
+      setConversationItems((current) => {
+        const withUser = upsertVoiceInterviewTranscriptItem(
+          current,
+          userItem,
+          result.userTranscriptItem.previousItemId,
+        );
+
+        return upsertVoiceInterviewTranscriptItem(
+          withUser,
+          assistantItem,
+          result.assistantTranscriptItem.previousItemId,
+        );
+      });
+      setConnectionLabel("Interviewer speaking");
+      setMicLabel("Playing interviewer reply");
+      setIsAgentSpeaking(true);
+      await playAssistantAudio(result.assistantAudio.base64);
+
+      if (controller.signal.aborted || turnAttemptId !== attemptIdRef.current) {
+        return;
+      }
+
+      setIsAgentSpeaking(false);
+      setConnectionLabel("Chained voice session active");
+      setMicLabel(
+        isMutedRef.current ? "Auto-commit paused" : "Listening for your answer",
+      );
+    } catch (error) {
+      if (
+        controller.signal.aborted ||
+        turnAttemptId !== attemptIdRef.current ||
+        isAbortError(error)
+      ) {
+        return;
+      }
+
+      throw error;
+    } finally {
+      if (chainedTurnAbortRef.current === controller) {
+        chainedTurnAbortRef.current = null;
+      }
+
+      if (turnAttemptId !== attemptIdRef.current) {
+        return;
+      }
+
+      setIsAgentSpeaking(false);
+      setProcessingTurnState(false);
+      if (
+        stageRef.current === "live" &&
+        runtimeDescriptorRef.current?.kind === "chained_voice" &&
+        !isMutedRef.current
+      ) {
+        void startChainedListening().catch((error) => {
+          const normalizedError = normalizeClientError(error);
+          void failSession(normalizedError, attemptIdRef.current);
+        });
+      }
+    }
+  }
+
+  function commitCurrentRecordedTurn() {
+    if (
+      !mediaRecorderRef.current ||
+      mediaRecorderRef.current.state === "inactive"
+    ) {
+      return;
+    }
+
+    turnShouldCommitRef.current = true;
+    clearTimeoutRef(turnAnalysisIntervalRef);
+    mediaRecorderRef.current.stop();
+  }
+
+  async function startChainedListening() {
+    const mediaStream = mediaStreamRef.current;
+    const transport = serverTurnsTransportRef.current;
+
+    if (
+      !mediaStream ||
+      !transport ||
+      stageRef.current !== "live" ||
+      isProcessingTurnRef.current ||
+      mediaRecorderRef.current ||
+      isMutedRef.current
+    ) {
+      return;
+    }
+
+    const mimeType = pickSupportedRecordingMimeType(
+      transport.acceptedMimeTypes,
+    );
+
+    if (!mimeType) {
+      throw new VoiceInterviewClientError(
+        "unsupported_recording_mime_type",
+        "This browser cannot capture a committed audio turn for chained voice mode.",
+      );
+    }
+
+    const analyser = await ensureChainedAudioAnalyser(mediaStream);
+
+    const recorder = new MediaRecorder(mediaStream, {
+      mimeType,
+    });
+    mediaRecorderRef.current = recorder;
+    recordingChunksRef.current = [];
+    recordingMimeTypeRef.current = mimeType;
+    turnHasSpokenRef.current = false;
+    turnLastVoiceAtRef.current = null;
+    turnStartedAtRef.current = Date.now();
+    turnShouldCommitRef.current = false;
+
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        recordingChunksRef.current.push(event.data);
+      }
+    };
+    recorder.onstop = () => {
+      const shouldCommit = turnShouldCommitRef.current;
+      const chunks = [...recordingChunksRef.current];
+      const currentMimeType = recordingMimeTypeRef.current ?? mimeType;
+
+      mediaRecorderRef.current = null;
+      recordingChunksRef.current = [];
+      turnShouldCommitRef.current = false;
+      setIsUserSpeaking(false);
+
+      if (!shouldCommit || chunks.length === 0) {
+        if (
+          stageRef.current === "live" &&
+          runtimeDescriptorRef.current?.kind === "chained_voice" &&
+          !isMutedRef.current &&
+          !isProcessingTurnRef.current
+        ) {
+          void startChainedListening().catch((error) => {
+            const normalizedError = normalizeClientError(error);
+            void failSession(normalizedError, attemptIdRef.current);
+          });
+        }
+        return;
+      }
+
+      void submitChainedTurn(
+        new Blob(chunks, { type: currentMimeType }),
+        currentMimeType,
+      ).catch((error) => {
+        const normalizedError = normalizeClientError(error);
+        logVoiceInterviewFailure({
+          attemptId: attemptIdRef.current,
+          error,
+          label: "chained turn failure",
+          normalizedError,
+          scopeSlug: scope.slug,
+          sessionId: localSessionIdRef.current,
+          stage: stageRef.current,
+        });
+        void failSession(normalizedError, attemptIdRef.current);
+      });
+    };
+    recorder.start(250);
+
+    setConnectionLabel("Chained voice session active");
+    setMicLabel("Listening for your answer");
+    clearTimeoutRef(turnAnalysisIntervalRef);
+    turnAnalysisIntervalRef.current = window.setInterval(() => {
+      if (!serverTurnsTransportRef.current) {
+        return;
+      }
+
+      const level = readAverageAudioLevel(analyser);
+      const now = Date.now();
+
+      if (level >= CHAINED_AUDIO_LEVEL_THRESHOLD) {
+        turnHasSpokenRef.current = true;
+        turnLastVoiceAtRef.current = now;
+        setIsUserSpeaking(true);
+        setMicLabel("Listening to your answer");
+        return;
+      }
+
+      setIsUserSpeaking(false);
+
+      if (!turnHasSpokenRef.current) {
+        return;
+      }
+
+      const silenceWindow = serverTurnsTransportRef.current.autoCommitSilenceMs;
+      const silenceStartedAt = turnLastVoiceAtRef.current ?? now;
+      const turnStartedAt = turnStartedAtRef.current ?? now;
+
+      if (
+        now - silenceStartedAt >= silenceWindow ||
+        now - turnStartedAt >=
+          serverTurnsTransportRef.current.maxTurnSeconds * 1000
+      ) {
+        commitCurrentRecordedTurn();
+      }
+    }, CHAINED_ANALYSIS_INTERVAL_MS);
+  }
+
+  async function startChainedRuntime(
+    bootstrap: CreateVoiceInterviewSessionResponse,
+  ) {
+    const runtimeAttemptId = attemptIdRef.current;
+
+    if (bootstrap.transport.type !== "server_turns") {
+      throw new VoiceInterviewClientError(
+        "invalid_chained_transport",
+        "The chained voice bootstrap response was invalid.",
+      );
+    }
+
+    serverTurnsTransportRef.current = bootstrap.transport;
+    stageRef.current = "live";
+    setStage("live");
+    setConnectionLabel(
+      bootstrap.openingTurn
+        ? "Preparing interviewer opening"
+        : "Chained voice session active",
+    );
+    setMicLabel(
+      bootstrap.openingTurn
+        ? "Preparing interviewer reply"
+        : "Listening for your answer",
+    );
+    setStatusItems((current) => {
+      const withStatus = upsertStatusTranscriptItem(
+        current,
+        buildVoiceInterviewSystemTranscriptItem({
+          id: "setup-status",
+          label: "Session",
+          meta: getMetaLabel(),
+          text: "Chained voice mode is live. Your answer will auto-submit after a short silence.",
+        }),
+      );
+
+      return upsertStatusTranscriptItem(
+        withStatus,
+        buildVoiceInterviewSystemTranscriptItem({
+          citations: buildVoiceInterviewScopedCitations(scope),
+          id: "scope-lock",
+          label: "Scope lock",
+          meta: getMetaLabel(),
+          text: `This interview stays inside ${scope.title}. Recent-changes browsing remains disabled until server-owned search is wired in.`,
+          tone: "search",
+        }),
+      );
+    });
+    setConversationItems([
+      bootstrap.openingTurn
+        ? mapPersistedTranscriptItemToRuntimeItem(
+            bootstrap.openingTurn.assistantTranscriptItem,
+          )
+        : {
+            id: "chained-opening",
+            label: "Interviewer",
+            meta: getMetaLabel(),
+            source: "server",
+            speaker: "assistant",
+            text: `Let's begin. ${scope.questionMap[0] ?? `Tell me what matters most about ${scope.title} in production.`}`,
+          },
+    ]);
+    logTimings();
+    enqueueTelemetryEvent({
+      eventKey: `chained-runtime-ready:${bootstrap.localSession.id}:${attemptIdRef.current}`,
+      eventName: "chained_runtime_ready",
+      eventSource: "client",
+      payload: {
+        autoCommitSilenceMs: bootstrap.transport.autoCommitSilenceMs,
+        hasOpeningTurn: Boolean(bootstrap.openingTurn),
+        localSessionId: bootstrap.localSession.id,
+        maxTurnSeconds: bootstrap.transport.maxTurnSeconds,
+      },
+      recordedAt: new Date().toISOString(),
+    });
+
+    await patchSessionState(bootstrap.localSession.id, {
+      state: "active",
+    });
+
+    if (bootstrap.openingTurn) {
+      setConnectionLabel("Interviewer speaking");
+      setMicLabel("Playing interviewer reply");
+      setIsAgentSpeaking(true);
+
+      try {
+        await playAssistantAudio(bootstrap.openingTurn.assistantAudio.base64);
+      } finally {
+        setIsAgentSpeaking(false);
+      }
+
+      if (runtimeAttemptId !== attemptIdRef.current) {
+        return;
+      }
+    }
+
+    setConnectionLabel("Chained voice session active");
+    setMicLabel("Listening for your answer");
+    await startChainedListening();
+  }
+
   function resetRuntimeState() {
     clearTimeoutRef(agentSpeakingTimeoutRef);
     clearTimeoutRef(disconnectFailureTimeoutRef);
@@ -1012,6 +1627,11 @@ export function useVoiceInterviewAgent({
     lastPatchedStateRef.current = null;
     lastPersistedSignatureRef.current = "";
     localSessionIdRef.current = null;
+    mediaRecorderRef.current = null;
+    recordingChunksRef.current = [];
+    recordingMimeTypeRef.current = null;
+    runtimeDescriptorRef.current = null;
+    serverTurnsTransportRef.current = null;
     serverTimingsRef.current = undefined;
     statusItemsRef.current = [];
     pendingTranscriptPreviousItemRef.current = {};
@@ -1020,6 +1640,10 @@ export function useVoiceInterviewAgent({
     realtimeModelRef.current = null;
     transcriptionModelRef.current = null;
     serviceTierRef.current = VOICE_INTERVIEW_DEFAULT_SERVICE_TIER;
+    chainedTurnAbortRef.current?.abort();
+    chainedTurnAbortRef.current = null;
+    stopAssistantAudioPlayback();
+    disconnectChainedAudioAnalyser();
     setConnectionLabel(undefined);
     setCompletionSummary(undefined);
     setConversationItems([]);
@@ -1031,16 +1655,34 @@ export function useVoiceInterviewAgent({
     setIsUserSpeaking(false);
     setIsAgentSpeaking(false);
     setMicLabel(undefined);
+    stageRef.current = "ready";
     setStage("ready");
     setStatusItems([]);
     startTimestampRef.current = null;
     startupStartedAtRef.current = null;
     transcriptMetaRef.current = {};
+    turnHasSpokenRef.current = false;
+    turnLastVoiceAtRef.current = null;
+    turnStartedAtRef.current = null;
+    turnShouldCommitRef.current = false;
+    setProcessingTurnState(false);
+    setRuntimeDescriptor(null);
   }
 
   function releaseMediaAndTransportResources() {
     clearTimeoutRef(agentSpeakingTimeoutRef);
     clearTimeoutRef(disconnectFailureTimeoutRef);
+    clearTimeoutRef(turnAnalysisIntervalRef);
+    chainedTurnAbortRef.current?.abort();
+    chainedTurnAbortRef.current = null;
+    stopAssistantAudioPlayback();
+    mediaRecorderRef.current?.stream
+      .getTracks()
+      .forEach((track) => track.stop());
+    mediaRecorderRef.current = null;
+    disconnectChainedAudioAnalyser();
+    void audioContextRef.current?.close().catch(() => {});
+    audioContextRef.current = null;
     transportCleanupRef.current?.();
     transportCleanupRef.current = null;
     transportRef.current = null;
@@ -1062,6 +1704,7 @@ export function useVoiceInterviewAgent({
     const sessionId = localSessionIdRef.current;
     attemptIdRef.current += 1;
     releaseActiveResources();
+    setProcessingTurnState(false);
     setBlockingSession(undefined);
     setConnectionLabel("Session ended elsewhere");
     setErrorMessage(message);
@@ -1865,7 +2508,11 @@ export function useVoiceInterviewAgent({
 
     const startupFlow = startVoiceInterviewConnectFlow({
       createBootstrap: () =>
-        createInterviewSessionBootstrap(scope, controller.signal),
+        createInterviewSessionBootstrap(
+          runtimePreference,
+          scope,
+          controller.signal,
+        ),
       getMicrophoneStream: () =>
         navigator.mediaDevices.getUserMedia(MICROPHONE_CONSTRAINTS),
     });
@@ -1923,8 +2570,11 @@ export function useVoiceInterviewAgent({
       }
 
       localSessionIdRef.current = bootstrap.localSession.id;
-      realtimeModelRef.current = bootstrap.realtime.model;
-      transcriptionModelRef.current = bootstrap.realtime.transcriptionModel;
+      runtimeDescriptorRef.current = bootstrap.runtime;
+      setRuntimeDescriptor(bootstrap.runtime);
+      realtimeModelRef.current = bootstrap.runtime.models.realtime ?? null;
+      transcriptionModelRef.current =
+        bootstrap.runtime.models.transcribe ?? null;
       serviceTierRef.current = VOICE_INTERVIEW_DEFAULT_SERVICE_TIER;
       enqueueTelemetryEvent({
         eventKey: `client-bootstrap-ready:${bootstrap.localSession.id}:${attemptId}`,
@@ -1935,12 +2585,27 @@ export function useVoiceInterviewAgent({
           localSessionId: bootstrap.localSession.id,
           micPermissionMs: clientTimingsRef.current.micPermission ?? 0,
           openAiBootstrapMs: bootstrap.timingsMs?.openAiBootstrap ?? 0,
-          openAiSessionId: bootstrap.realtime.openAiSessionId,
+          profileId: bootstrap.runtime.profileId,
           profileSyncMs: bootstrap.timingsMs?.profileSync ?? 0,
-          webrtcModel: bootstrap.realtime.model,
+          runtimeKind: bootstrap.runtime.kind,
+          selectionSource: bootstrap.runtime.selectionSource,
+          transport: bootstrap.runtime.transport,
         },
         recordedAt: new Date().toISOString(),
       });
+
+      if (bootstrap.runtime.kind === "chained_voice") {
+        await startChainedRuntime(bootstrap);
+        return;
+      }
+
+      if (bootstrap.transport.type !== "realtime_webrtc") {
+        throw new VoiceInterviewClientError(
+          "invalid_realtime_transport",
+          "The realtime bootstrap response was invalid.",
+        );
+      }
+
       setConnectionLabel("Establishing realtime session");
       setStatusItems((current) =>
         upsertStatusTranscriptItem(
@@ -1964,14 +2629,11 @@ export function useVoiceInterviewAgent({
 
       const connectStartedAt = nowMs();
       await transport.connect({
-        apiKey: bootstrap.clientSecret.value,
-        // The server bootstrap already sets tracing on the realtime session.
-        // Passing an explicit tracing field prevents the WebRTC SDK from
-        // sending a follow-up tracing update that the API rejects.
+        apiKey: bootstrap.transport.clientSecret.value,
         initialSessionConfig: {
           tracing: null,
         },
-        model: bootstrap.realtime.model,
+        model: bootstrap.runtime.models.realtime ?? "gpt-realtime",
       });
       clientTimingsRef.current.webrtcConnect = roundDurationMs(
         nowMs() - connectStartedAt,
@@ -2027,6 +2689,7 @@ export function useVoiceInterviewAgent({
         eventName: "transport_connected",
         eventSource: "client",
         payload: {
+          openAiSessionId: bootstrap.transport.openAiSessionId,
           timeToLiveMs: clientTimingsRef.current.timeToLive ?? 0,
           webrtcConnectMs: clientTimingsRef.current.webrtcConnect ?? 0,
         },
@@ -2125,7 +2788,39 @@ export function useVoiceInterviewAgent({
   }
 
   function toggleMute() {
-    if (stageRef.current !== "live" || !transportRef.current) {
+    if (stageRef.current !== "live") {
+      return;
+    }
+
+    if (runtimeDescriptorRef.current?.kind === "chained_voice") {
+      const nextMuted = !isMuted;
+      isMutedRef.current = nextMuted;
+      setIsMuted(nextMuted);
+      setMicLabel(
+        nextMuted ? "Auto-commit paused" : "Listening for your answer",
+      );
+      setConnectionLabel(
+        nextMuted ? "Chained voice paused" : "Chained voice session active",
+      );
+
+      if (nextMuted) {
+        turnShouldCommitRef.current = false;
+        clearTimeoutRef(turnAnalysisIntervalRef);
+        if (mediaRecorderRef.current?.state === "recording") {
+          mediaRecorderRef.current.stop();
+        }
+        setIsUserSpeaking(false);
+        return;
+      }
+
+      void startChainedListening().catch((error) => {
+        const normalizedError = normalizeClientError(error);
+        void failSession(normalizedError, attemptIdRef.current);
+      });
+      return;
+    }
+
+    if (!transportRef.current) {
       return;
     }
 
@@ -2133,6 +2828,14 @@ export function useVoiceInterviewAgent({
     transportRef.current.mute(nextMuted);
     setIsMuted(nextMuted);
     setMicLabel(nextMuted ? "Live and muted" : "Live and unmuted");
+  }
+
+  function commitTurn() {
+    if (runtimeDescriptorRef.current?.kind !== "chained_voice") {
+      return;
+    }
+
+    commitCurrentRecordedTurn();
   }
 
   function end() {
@@ -2143,6 +2846,7 @@ export function useVoiceInterviewAgent({
     const sessionId = localSessionIdRef.current;
     attemptIdRef.current += 1;
     releaseActiveResources();
+    setProcessingTurnState(false);
     setIsAgentSpeaking(false);
     setConnectionLabel("Session closed cleanly");
     setIsMuted(false);
@@ -2236,18 +2940,27 @@ export function useVoiceInterviewAgent({
 
   return {
     audioElementRef,
+    canCommitTurn:
+      runtimeDescriptor?.kind === "chained_voice" &&
+      stage === "live" &&
+      !isProcessingTurn &&
+      Boolean(mediaRecorderRef.current) &&
+      turnHasSpokenRef.current,
     canRecoverBlockingSession: Boolean(blockingSession),
     cancelSetup,
+    commitTurn,
     end,
-    isRecoveringBlockingSession,
-    isMuted,
-    isUserSpeaking,
     isAgentSpeaking,
+    isMuted,
+    isProcessingTurn,
+    isRecoveringBlockingSession,
+    isUserSpeaking,
     recoverBlockingSession: () => {
       void recoverBlockingSession();
     },
     reset,
     retry,
+    runtime: runtimeDescriptor,
     session,
     stage,
     start,

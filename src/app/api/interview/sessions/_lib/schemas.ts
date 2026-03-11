@@ -59,6 +59,19 @@ export const interviewSessionParamsSchema = z.object({
 
 export const createInterviewSessionSchema = z
   .object({
+    capabilities: z
+      .object({
+        hasAudioContext: z.boolean(),
+        hasMediaRecorder: z.boolean(),
+        supportedMimeTypes: z
+          .array(requiredTrimmedString(MAX_SMALL_TEXT_LENGTH))
+          .max(8),
+      })
+      .strict()
+      .optional(),
+    runtimePreference: z
+      .enum(["auto", "realtime_sts", "chained_voice"])
+      .optional(),
     scopeSlug: z
       .string()
       .trim()
@@ -97,7 +110,7 @@ export const persistedTranscriptItemSchema = z
     label: requiredTrimmedString(MAX_SMALL_TEXT_LENGTH),
     metaLabel: requiredTrimmedString(64),
     previousItemId: nullableOptionalTrimmedString(MAX_MEDIUM_TEXT_LENGTH),
-    source: z.enum(["realtime", "system", "search"]),
+    source: z.enum(["realtime", "server", "system", "search"]),
     speaker: z.enum(["assistant", "user", "system"]),
     text: requiredTrimmedString(MAX_TRANSCRIPT_TEXT_LENGTH),
     tone: z.enum(["default", "search", "status", "error"]).optional(),

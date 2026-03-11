@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 
+import { getVoiceInterviewEnv } from "@/lib/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { resolveVoiceInterviewScope } from "@/lib/interview/voice-scope";
 import {
@@ -94,8 +95,14 @@ export default async function TopicMockInterviewPage({
   )
     ? requestedStage
     : undefined;
+  const defaultRuntimePreference =
+    getVoiceInterviewEnv().VOICE_INTERVIEW_DEFAULT_RUNTIME_PREFERENCE;
 
   return (
-    <TopicVoiceInterviewExperience scope={scope} initialStage={initialStage} />
+    <TopicVoiceInterviewExperience
+      defaultRuntimePreference={defaultRuntimePreference}
+      initialStage={initialStage}
+      scope={scope}
+    />
   );
 }

@@ -14,14 +14,15 @@ export type VoiceInterviewCitation = {
 };
 
 export type VoiceInterviewTranscriptItem = {
-  id: string;
-  speaker: "assistant" | "user" | "system";
-  label: string;
-  text: string;
-  meta: string;
-  tone?: "default" | "search" | "status" | "error";
-  status?: "final" | "streaming";
   citations?: VoiceInterviewCitation[];
+  id: string;
+  label: string;
+  meta: string;
+  source?: "realtime" | "server" | "system" | "search";
+  speaker: "assistant" | "user" | "system";
+  status?: "final" | "streaming";
+  text: string;
+  tone?: "default" | "search" | "status" | "error";
 };
 
 export type VoiceInterviewCompletionSummary = {

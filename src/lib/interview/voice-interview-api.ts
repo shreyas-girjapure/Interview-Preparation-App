@@ -1,10 +1,24 @@
 import type { VoiceInterviewScopeType } from "@/lib/interview/voice-scope";
 import type {
+  VoiceInterviewRuntimeKind,
   VoiceInterviewTelemetryEventRequest,
   VoiceInterviewUsageEventRequest,
 } from "@/lib/interview/voice-interview-observability";
 
+export type VoiceInterviewRuntimePreference =
+  | "auto"
+  | "realtime_sts"
+  | "chained_voice";
+
+export type VoiceInterviewBrowserCapabilityReport = {
+  hasAudioContext: boolean;
+  hasMediaRecorder: boolean;
+  supportedMimeTypes: string[];
+};
+
 export type CreateVoiceInterviewSessionRequest = {
+  capabilities?: VoiceInterviewBrowserCapabilityReport;
+  runtimePreference?: VoiceInterviewRuntimePreference;
   scopeSlug: string;
   scopeType: VoiceInterviewScopeType;
 };
@@ -33,29 +47,78 @@ export type CreateVoiceInterviewSessionConflictResponse = {
 export type VoiceInterviewBootstrapTimingsMs = {
   localSessionCreate?: number;
   markReady?: number;
-  openAiBootstrap: number;
+  openAiBootstrap?: number;
   profileSync?: number;
   total: number;
 };
 
-export type CreateVoiceInterviewSessionResponse = {
+export type VoiceInterviewRuntimeDescriptor = {
+  kind: VoiceInterviewRuntimeKind;
+  models: {
+    realtime?: string;
+    text?: string;
+    transcribe?: string;
+    tts?: string;
+  };
+  profileId: string;
+  profileVersion: string;
+  selectionSource: "auto_policy" | "user_preference" | "fallback";
+  transport: "realtime_webrtc" | "server_turns";
+  turnStrategy:
+    | "server_vad_full_duplex"
+    | "client_vad_half_duplex"
+    | "manual_commit_half_duplex";
+  voice: string;
+};
+
+export type RealtimeWebRtcTransport = {
   clientSecret: {
     expiresAt: number;
     value: string;
   };
+  openAiSessionId: string | null;
+  type: "realtime_webrtc";
+};
+
+export type ChainedVoiceTransport = {
+  acceptedMimeTypes: string[];
+  autoCommitSilenceMs: number;
+  maxTurnSeconds: number;
+  playbackFormat: "mp3";
+  turnsPath: string;
+  type: "server_turns";
+};
+
+export type VoiceInterviewBootstrapTransport =
+  | ChainedVoiceTransport
+  | RealtimeWebRtcTransport;
+
+export type VoiceInterviewAssistantAudio = {
+  base64: string;
+  mimeType: "audio/mpeg";
+  voice: string;
+};
+
+export type VoiceInterviewBootstrapOpeningTurn = {
+  assistantAudio: VoiceInterviewAssistantAudio;
+  assistantTranscriptItem: VoiceInterviewPersistedTranscriptItem;
+  timingsMs: {
+    total: number;
+    tts: number;
+  };
+};
+
+export type CreateVoiceInterviewSessionResponse = {
   localSession: {
     id: string;
     scopeSlug: string;
     scopeTitle: string;
     scopeType: VoiceInterviewScopeType;
   };
-  realtime: {
-    model: string;
-    openAiSessionId: string | null;
-    transcriptionModel: string;
-    voice: string;
-  };
+  openingTurn?: VoiceInterviewBootstrapOpeningTurn;
+  runtime: VoiceInterviewRuntimeDescriptor;
   timingsMs?: VoiceInterviewBootstrapTimingsMs;
+  transport: VoiceInterviewBootstrapTransport;
 };
 
 export type UpdateVoiceInterviewSessionRequest = {
@@ -74,6 +137,12 @@ export type VoiceInterviewPersistedTranscriptCitation = {
   url: string;
 };
 
+export type VoiceInterviewTranscriptSource =
+  | "realtime"
+  | "server"
+  | "system"
+  | "search";
+
 export type VoiceInterviewPersistedTranscriptItem = {
   citations?: VoiceInterviewPersistedTranscriptCitation[];
   clientSequence: number;
@@ -82,7 +151,7 @@ export type VoiceInterviewPersistedTranscriptItem = {
   label: string;
   metaLabel: string;
   previousItemId?: string | null;
-  source: "realtime" | "system" | "search";
+  source: VoiceInterviewTranscriptSource;
   speaker: "assistant" | "user" | "system";
   text: string;
   tone?: "default" | "search" | "status" | "error";
@@ -189,6 +258,21 @@ export type VoiceInterviewSessionHeartbeatResponse = {
     | "cancelled";
 };
 
+export type CreateInterviewTurnResponse = {
+  assistantAudio: VoiceInterviewAssistantAudio;
+  assistantTranscriptItem: VoiceInterviewPersistedTranscriptItem;
+  ok: true;
+  runtimeKind: "chained_voice";
+  timingsMs: {
+    total: number;
+    text: number;
+    transcription: number;
+    tts: number;
+  };
+  usageEvents: VoiceInterviewUsageEventRequest[];
+  userTranscriptItem: VoiceInterviewPersistedTranscriptItem;
+};
+
 export type VoiceInterviewSessionDetailResponse = {
   events: Array<{
     createdAt: string;
@@ -219,17 +303,22 @@ export type VoiceInterviewSessionDetailResponse = {
     lastDisconnectReason: string | null;
     lastUsageRecordedAt: string | null;
     metrics: Record<string, unknown> | null;
+    openAiTextModel: string | null;
     openAiTraceEnabled: boolean;
     openAiTraceGroupId: string | null;
     openAiTraceMetadata: Record<string, unknown> | null;
     openAiTraceMode: string | null;
     openAiTraceWorkflowName: string | null;
+    openAiTtsModel: string | null;
     persistedTurnCount: number;
     forcedEndAt: string | null;
     forcedEndReason: string | null;
     retryCount: number;
     runtimeEnvironment: string | null;
+    runtimeKind: VoiceInterviewRuntimeKind | null;
     runtimePersistenceVersion: string | null;
+    runtimeProfileId: string | null;
+    runtimeProfileVersion: string | null;
     runtimePromptVersion: string | null;
     runtimeSearchPolicyVersion: string | null;
     runtimeTransportVersion: string | null;

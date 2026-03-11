@@ -13,6 +13,21 @@ const serverEnvSchema = publicEnvSchema.extend({
   SUPABASE_SERVICE_ROLE_KEY: requiredString,
 });
 
+const reasoningEffortSchema = z.enum([
+  "none",
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+]);
+
+const runtimePreferenceSchema = z.enum([
+  "auto",
+  "realtime_sts",
+  "chained_voice",
+]);
+
 const voiceInterviewEnvSchema = z.object({
   OPENAI_API_KEY: requiredString,
   OPENAI_REALTIME_BOOTSTRAP_TIMEOUT_MS: z.coerce
@@ -59,6 +74,29 @@ const voiceInterviewEnvSchema = z.object({
     .min(10)
     .max(7200)
     .default(600),
+  VOICE_INTERVIEW_DEFAULT_RUNTIME_PREFERENCE:
+    runtimePreferenceSchema.default("realtime_sts"),
+  OPENAI_CHAINED_DEFAULT_VOICE: requiredString.default("marin"),
+  OPENAI_CHAINED_TRANSCRIBE_MODEL: requiredString.default(
+    "gpt-4o-mini-transcribe",
+  ),
+  OPENAI_CHAINED_TEXT_MODEL_PREMIUM: requiredString.default("gpt-5.4"),
+  OPENAI_CHAINED_TEXT_MODEL_BALANCED: requiredString.default("gpt-5-mini"),
+  OPENAI_CHAINED_TTS_MODEL: requiredString.default("gpt-4o-mini-tts"),
+  OPENAI_CHAINED_REASONING_EFFORT_PREMIUM:
+    reasoningEffortSchema.default("none"),
+  OPENAI_CHAINED_MAX_TURN_SECONDS: z.coerce
+    .number()
+    .int()
+    .min(5)
+    .max(120)
+    .default(45),
+  OPENAI_CHAINED_AUTO_COMMIT_SILENCE_MS: z.coerce
+    .number()
+    .int()
+    .min(400)
+    .max(4_000)
+    .default(1_200),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;

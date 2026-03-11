@@ -10,7 +10,9 @@ import type {
   PersistInterviewEventsResponse,
   PersistedVoiceInterviewDebrief,
   VoiceInterviewBlockingSession,
+  VoiceInterviewBootstrapTransport,
   VoiceInterviewPersistedTranscriptItem,
+  VoiceInterviewRuntimeDescriptor,
   VoiceInterviewSessionHeartbeatResponse,
   VoiceInterviewSessionDetailResponse,
 } from "@/lib/interview/voice-interview-api";
@@ -89,14 +91,19 @@ type InterviewSessionRow = {
   openai_client_secret_expires_at: string | null;
   openai_model: string | null;
   openai_session_id: string | null;
+  openai_text_model: string | null;
   openai_transcription_model: string | null;
+  openai_tts_model: string | null;
   openai_voice: string | null;
   estimated_cost_currency: string | null;
   estimated_cost_usd: number | string | null;
   persisted_turn_count: number;
   retry_count: number;
   runtime_environment: string | null;
+  runtime_kind: "realtime_sts" | "chained_voice" | null;
   runtime_persistence_version: string | null;
+  runtime_profile_id: string | null;
+  runtime_profile_version: string | null;
   runtime_prompt_version: string | null;
   runtime_search_policy_version: string | null;
   runtime_transport_version: string | null;
@@ -167,7 +174,7 @@ const INTERVIEW_SESSION_ONE_LIVE_INDEX =
 export const VOICE_INTERVIEW_PROMPT_VERSION = "voice-prompt-v2-2026-03-10";
 export const VOICE_INTERVIEW_SEARCH_POLICY_VERSION = "docs-search-v1";
 export const VOICE_INTERVIEW_PERSISTENCE_VERSION = "transcript-persistence-v1";
-export const VOICE_INTERVIEW_TRANSPORT_VERSION = "agents-webrtc-v1";
+export const VOICE_INTERVIEW_TRANSPORT_VERSION = "dual-runtime-v1";
 
 function getUserProfileSeed(user: User) {
   const metadata = user.user_metadata as
@@ -685,26 +692,24 @@ export async function createInterviewSessionRecord({
 }
 
 export async function markInterviewSessionReady({
-  clientSecretExpiresAt,
-  model,
-  openAiSessionId,
+  runtime,
   sessionId,
   supabase,
   trace,
-  transcriptionModel,
-  voice,
+  transport,
 }: {
-  clientSecretExpiresAt: string;
-  model: string;
-  openAiSessionId: string | null;
+  runtime: VoiceInterviewRuntimeDescriptor;
   sessionId: string;
   supabase: SupabaseServerClient;
   trace: VoiceInterviewTraceConfig;
-  transcriptionModel: string;
-  voice: string;
+  transport: VoiceInterviewBootstrapTransport;
 }) {
   const readyPolicyStaleAtMs =
     Date.now() + INTERVIEW_SESSION_POLICY_STALE_WINDOWS_MS.ready;
+  const clientSecretExpiresAt =
+    transport.type === "realtime_webrtc"
+      ? new Date(transport.clientSecret.expiresAt * 1000).toISOString()
+      : null;
   const readyStaleAtMs = minEpochMs(
     readyPolicyStaleAtMs,
     toEpochMs(clientSecretExpiresAt),
@@ -731,25 +736,28 @@ export async function markInterviewSessionReady({
       openai_trace_metadata_json: trace.metadata,
       openai_trace_mode: trace.mode,
       openai_trace_workflow_name: trace.workflowName,
-      openai_session_id: openAiSessionId,
-      openai_model: model,
-      openai_voice: voice,
-      openai_transcription_model: transcriptionModel,
       openai_client_secret_expires_at: clientSecretExpiresAt,
+      openai_model: runtime.models.realtime ?? runtime.models.text ?? null,
+      openai_session_id:
+        transport.type === "realtime_webrtc" ? transport.openAiSessionId : null,
+      openai_text_model: runtime.models.text ?? null,
+      openai_transcription_model: runtime.models.transcribe ?? null,
+      openai_tts_model: runtime.models.tts ?? null,
+      openai_voice: runtime.voice,
       runtime_environment: trace.runtimeEnvironment,
+      runtime_kind: runtime.kind,
+      runtime_persistence_version: VOICE_INTERVIEW_PERSISTENCE_VERSION,
+      runtime_profile_id: runtime.profileId,
+      runtime_profile_version: runtime.profileVersion,
       runtime_prompt_version: VOICE_INTERVIEW_PROMPT_VERSION,
       runtime_search_policy_version: VOICE_INTERVIEW_SEARCH_POLICY_VERSION,
-      runtime_persistence_version: VOICE_INTERVIEW_PERSISTENCE_VERSION,
       runtime_transport_version: VOICE_INTERVIEW_TRANSPORT_VERSION,
       started_at: readyAt,
       ended_at: null,
       diagnostics_json: {
         bootstrap: {
-          clientSecretExpiresAt,
-          model,
-          openAiSessionId,
-          transcriptionModel,
-          voice,
+          runtime,
+          transport,
         },
       },
       last_error_code: null,
@@ -879,7 +887,10 @@ export async function persistInterviewSessionEvents({
       cost_status: session.cost_status,
       estimated_cost_currency: session.estimated_cost_currency,
       openai_model: session.openai_model,
+      openai_text_model: session.openai_text_model,
       openai_transcription_model: session.openai_transcription_model,
+      openai_tts_model: session.openai_tts_model,
+      runtime_kind: session.runtime_kind,
     },
     sessionId,
     supabase,
@@ -1143,6 +1154,33 @@ export async function recordInterviewSessionHeartbeat({
   };
 }
 
+export async function getInterviewSessionRuntimeContext({
+  sessionId,
+  supabase,
+}: {
+  sessionId: string;
+  supabase: SupabaseServerClient;
+}) {
+  const session = await getInterviewSessionRow({
+    sessionId,
+    supabase,
+  });
+  const transcriptRows = await listInterviewMessages({
+    sessionId,
+    supabase,
+  });
+
+  return {
+    runtimeKind: session.runtime_kind,
+    runtimeProfileId: session.runtime_profile_id,
+    runtimeProfileVersion: session.runtime_profile_version,
+    scope: session.scope_snapshot,
+    session,
+    startedAt: session.started_at,
+    transcriptRows,
+  };
+}
+
 export async function getInterviewSessionDetail({
   sessionId,
   supabase,
@@ -1188,15 +1226,20 @@ export async function getInterviewSessionDetail({
       lastDisconnectReason: session.last_disconnect_reason,
       lastUsageRecordedAt: session.last_usage_recorded_at,
       metrics: parseMetrics(session.metrics_json),
+      openAiTextModel: session.openai_text_model,
       openAiTraceEnabled: session.openai_trace_enabled,
       openAiTraceGroupId: session.openai_trace_group_id,
       openAiTraceMetadata: parseJsonObject(session.openai_trace_metadata_json),
       openAiTraceMode: session.openai_trace_mode,
       openAiTraceWorkflowName: session.openai_trace_workflow_name,
+      openAiTtsModel: session.openai_tts_model,
       persistedTurnCount: session.persisted_turn_count,
       retryCount: session.retry_count,
       runtimeEnvironment: session.runtime_environment,
+      runtimeKind: session.runtime_kind,
       runtimePersistenceVersion: session.runtime_persistence_version,
+      runtimeProfileId: session.runtime_profile_id,
+      runtimeProfileVersion: session.runtime_profile_version,
       runtimePromptVersion: session.runtime_prompt_version,
       runtimeSearchPolicyVersion: session.runtime_search_policy_version,
       runtimeTransportVersion: session.runtime_transport_version,

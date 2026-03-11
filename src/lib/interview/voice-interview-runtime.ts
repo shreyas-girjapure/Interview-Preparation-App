@@ -1,5 +1,6 @@
 import type { RealtimeItem } from "@openai/agents/realtime";
 
+import type { VoiceInterviewPersistedTranscriptItem } from "@/lib/interview/voice-interview-api";
 import type { VoiceInterviewScope } from "@/lib/interview/voice-scope";
 import {
   buildVoiceInterviewSessionSnapshot,
@@ -54,6 +55,7 @@ export function buildVoiceInterviewSystemTranscriptItem({
     id,
     label,
     meta,
+    source: tone === "search" ? "search" : "system",
     speaker: "system",
     text,
     tone,
@@ -81,9 +83,29 @@ export function buildVoiceInterviewUserTranscriptItem({
     id,
     label: "You",
     meta,
+    source: "realtime",
     speaker: "user",
     status,
     text: normalizedText,
+  };
+}
+
+export function mapPersistedTranscriptItemToRuntimeItem(
+  item: VoiceInterviewPersistedTranscriptItem,
+): VoiceInterviewTranscriptItem {
+  return {
+    citations: item.citations?.map((citation) => ({
+      href: citation.url,
+      label: citation.label ?? citation.title ?? citation.source,
+      source: citation.source,
+    })),
+    id: item.itemId,
+    label: item.label,
+    meta: item.metaLabel,
+    source: item.source,
+    speaker: item.speaker,
+    text: item.text,
+    tone: item.tone,
   };
 }
 
@@ -165,6 +187,7 @@ export function mapRealtimeItemToTranscriptItem({
           ? "You"
           : "Session",
     meta,
+    source: item.role === "system" ? "system" : "realtime",
     speaker: item.role,
     status:
       item.role !== "system" && item.status === "in_progress"
@@ -273,15 +296,15 @@ export function buildVoiceInterviewRuntimeSnapshot({
     connectionLabel:
       connectionLabel ??
       (stage === "connecting"
-        ? "Preparing realtime browser session"
+        ? "Preparing interview session"
         : stage === "live"
-          ? "Realtime session connected"
+          ? "Interview session connected"
           : stage === "failed"
             ? "Interview session failed"
             : base.connectionLabel),
     description:
       stage === "connecting"
-        ? "This is the short-lived phase for microphone access, secure bootstrap, and the WebRTC connection."
+        ? "This is the short-lived phase for microphone access, secure bootstrap, and the selected runtime connection."
         : stage === "live"
           ? "The live shell keeps the voice stage central while the transcript and controls remain readable."
           : base.description,
@@ -296,7 +319,7 @@ export function buildVoiceInterviewRuntimeSnapshot({
         : LIVE_RECENCY_LABEL,
     title:
       stage === "connecting"
-        ? "The browser is requesting microphone access and opening a realtime interview session."
+        ? "The browser is requesting microphone access and opening the interview session."
         : base.title,
     transcript: resolvedTranscript,
     transcriptCountLabel:

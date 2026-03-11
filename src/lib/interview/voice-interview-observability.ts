@@ -3,8 +3,10 @@ import type { VoiceInterviewScopeType } from "@/lib/interview/voice-scope";
 export const VOICE_INTERVIEW_RUNTIME_KIND = "realtime_sts";
 export const VOICE_INTERVIEW_SERVICE_PROVIDER = "openai";
 export const VOICE_INTERVIEW_DEFAULT_SERVICE_TIER = "standard";
-export const VOICE_INTERVIEW_TRACE_WORKFLOW_NAME =
+export const VOICE_INTERVIEW_REALTIME_TRACE_WORKFLOW_NAME =
   "voice-interview-realtime-sts";
+export const VOICE_INTERVIEW_CHAINED_TRACE_WORKFLOW_NAME =
+  "voice-interview-chained-voice";
 
 export type VoiceInterviewTraceMode = "structured" | "auto" | "disabled";
 
@@ -80,25 +82,45 @@ type RealtimeResponseNormalizedUsage = {
   usageType: "realtime_response";
 };
 
-type RealtimeInputTranscriptionTokenUsage = {
+type AudioTranscriptionTokenUsage = {
   inputAudioTokens: number;
   inputTextTokens: number;
   outputTextTokens: number;
   totalTokens: number;
-  usageType: "realtime_input_transcription";
+  usageType: "realtime_input_transcription" | "server_audio_transcription";
   usageUnit: "tokens";
 };
 
-type RealtimeInputTranscriptionDurationUsage = {
+type AudioTranscriptionDurationUsage = {
   seconds: number;
-  usageType: "realtime_input_transcription";
+  usageType: "realtime_input_transcription" | "server_audio_transcription";
   usageUnit: "duration";
 };
 
+type ServerTextResponseUsage = {
+  inputCachedTextTokens: number;
+  inputTextTokens: number;
+  inputTokens: number;
+  outputReasoningTokens: number;
+  outputTextTokens: number;
+  outputTokens: number;
+  totalTokens: number;
+  usageType: "server_text_response";
+};
+
+type ServerTtsUsage = {
+  inputCharacters: number;
+  outputAudioBytes: number;
+  usageType: "server_tts";
+  usageUnit: "characters";
+};
+
 export type VoiceInterviewNormalizedUsage =
-  | RealtimeInputTranscriptionDurationUsage
-  | RealtimeInputTranscriptionTokenUsage
-  | RealtimeResponseNormalizedUsage;
+  | AudioTranscriptionDurationUsage
+  | AudioTranscriptionTokenUsage
+  | RealtimeResponseNormalizedUsage
+  | ServerTextResponseUsage
+  | ServerTtsUsage;
 
 export type VoiceInterviewUsageEstimation = {
   estimatedCostUsd: number | null;
@@ -236,17 +258,16 @@ function normalizeRealtimeResponseUsage(
   };
 }
 
-function normalizeRealtimeInputTranscriptionUsage(
+function normalizeAudioTranscriptionUsage(
   usage: VoiceInterviewUsagePayload,
-):
-  | RealtimeInputTranscriptionDurationUsage
-  | RealtimeInputTranscriptionTokenUsage {
-  const usageType = typeof usage.type === "string" ? usage.type : null;
+  usageType: AudioTranscriptionTokenUsage["usageType"],
+): AudioTranscriptionDurationUsage | AudioTranscriptionTokenUsage {
+  const normalizedType = typeof usage.type === "string" ? usage.type : null;
 
-  if (usageType === "duration") {
+  if (normalizedType === "duration") {
     return {
       seconds: pickNumber(usage, "seconds") ?? 0,
-      usageType: "realtime_input_transcription",
+      usageType,
       usageUnit: "duration",
     };
   }
@@ -259,8 +280,54 @@ function normalizeRealtimeInputTranscriptionUsage(
     outputTextTokens:
       pickNumber(usage, "output_text_tokens", "outputTextTokens") ?? 0,
     totalTokens: pickNumber(usage, "total_tokens", "totalTokens") ?? 0,
-    usageType: "realtime_input_transcription",
+    usageType,
     usageUnit: "tokens",
+  };
+}
+
+function normalizeServerTextResponseUsage(
+  usage: VoiceInterviewUsagePayload,
+): ServerTextResponseUsage {
+  const inputTokens = pickNumber(usage, "input_tokens", "inputTokens") ?? 0;
+  const cachedTokens =
+    pickNumber(
+      usage,
+      "input_cached_text_tokens",
+      "inputCachedTextTokens",
+      "cached_tokens",
+    ) ?? 0;
+
+  return {
+    inputCachedTextTokens: cachedTokens,
+    inputTextTokens: Math.max(0, inputTokens - cachedTokens),
+    inputTokens,
+    outputReasoningTokens:
+      pickNumber(
+        usage,
+        "output_reasoning_tokens",
+        "outputReasoningTokens",
+        "reasoning_tokens",
+      ) ?? 0,
+    outputTextTokens:
+      pickNumber(usage, "output_text_tokens", "outputTextTokens") ??
+      pickNumber(usage, "output_tokens", "outputTokens") ??
+      0,
+    outputTokens: pickNumber(usage, "output_tokens", "outputTokens") ?? 0,
+    totalTokens: pickNumber(usage, "total_tokens", "totalTokens") ?? 0,
+    usageType: "server_text_response",
+  };
+}
+
+function normalizeServerTtsUsage(
+  usage: VoiceInterviewUsagePayload,
+): ServerTtsUsage {
+  return {
+    inputCharacters:
+      pickNumber(usage, "input_characters", "inputCharacters") ?? 0,
+    outputAudioBytes:
+      pickNumber(usage, "output_audio_bytes", "outputAudioBytes") ?? 0,
+    usageType: "server_tts",
+    usageUnit: "characters",
   };
 }
 
@@ -268,27 +335,31 @@ export function buildVoiceInterviewTraceConfig({
   persistenceVersion,
   promptVersion,
   runtimeEnvironment,
+  runtimeKind = VOICE_INTERVIEW_RUNTIME_KIND,
   scopeSlug,
   scopeType,
   searchPolicyVersion,
   sessionId,
   transportVersion,
+  workflowName,
 }: {
   persistenceVersion: string;
   promptVersion: string;
   runtimeEnvironment?: string | null;
+  runtimeKind?: VoiceInterviewRuntimeKind;
   scopeSlug: string;
   scopeType: VoiceInterviewScopeType;
   searchPolicyVersion: string;
   sessionId: string;
   transportVersion: string;
+  workflowName?: string | null;
 }): VoiceInterviewTraceConfig {
   return {
     enabled: true,
     groupId: sessionId,
     metadata: {
       localSessionId: sessionId,
-      runtimeKind: VOICE_INTERVIEW_RUNTIME_KIND,
+      runtimeKind,
       runtimePersistenceVersion: persistenceVersion,
       runtimePromptVersion: promptVersion,
       runtimeSearchPolicyVersion: searchPolicyVersion,
@@ -302,7 +373,11 @@ export function buildVoiceInterviewTraceConfig({
       process.env.VERCEL_ENV ??
       process.env.NODE_ENV ??
       "development",
-    workflowName: VOICE_INTERVIEW_TRACE_WORKFLOW_NAME,
+    workflowName:
+      workflowName ??
+      (runtimeKind === "chained_voice"
+        ? VOICE_INTERVIEW_CHAINED_TRACE_WORKFLOW_NAME
+        : VOICE_INTERVIEW_REALTIME_TRACE_WORKFLOW_NAME),
   };
 }
 
@@ -323,8 +398,14 @@ export function estimateVoiceInterviewUsage({
 }): VoiceInterviewUsageEstimation {
   const normalizedUsage =
     usageSource === "realtime_input_transcription"
-      ? normalizeRealtimeInputTranscriptionUsage(usage)
-      : normalizeRealtimeResponseUsage(usage);
+      ? normalizeAudioTranscriptionUsage(usage, "realtime_input_transcription")
+      : usageSource === "server_audio_transcription"
+        ? normalizeAudioTranscriptionUsage(usage, "server_audio_transcription")
+        : usageSource === "server_text_response"
+          ? normalizeServerTextResponseUsage(usage)
+          : usageSource === "server_tts"
+            ? normalizeServerTtsUsage(usage)
+            : normalizeRealtimeResponseUsage(usage);
   const resolvedServiceTier =
     serviceTier?.trim() || VOICE_INTERVIEW_DEFAULT_SERVICE_TIER;
   const pricingRateIndex = buildPricingRateIndex(pricingRates);
@@ -360,7 +441,11 @@ export function estimateVoiceInterviewUsage({
       return;
     }
 
-    if (rate.unit !== "per_1m_tokens" && rate.unit !== "per_second") {
+    if (
+      rate.unit !== "per_1m_tokens" &&
+      rate.unit !== "per_second" &&
+      rate.unit !== "per_1m_characters"
+    ) {
       notes.push(`unsupported_unit:${usageType}:${rate.unit}`);
       estimateFailed = true;
       return;
@@ -374,7 +459,9 @@ export function estimateVoiceInterviewUsage({
     estimatedCostUsd +=
       rate.unit === "per_1m_tokens"
         ? amount * (rate.priceUsd / 1_000_000)
-        : amount * rate.priceUsd;
+        : rate.unit === "per_1m_characters"
+          ? amount * (rate.priceUsd / 1_000_000)
+          : amount * rate.priceUsd;
   };
 
   if (normalizedUsage.usageType === "realtime_response") {
@@ -390,12 +477,23 @@ export function estimateVoiceInterviewUsage({
       normalizedUsage.inputCachedAudioTokens,
     );
     addCost("realtime_audio_output", normalizedUsage.outputAudioTokens);
-  } else if (normalizedUsage.usageUnit === "tokens") {
-    addCost("transcription_audio_input", normalizedUsage.inputAudioTokens);
-    addCost("transcription_text_input", normalizedUsage.inputTextTokens);
-    addCost("transcription_text_output", normalizedUsage.outputTextTokens);
-  } else {
-    addCost("transcription_audio_seconds", normalizedUsage.seconds);
+  } else if (
+    normalizedUsage.usageType === "realtime_input_transcription" ||
+    normalizedUsage.usageType === "server_audio_transcription"
+  ) {
+    if (normalizedUsage.usageUnit === "duration") {
+      addCost("transcription_audio_seconds", normalizedUsage.seconds);
+    } else {
+      addCost("transcription_audio_input", normalizedUsage.inputAudioTokens);
+      addCost("transcription_text_input", normalizedUsage.inputTextTokens);
+      addCost("transcription_text_output", normalizedUsage.outputTextTokens);
+    }
+  } else if (normalizedUsage.usageType === "server_text_response") {
+    addCost("text_input", normalizedUsage.inputTextTokens);
+    addCost("text_input_cached", normalizedUsage.inputCachedTextTokens);
+    addCost("text_output", normalizedUsage.outputTextTokens);
+  } else if (normalizedUsage.usageType === "server_tts") {
+    addCost("tts_characters", normalizedUsage.inputCharacters);
   }
 
   return {
@@ -450,28 +548,64 @@ function parseNormalizedUsage(
     };
   }
 
-  if (value.usageType !== "realtime_input_transcription") {
-    return null;
-  }
+  if (
+    value.usageType === "realtime_input_transcription" ||
+    value.usageType === "server_audio_transcription"
+  ) {
+    if (value.usageUnit === "duration") {
+      return {
+        seconds: pickNumber(value, "seconds") ?? 0,
+        usageType: value.usageType,
+        usageUnit: "duration",
+      };
+    }
 
-  if (value.usageUnit === "duration") {
     return {
-      seconds: pickNumber(value, "seconds") ?? 0,
-      usageType: "realtime_input_transcription",
-      usageUnit: "duration",
+      inputAudioTokens:
+        pickNumber(value, "inputAudioTokens", "input_audio_tokens") ?? 0,
+      inputTextTokens:
+        pickNumber(value, "inputTextTokens", "input_text_tokens") ?? 0,
+      outputTextTokens:
+        pickNumber(value, "outputTextTokens", "output_text_tokens") ?? 0,
+      totalTokens: pickNumber(value, "totalTokens", "total_tokens") ?? 0,
+      usageType: value.usageType,
+      usageUnit: "tokens",
     };
   }
 
+  if (value.usageType === "server_text_response") {
+    return {
+      inputCachedTextTokens:
+        pickNumber(
+          value,
+          "inputCachedTextTokens",
+          "input_cached_text_tokens",
+        ) ?? 0,
+      inputTextTokens:
+        pickNumber(value, "inputTextTokens", "input_text_tokens") ?? 0,
+      inputTokens: pickNumber(value, "inputTokens", "input_tokens") ?? 0,
+      outputReasoningTokens:
+        pickNumber(value, "outputReasoningTokens", "output_reasoning_tokens") ??
+        0,
+      outputTextTokens:
+        pickNumber(value, "outputTextTokens", "output_text_tokens") ?? 0,
+      outputTokens: pickNumber(value, "outputTokens", "output_tokens") ?? 0,
+      totalTokens: pickNumber(value, "totalTokens", "total_tokens") ?? 0,
+      usageType: "server_text_response",
+    };
+  }
+
+  if (value.usageType !== "server_tts") {
+    return null;
+  }
+
   return {
-    inputAudioTokens:
-      pickNumber(value, "inputAudioTokens", "input_audio_tokens") ?? 0,
-    inputTextTokens:
-      pickNumber(value, "inputTextTokens", "input_text_tokens") ?? 0,
-    outputTextTokens:
-      pickNumber(value, "outputTextTokens", "output_text_tokens") ?? 0,
-    totalTokens: pickNumber(value, "totalTokens", "total_tokens") ?? 0,
-    usageType: "realtime_input_transcription",
-    usageUnit: "tokens",
+    inputCharacters:
+      pickNumber(value, "inputCharacters", "input_characters") ?? 0,
+    outputAudioBytes:
+      pickNumber(value, "outputAudioBytes", "output_audio_bytes") ?? 0,
+    usageType: "server_tts",
+    usageUnit: "characters",
   };
 }
 
@@ -526,6 +660,9 @@ export function rollupVoiceInterviewUsage(
   const costBreakdown: Record<string, number> = {
     realtimeInputTranscriptionUsd: 0,
     realtimeResponseUsd: 0,
+    serverAudioTranscriptionUsd: 0,
+    serverTextResponseUsd: 0,
+    serverTtsUsd: 0,
     totalUsd: 0,
   };
   const costNotes = new Set<string>();
@@ -586,27 +723,79 @@ export function rollupVoiceInterviewUsage(
       continue;
     }
 
-    readUsageSummaryValue(usageSummary, "realtimeInputTranscriptions");
-    usageSummary.realtimeInputTranscriptions += 1;
-    costBreakdown.realtimeInputTranscriptionUsd += estimatedCostUsd;
+    if (
+      normalizedUsage.usageType === "realtime_input_transcription" ||
+      normalizedUsage.usageType === "server_audio_transcription"
+    ) {
+      const countKey =
+        normalizedUsage.usageType === "realtime_input_transcription"
+          ? "realtimeInputTranscriptions"
+          : "serverAudioTranscriptions";
+      const costKey =
+        normalizedUsage.usageType === "realtime_input_transcription"
+          ? "realtimeInputTranscriptionUsd"
+          : "serverAudioTranscriptionUsd";
+      readUsageSummaryValue(usageSummary, countKey);
+      usageSummary[countKey] += 1;
+      costBreakdown[costKey] += estimatedCostUsd;
 
-    if (normalizedUsage.usageUnit === "duration") {
-      usageSummary.transcriptionAudioSeconds =
-        readUsageSummaryValue(usageSummary, "transcriptionAudioSeconds") +
-        normalizedUsage.seconds;
-      hasEstimateFailure = hasEstimateFailure || rateSnapshot.notes.length > 0;
+      if (normalizedUsage.usageUnit === "duration") {
+        const secondsKey =
+          normalizedUsage.usageType === "realtime_input_transcription"
+            ? "transcriptionAudioSeconds"
+            : "serverTranscriptionAudioSeconds";
+        usageSummary[secondsKey] =
+          readUsageSummaryValue(usageSummary, secondsKey) +
+          normalizedUsage.seconds;
+        continue;
+      }
+
+      const prefix =
+        normalizedUsage.usageType === "realtime_input_transcription"
+          ? "transcription"
+          : "serverTranscription";
+      usageSummary[`${prefix}AudioInputTokens`] =
+        readUsageSummaryValue(usageSummary, `${prefix}AudioInputTokens`) +
+        normalizedUsage.inputAudioTokens;
+      usageSummary[`${prefix}TextInputTokens`] =
+        readUsageSummaryValue(usageSummary, `${prefix}TextInputTokens`) +
+        normalizedUsage.inputTextTokens;
+      usageSummary[`${prefix}TextOutputTokens`] =
+        readUsageSummaryValue(usageSummary, `${prefix}TextOutputTokens`) +
+        normalizedUsage.outputTextTokens;
       continue;
     }
 
-    usageSummary.transcriptionAudioInputTokens =
-      readUsageSummaryValue(usageSummary, "transcriptionAudioInputTokens") +
-      normalizedUsage.inputAudioTokens;
-    usageSummary.transcriptionTextInputTokens =
-      readUsageSummaryValue(usageSummary, "transcriptionTextInputTokens") +
-      normalizedUsage.inputTextTokens;
-    usageSummary.transcriptionTextOutputTokens =
-      readUsageSummaryValue(usageSummary, "transcriptionTextOutputTokens") +
-      normalizedUsage.outputTextTokens;
+    if (normalizedUsage.usageType === "server_text_response") {
+      readUsageSummaryValue(usageSummary, "serverTextResponses");
+      usageSummary.serverTextResponses += 1;
+      usageSummary.serverTextInputTokens =
+        readUsageSummaryValue(usageSummary, "serverTextInputTokens") +
+        normalizedUsage.inputTextTokens;
+      usageSummary.serverTextCachedInputTokens =
+        readUsageSummaryValue(usageSummary, "serverTextCachedInputTokens") +
+        normalizedUsage.inputCachedTextTokens;
+      usageSummary.serverTextOutputTokens =
+        readUsageSummaryValue(usageSummary, "serverTextOutputTokens") +
+        normalizedUsage.outputTextTokens;
+      usageSummary.serverReasoningTokens =
+        readUsageSummaryValue(usageSummary, "serverReasoningTokens") +
+        normalizedUsage.outputReasoningTokens;
+      costBreakdown.serverTextResponseUsd += estimatedCostUsd;
+      continue;
+    }
+
+    if (normalizedUsage.usageType === "server_tts") {
+      readUsageSummaryValue(usageSummary, "serverTtsResponses");
+      usageSummary.serverTtsResponses += 1;
+      usageSummary.ttsInputCharacters =
+        readUsageSummaryValue(usageSummary, "ttsInputCharacters") +
+        normalizedUsage.inputCharacters;
+      usageSummary.ttsOutputAudioBytes =
+        readUsageSummaryValue(usageSummary, "ttsOutputAudioBytes") +
+        normalizedUsage.outputAudioBytes;
+      costBreakdown.serverTtsUsd += estimatedCostUsd;
+    }
   }
 
   const estimatedCostUsd = roundUsd(costBreakdown.totalUsd);
@@ -617,6 +806,11 @@ export function rollupVoiceInterviewUsage(
         costBreakdown.realtimeInputTranscriptionUsd,
       ),
       realtimeResponseUsd: roundUsd(costBreakdown.realtimeResponseUsd),
+      serverAudioTranscriptionUsd: roundUsd(
+        costBreakdown.serverAudioTranscriptionUsd,
+      ),
+      serverTextResponseUsd: roundUsd(costBreakdown.serverTextResponseUsd),
+      serverTtsUsd: roundUsd(costBreakdown.serverTtsUsd),
       totalUsd: estimatedCostUsd,
     },
     costNotes: costNotes.size > 0 ? Array.from(costNotes) : null,

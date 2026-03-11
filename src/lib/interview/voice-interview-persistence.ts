@@ -20,7 +20,7 @@ export type InterviewMessageRow = {
   meta_label: string;
   previous_item_id: string | null;
   session_id: string;
-  source: "realtime" | "system" | "search";
+  source: "realtime" | "server" | "system" | "search";
   speaker: "assistant" | "user" | "system";
   tone: "default" | "search" | "status" | "error" | null;
   updated_at: string;

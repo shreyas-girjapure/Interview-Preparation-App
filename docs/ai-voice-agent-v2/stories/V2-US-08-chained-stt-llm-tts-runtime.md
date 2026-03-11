@@ -9,8 +9,8 @@ selects a higher-control lane than raw speech-to-speech.
 
 ## Status
 
-- `Status`: Prioritized for implementation; implementation-ready plan drafted
-  around the current codebase (as of 2026-03-12)
+- `Status`: Complete
+- `Shipped`: The chained runtime, db migrations, API endpoints (`/turns`), and runtime routing adapter were all implemented as of 2026-03-12.
 - `Why this exists`: OpenAI's current voice-agent guidance recommends a
   predictable chained architecture for teams that want higher control,
   explicit transcripts, and reliable server-owned orchestration. The voice
@@ -63,47 +63,24 @@ selects a higher-control lane than raw speech-to-speech.
 
 ### Implemented now (2026-03-12)
 
-- Shared observability types already model
-  `VoiceInterviewRuntimeKind = "realtime_sts" | "chained_voice"`.
-- Usage-event validation and server rollups already accept future chained usage
-  sources: `server_text_response`, `server_audio_transcription`, and
-  `server_tts`.
-- Session detail and pricing rollup paths can already store and read usage rows
-  tagged as `chained_voice`.
-- The immersive shell, transcript model, persistence reads, and debrief flow
-  are already generic enough to support a second runtime lane.
-- The app already ships the official `openai` SDK and already has a server-side
-  OpenAI singleton pattern in `src/lib/ai/voice-agent.ts`.
+- Shared observability types already model `VoiceInterviewRuntimeKind = "realtime_sts" | "chained_voice"`.
+- Usage-event validation and server rollups already accept future chained usage sources: `server_text_response`, `server_audio_transcription`, and `server_tts`.
+- Session detail and pricing rollup paths can already store and read usage rows tagged as `chained_voice`.
+- The immersive shell, transcript model, persistence reads, and debrief flow are already generic enough to support a second runtime lane.
+- The app already ships the official `openai` SDK and already has a server-side OpenAI singleton pattern in `src/lib/ai/voice-agent.ts`.
+- Server-owned runtime-selection policy, feature flag, and profile routing.
+- Normalized runtime descriptor in `src/lib/interview/voice-interview-api.ts`.
+- `POST /api/interview/sessions/[sessionId]/turns` endpoint.
+- `src/lib/ai/voice-runtimes/chained-voice.ts` implementation.
+- Browser adapter for committed-turn capture, upload, assistant-audio playback, and half-duplex turn state.
+- Chained-runtime happy-path tests across bootstrap, turn execution, persistence, and session completion.
 
 ### Current codebase constraints
 
-- `POST /api/interview/sessions` still always returns a Realtime-specific
-  payload shaped as `{ clientSecret, realtime }`.
-- `useVoiceInterviewAgent` is Realtime-first and directly instantiates
-  `OpenAIRealtimeWebRTC`; it is not a runtime router yet.
-- The current stage control surface only supports `start`, `cancel setup`,
-  `mute`, `retry`, and `end`. There is no committed-turn action yet.
-- There is no frontend runtime picker yet; the learner cannot currently choose
-  between `realtime_sts` and `chained_voice`.
-- Live Realtime transcript persistence is currently client-driven through the
-  shared `/events` path. That pattern is not the simplest way to run a server-
-  owned chained lane.
-- Session persistence stores Realtime model, transcription model, and voice,
-  but not a normalized runtime kind, runtime profile id, text model, or TTS
-  model snapshot.
-
-### Still pending
-
-- No server-owned runtime-selection policy, feature flag, or profile routing
-  exists yet.
-- No normalized runtime descriptor exists in
-  `src/lib/interview/voice-interview-api.ts`.
-- No `POST /api/interview/sessions/[sessionId]/turns` endpoint exists.
-- No `src/lib/ai/voice-runtimes/chained-voice.ts` implementation exists.
-- No browser adapter exists for committed-turn capture, upload, assistant-audio
-  playback, or half-duplex turn state.
-- No chained-runtime happy-path tests exist across bootstrap, turn execution,
-  persistence, and session completion.
+- `useVoiceInterviewAgent` is still primarily Realtime-first but now includes a runtime router.
+- Frontend runtime picker (`realtime_sts` vs `chained_voice`) still needs UI rollout decisions for some entry points.
+- Live Realtime transcript persistence is client-driven via the shared `/events` path.
+- Session persistence now stores normalized runtime metadata, including `runtime_kind`, `runtime_profile_id`, `runtime_profile_version`, `openai_text_model`, and `openai_tts_model`.
 
 ### Turn terminology
 

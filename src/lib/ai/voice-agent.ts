@@ -1,26 +1,23 @@
-import OpenAI from "openai";
+import type { ClientSecretCreateParams } from "openai/resources/realtime/client-secrets";
 
+import { getServerOpenAiClient } from "@/lib/ai/server-openai";
 import { getVoiceInterviewEnv, type VoiceInterviewEnv } from "@/lib/env";
-import type { VoiceInterviewBootstrapTimingsMs } from "@/lib/interview/voice-interview-api";
+import type {
+  RealtimeWebRtcTransport,
+  VoiceInterviewBootstrapTimingsMs,
+  VoiceInterviewRuntimeDescriptor,
+} from "@/lib/interview/voice-interview-api";
 import { buildVoiceInterviewPrompt } from "@/lib/interview/voice-interview-prompt";
 import type { VoiceInterviewScope } from "@/lib/interview/voice-scope";
 
-export type VoiceInterviewBrowserBootstrap = {
-  clientSecret: {
-    expiresAt: number;
-    value: string;
-  };
-  realtime: {
-    model: string;
-    openAiSessionId: string | null;
-    transcriptionModel: string;
-    voice: string;
-  };
+export type VoiceInterviewRealtimeBootstrap = {
+  runtime: VoiceInterviewRuntimeDescriptor;
   timingsMs: VoiceInterviewBootstrapTimingsMs;
+  transport: RealtimeWebRtcTransport;
 };
 
 type RealtimeClientSecretSessionConfig = NonNullable<
-  Parameters<OpenAI["realtime"]["clientSecrets"]["create"]>[0]["session"]
+  ClientSecretCreateParams["session"]
 >;
 
 type VoiceInterviewRealtimeTracingConfig =
@@ -31,8 +28,6 @@ type VoiceInterviewRealtimeTracingConfig =
     }
   | "auto"
   | null;
-
-let openAiClientSingleton: OpenAI | null = null;
 
 export class VoiceInterviewBootstrapTimeoutError extends Error {
   readonly timeoutMs: number;
@@ -77,15 +72,22 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
   });
 }
 
-function getOpenAiClient() {
-  if (!openAiClientSingleton) {
-    const env = getVoiceInterviewEnv();
-    openAiClientSingleton = new OpenAI({
-      apiKey: env.OPENAI_API_KEY,
-    });
-  }
-
-  return openAiClientSingleton;
+export function buildRealtimeVoiceInterviewRuntimeDescriptor(
+  env: VoiceInterviewEnv,
+): VoiceInterviewRuntimeDescriptor {
+  return {
+    kind: "realtime_sts",
+    models: {
+      realtime: env.OPENAI_REALTIME_MODEL,
+      transcribe: env.OPENAI_REALTIME_TRANSCRIBE_MODEL,
+    },
+    profileId: "realtime_voice_premium",
+    profileVersion: "2026-03-12",
+    selectionSource: "user_preference",
+    transport: "realtime_webrtc",
+    turnStrategy: "server_vad_full_duplex",
+    voice: env.OPENAI_REALTIME_VOICE,
+  };
 }
 
 export function buildVoiceInterviewRealtimeSessionConfig({
@@ -151,9 +153,9 @@ export async function createVoiceInterviewBrowserBootstrap({
 }: {
   scope: VoiceInterviewScope;
   traceConfig?: VoiceInterviewRealtimeTracingConfig;
-}): Promise<VoiceInterviewBrowserBootstrap> {
+}): Promise<VoiceInterviewRealtimeBootstrap> {
   const env = getVoiceInterviewEnv();
-  const client = getOpenAiClient();
+  const client = getServerOpenAiClient();
   const totalStartedAt = nowMs();
   const openAiBootstrapStartedAt = nowMs();
   const sessionConfig = buildVoiceInterviewRealtimeSessionConfig({
@@ -180,19 +182,18 @@ export async function createVoiceInterviewBrowserBootstrap({
       : null;
 
   return {
-    clientSecret: {
-      expiresAt: session.expires_at,
-      value: session.value,
-    },
-    realtime: {
-      model: env.OPENAI_REALTIME_MODEL,
-      openAiSessionId,
-      transcriptionModel: env.OPENAI_REALTIME_TRANSCRIBE_MODEL,
-      voice: env.OPENAI_REALTIME_VOICE,
-    },
+    runtime: buildRealtimeVoiceInterviewRuntimeDescriptor(env),
     timingsMs: {
       openAiBootstrap: openAiBootstrapMs,
       total: roundDurationMs(nowMs() - totalStartedAt),
+    },
+    transport: {
+      clientSecret: {
+        expiresAt: session.expires_at,
+        value: session.value,
+      },
+      openAiSessionId,
+      type: "realtime_webrtc",
     },
   };
 }

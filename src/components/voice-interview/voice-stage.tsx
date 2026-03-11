@@ -1,35 +1,41 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   AudioLines,
+  Bot,
   Clock3,
   LoaderCircle,
   Mic,
   MicOff,
   PhoneOff,
   RotateCcw,
+  Send,
   User,
-  Bot,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import type { VoiceInterviewRuntimeKind } from "@/lib/interview/voice-interview-observability";
 import type {
   VoiceInterviewSessionSnapshot,
   VoiceInterviewStage,
 } from "@/lib/interview/voice-interview-session";
 
 type VoiceStageProps = {
+  canCommitTurn?: boolean;
   canRecoverBlockingSession?: boolean;
+  isProcessingTurn?: boolean;
   isRecoveringBlockingSession?: boolean;
   isMuted?: boolean;
   isUserSpeaking?: boolean;
   isAgentSpeaking?: boolean;
   onCancelSetup: () => void;
+  onCommitTurn?: () => void;
   onEnd: () => void;
   onRecoverBlockingSession?: () => void;
   onRetry: () => void;
   onStart: () => void;
   onToggleMute: () => void;
+  runtimeKind?: VoiceInterviewRuntimeKind;
   session: VoiceInterviewSessionSnapshot;
   stage: VoiceInterviewStage;
 };
@@ -59,7 +65,6 @@ const visualToneMap: Record<
     iconBg: string;
   }
 > = {
-  // --- NON-LIVE STAGES ---
   ready: {
     bg: "bg-sky-50 shadow-sky-900/5 border-sky-100",
     innerBg: "bg-sky-100/40",
@@ -108,8 +113,6 @@ const visualToneMap: Record<
     endButtonIcon: "text-rose-600",
     iconBg: "bg-rose-200 text-rose-800",
   },
-
-  // --- LIVE VAD STAGES ---
   listening: {
     bg: "bg-emerald-50 shadow-emerald-900/5 border-emerald-100",
     innerBg: "bg-emerald-100/40",
@@ -214,39 +217,41 @@ function StatusRow({
 }
 
 export function VoiceStage({
+  canCommitTurn,
   canRecoverBlockingSession,
+  isProcessingTurn,
   isRecoveringBlockingSession,
   isMuted,
   isUserSpeaking,
   isAgentSpeaking,
   onCancelSetup,
+  onCommitTurn,
   onEnd,
   onRecoverBlockingSession,
   onRetry,
   onStart,
   onToggleMute,
+  runtimeKind = "realtime_sts",
   session,
   stage,
 }: VoiceStageProps) {
   const [audioLevel, setAudioLevel] = useState(0);
 
-  // Audio waveform simulation driven by actual event states
   useEffect(() => {
     if (isUserSpeaking || isAgentSpeaking) {
       const interval = setInterval(() => {
-        // Generate a random audio level spike between 0.2 and 1.0 representing active audio volume
         setAudioLevel(0.2 + Math.random() * 0.8);
       }, 120);
       return () => clearInterval(interval);
-    } else {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAudioLevel(0);
     }
+
+    setAudioLevel(0);
   }, [isUserSpeaking, isAgentSpeaking]);
 
   let activeState: VisualState = stage === "live" ? "listening" : stage;
   if (stage === "live") {
-    if (isMuted && isAgentSpeaking) activeState = "agent-speaking-muted";
+    if (isProcessingTurn) activeState = "connecting";
+    else if (isMuted && isAgentSpeaking) activeState = "agent-speaking-muted";
     else if (isMuted) activeState = "muted";
     else if (isUserSpeaking) activeState = "user-speaking";
     else if (isAgentSpeaking) activeState = "agent-speaking";
@@ -257,6 +262,11 @@ export function VoiceStage({
   const showQuickEnd = stage === "connecting" || stage === "live";
   const showBlockingRecoveryAction =
     stage === "failed" && Boolean(canRecoverBlockingSession);
+  const showCommitAction =
+    stage === "live" &&
+    runtimeKind === "chained_voice" &&
+    Boolean(onCommitTurn) &&
+    Boolean(canCommitTurn);
 
   let CenterIcon = Mic;
   if (activeState === "ready") CenterIcon = Mic;
@@ -274,10 +284,12 @@ export function VoiceStage({
       onStart();
       return;
     }
+
     if (stage === "live") {
       onToggleMute();
       return;
     }
+
     if (stage === "failed") {
       if (canRecoverBlockingSession && onRecoverBlockingSession) {
         onRecoverBlockingSession();
@@ -290,8 +302,6 @@ export function VoiceStage({
 
   const PrimaryText = tone.primaryText;
   const SecondaryText = tone.secondaryText;
-
-  // Audio driven scale mappings
   const shouldAnimateBreathing =
     activeState === "user-speaking" ||
     activeState === "agent-speaking" ||
@@ -316,7 +326,18 @@ export function VoiceStage({
             tone.innerBg,
           )}
         >
-          <div className="flex justify-end relative z-10 min-h-8">
+          <div className="relative z-10 flex min-h-8 items-center justify-end gap-2">
+            {showCommitAction ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="rounded-2xl bg-white/60"
+                onClick={onCommitTurn}
+              >
+                <Send className="mr-2 size-4" />
+                Send now
+              </Button>
+            ) : null}
             {showQuickEnd && (
               <Button
                 size="icon-sm"
@@ -355,7 +376,6 @@ export function VoiceStage({
           </div>
 
           <div className="relative mx-auto mt-8 flex size-72 items-center justify-center md:size-[22rem] xl:size-[25rem]">
-            {/* Outer ring wrapper for scale */}
             <div
               className="absolute size-[92%] transition-all duration-300 ease-in-out"
               style={{ transform: `scale(${getScale(0.15)})` }}
@@ -368,7 +388,6 @@ export function VoiceStage({
               />
             </div>
 
-            {/* Middle ring wrapper for scale */}
             <div
               className="absolute size-[74%] transition-all duration-300 ease-in-out"
               style={{ transform: `scale(${getScale(0.08)})` }}
@@ -381,7 +400,6 @@ export function VoiceStage({
               />
             </div>
 
-            {/* Inner ring wrapper for scale */}
             <div
               className="absolute size-[56%] transition-all duration-300 ease-in-out"
               style={{ transform: `scale(${getScale(0.04)})` }}
@@ -396,12 +414,14 @@ export function VoiceStage({
 
             <button
               onClick={handleCenterAction}
-              disabled={stage === "connecting"}
+              disabled={stage === "connecting" || Boolean(isProcessingTurn)}
               className={cn(
                 "relative flex size-[42%] items-center justify-center rounded-[50%_50%_40%_60%/60%_40%_60%_40%] shadow-[0_10px_20px_-10px_currentColor] transition-all duration-300 ease-in-out outline-none focus-visible:ring-4 focus-visible:ring-ring/40",
                 stage !== "connecting" &&
+                  !isProcessingTurn &&
                   "hover:brightness-110 active:brightness-90 cursor-pointer",
-                stage === "connecting" && "cursor-wait opacity-80",
+                (stage === "connecting" || isProcessingTurn) &&
+                  "cursor-wait opacity-80",
                 tone.button,
               )}
               style={{ transform: `scale(${getScale(0.02)})` }}
@@ -409,7 +429,7 @@ export function VoiceStage({
               <CenterIcon
                 className={cn(
                   "size-14",
-                  activeState === "connecting" &&
+                  (activeState === "connecting" || isProcessingTurn) &&
                     "motion-safe:animate-spin [animation-duration:2.8s]",
                 )}
               />
@@ -417,14 +437,13 @@ export function VoiceStage({
           </div>
         </div>
 
-        <div className="bg-white/60 p-6 md:p-8 xl:rounded-bl-[3rem] xl:rounded-tl-none border-t border-black/5 xl:border-t-0 xl:border-l relative overflow-hidden">
-          {/* Decorative background ping for active states */}
+        <div className="relative overflow-hidden border-t border-black/5 bg-white/60 p-6 md:p-8 xl:rounded-bl-[3rem] xl:rounded-tl-none xl:border-t-0 xl:border-l">
           {(activeState === "user-speaking" ||
             activeState === "agent-speaking" ||
             activeState === "agent-speaking-muted") && (
             <div
               className={cn(
-                "absolute top-0 right-0 size-32 opacity-20 blur-3xl rounded-full transition-colors duration-1000",
+                "absolute top-0 right-0 size-32 rounded-full opacity-20 blur-3xl transition-colors duration-1000",
                 activeState === "user-speaking"
                   ? "bg-teal-500"
                   : "bg-indigo-500",
@@ -451,13 +470,13 @@ export function VoiceStage({
             </p>
           </div>
 
-          <div className="mt-8 space-y-6 relative z-10">
+          <div className="relative z-10 mt-8 space-y-6">
             <StatusRow
               icon={Mic}
               label="Microphone"
               value={session.micLabel}
               iconClassName={cn(
-                "transition-colors duration-500 ease-in-out rounded-[40%_60%_70%_30%/50%_60%_30%_60%]",
+                "rounded-[40%_60%_70%_30%/50%_60%_30%_60%] transition-colors duration-500 ease-in-out",
                 tone.iconBg,
               )}
               textClassName={PrimaryText}
@@ -467,7 +486,7 @@ export function VoiceStage({
               label="Elapsed"
               value={session.elapsedLabel}
               iconClassName={cn(
-                "transition-colors duration-500 ease-in-out rounded-[50%_50%_40%_60%/60%_40%_60%_40%]",
+                "rounded-[50%_50%_40%_60%/60%_40%_60%_40%] transition-colors duration-500 ease-in-out",
                 tone.iconBg,
               )}
               textClassName={PrimaryText}
@@ -477,7 +496,7 @@ export function VoiceStage({
               label="Transcript"
               value={session.transcriptCountLabel}
               iconClassName={cn(
-                "transition-colors duration-500 ease-in-out rounded-[60%_40%_30%_70%/60%_30%_70%_40%]",
+                "rounded-[60%_40%_30%_70%/60%_30%_70%_40%] transition-colors duration-500 ease-in-out",
                 tone.iconBg,
               )}
               textClassName={PrimaryText}

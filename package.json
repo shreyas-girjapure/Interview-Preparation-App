@@ -22,6 +22,7 @@
     "db:seed:local": "node scripts/run-local-supabase-cli.mjs db push --local --include-seed --yes",
     "db:reset:local": "node scripts/run-local-supabase-cli.mjs db reset --local --yes",
     "db:dump:seed:local": "node scripts/run-local-supabase-cli.mjs db dump --local --data-only -f supabase/seed.sql",
+    "debug:voice-session": "node scripts/debug-voice-interview-session.mjs",
     "db:smoke:guardrail": "node scripts/smoke-published-question-topic-guardrail.mjs",
     "db:smoke:guardrail:dev": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref stxikhpofortkerjeuhf",
     "db:smoke:guardrail:prod": "node scripts/smoke-published-question-topic-guardrail.mjs --project-ref xglbjcouoyjegryxorqo",

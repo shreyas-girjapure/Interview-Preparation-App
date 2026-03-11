@@ -5,6 +5,7 @@ import {
   VOICE_INTERVIEW_RUNTIME_KIND,
   VOICE_INTERVIEW_SERVICE_PROVIDER,
   type VoiceInterviewPricingRate,
+  type VoiceInterviewRuntimeKind,
   type VoiceInterviewTelemetryEventRequest,
   type VoiceInterviewUsageEventRequest,
 } from "@/lib/interview/voice-interview-observability";
@@ -18,7 +19,10 @@ type InterviewSessionObservabilityRow = {
   cost_status: "pending" | "estimated" | "estimate_failed";
   estimated_cost_currency: string | null;
   openai_model: string | null;
+  openai_text_model: string | null;
   openai_transcription_model: string | null;
+  openai_tts_model: string | null;
+  runtime_kind: string | null;
 };
 
 type InterviewSessionEventRow = {
@@ -156,6 +160,24 @@ async function listVoiceInterviewPricingRates(
   }
 }
 
+function resolveRuntimeKind({
+  event,
+  session,
+}: {
+  event: VoiceInterviewUsageEventRequest;
+  session: InterviewSessionObservabilityRow;
+}): VoiceInterviewRuntimeKind {
+  if (event.runtimeKind?.trim() === "chained_voice") {
+    return "chained_voice";
+  }
+
+  if (session.runtime_kind === "chained_voice") {
+    return "chained_voice";
+  }
+
+  return VOICE_INTERVIEW_RUNTIME_KIND;
+}
+
 function resolveUsageModel({
   event,
   session,
@@ -169,8 +191,19 @@ function resolveUsageModel({
     return model;
   }
 
-  if (event.usageSource === "realtime_input_transcription") {
+  if (
+    event.usageSource === "realtime_input_transcription" ||
+    event.usageSource === "server_audio_transcription"
+  ) {
     return session.openai_transcription_model ?? "gpt-4o-mini-transcribe";
+  }
+
+  if (event.usageSource === "server_text_response") {
+    return session.openai_text_model ?? session.openai_model ?? "gpt-5-mini";
+  }
+
+  if (event.usageSource === "server_tts") {
+    return session.openai_tts_model ?? "gpt-4o-mini-tts";
   }
 
   return session.openai_model ?? "gpt-realtime";
@@ -237,13 +270,14 @@ async function upsertInterviewSessionUsageEvents({
           event,
           session,
         });
+        const runtimeKind = resolveRuntimeKind({
+          event,
+          session,
+        });
         const estimation = estimateVoiceInterviewUsage({
           model,
           pricingRates,
-          runtimeKind:
-            event.runtimeKind?.trim() === "chained_voice"
-              ? "chained_voice"
-              : VOICE_INTERVIEW_RUNTIME_KIND,
+          runtimeKind,
           serviceTier:
             event.serviceTier ?? VOICE_INTERVIEW_DEFAULT_SERVICE_TIER,
           usage: event.usage,
@@ -268,10 +302,7 @@ async function upsertInterviewSessionUsageEvents({
           provider_usage_json: event.rawUsage ?? event.usage,
           rate_snapshot_json: rateSnapshot,
           recorded_at: event.recordedAt,
-          runtime_kind:
-            event.runtimeKind?.trim() === "chained_voice"
-              ? "chained_voice"
-              : VOICE_INTERVIEW_RUNTIME_KIND,
+          runtime_kind: runtimeKind,
           service_tier:
             event.serviceTier?.trim() || VOICE_INTERVIEW_DEFAULT_SERVICE_TIER,
           session_id: sessionId,
