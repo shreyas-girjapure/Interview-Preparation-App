@@ -242,10 +242,11 @@ export function VoiceStage({
       const interval = setInterval(() => {
         setAudioLevel(0.2 + Math.random() * 0.8);
       }, 120);
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+        setAudioLevel(0);
+      };
     }
-
-    setAudioLevel(0);
   }, [isUserSpeaking, isAgentSpeaking]);
 
   let activeState: VisualState = stage === "live" ? "listening" : stage;

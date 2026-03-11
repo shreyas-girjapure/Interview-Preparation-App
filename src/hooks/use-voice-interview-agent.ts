@@ -7,7 +7,7 @@ import {
   type TransportError,
   type TransportLayerTranscriptDelta,
 } from "@openai/agents/realtime";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import type {
   CancelInterviewSessionRequest,
@@ -1669,7 +1669,7 @@ export function useVoiceInterviewAgent({
     setRuntimeDescriptor(null);
   }
 
-  function releaseMediaAndTransportResources() {
+  const releaseMediaAndTransportResources = useCallback(() => {
     clearTimeoutRef(agentSpeakingTimeoutRef);
     clearTimeoutRef(disconnectFailureTimeoutRef);
     clearTimeoutRef(turnAnalysisIntervalRef);
@@ -1688,7 +1688,7 @@ export function useVoiceInterviewAgent({
     transportRef.current = null;
     stopMediaStream(mediaStreamRef.current);
     mediaStreamRef.current = null;
-  }
+  }, []);
 
   function releaseActiveResources() {
     bootstrapAbortRef.current?.abort();
@@ -1832,7 +1832,7 @@ export function useVoiceInterviewAgent({
       bootstrapAbortRef.current = null;
       releaseMediaAndTransportResources();
     };
-  }, []);
+  }, [releaseMediaAndTransportResources]);
 
   async function postInterviewSessionHeartbeat(
     sessionId: string,

@@ -1,0 +1,15 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.18 [39m[90mE:/Programming Stuff/JS Related/Interview-Preparation-App[39m
+
+ [31m❯[39m src/lib/interview/voice-interview-runtime.test.ts [2m([22m[2m5 tests[22m[2m | [22m[31m2 failed[39m[2m)[22m[32m 12[2mms[22m[39m
+[31m     [31m×[31m maps assistant audio deltas into transcript items[39m[32m 8[2mms[22m[39m
+     [32m✓[39m inserts new transcript items after their previous item[32m 0[2mms[22m[39m
+[31m     [31m×[31m builds a finalized user transcript item from raw transcription text[39m[32m 1[2mms[22m[39m
+     [32m✓[39m repositions an existing transcript item when the previous item becomes known[32m 0[2mms[22m[39m
+     [32m✓[39m counts only finalized conversation turns in the runtime snapshot[32m 1[2mms[22m[39m
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[31m2 failed[39m[22m[2m | [22m[1m[32m3 passed[39m[22m[90m (5)[39m
+[2m   Start at [22m 02:53:17
+[2m   Duration [22m 266ms[2m (transform 58ms, setup 0ms, import 78ms, tests 12ms, environment 0ms)[22m
+
