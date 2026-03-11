@@ -495,6 +495,13 @@ export function useVoiceInterviewAgent({
     Record<string, string | null | undefined>
   >({});
   const persistFlushTimeoutRef = useRef<BrowserTimeoutId | null>(null);
+  const schedulePersistFlushRef = useRef<
+    (options?: {
+      force?: boolean;
+      keepalive?: boolean;
+      immediate?: boolean;
+    }) => void
+  >(() => {});
   const serverTimingsRef = useRef<
     CreateVoiceInterviewSessionResponse["timingsMs"] | undefined
   >(undefined);
@@ -507,6 +514,22 @@ export function useVoiceInterviewAgent({
   const transportRef = useRef<OpenAIRealtimeWebRTC | null>(null);
   const attemptIdRef = useRef(0);
   const agentSpeakingTimeoutRef = useRef<BrowserTimeoutId | null>(null);
+  const handleHeartbeatStateMismatchRef = useRef<
+    (heartbeat: VoiceInterviewSessionHeartbeatResponse) => void
+  >(() => {});
+  const handleSessionEndedRemotelyRef = useRef<(message: string) => void>(
+    () => {},
+  );
+  const cancelInterviewSessionRef = useRef<
+    (
+      sessionId: string,
+      reason: CancelInterviewSessionRequest["reason"],
+      options?: {
+        keepalive?: boolean;
+        preferBeacon?: boolean;
+      },
+    ) => Promise<void>
+  >(async () => {});
   const disconnectFailureTimeoutRef = useRef<BrowserTimeoutId | null>(null);
 
   const [connectionLabel, setConnectionLabel] = useState<string | undefined>();
@@ -598,7 +621,7 @@ export function useVoiceInterviewAgent({
       return;
     }
 
-    schedulePersistFlush();
+    schedulePersistFlushRef.current();
 
     return () => {
       clearTimeoutRef(persistFlushTimeoutRef);
@@ -624,7 +647,7 @@ export function useVoiceInterviewAgent({
             return;
           }
 
-          handleHeartbeatStateMismatch(heartbeat);
+          handleHeartbeatStateMismatchRef.current(heartbeat);
         })
         .catch((error) => {
           if (didDispose) {
@@ -710,6 +733,8 @@ export function useVoiceInterviewAgent({
       options?.immediate ? 0 : PERSIST_FLUSH_DEBOUNCE_MS,
     );
   }
+
+  schedulePersistFlushRef.current = schedulePersistFlush;
 
   function enqueueTelemetryEvent(event: VoiceInterviewTelemetryEventRequest) {
     pendingTelemetryEventsRef.current = [
@@ -858,6 +883,8 @@ export function useVoiceInterviewAgent({
 
     lastPersistedSignatureRef.current = signature;
   }
+
+  cancelInterviewSessionRef.current = cancelInterviewSession;
 
   async function forceEndBlockingSession(sessionId: string) {
     const response = await fetch(
@@ -1081,6 +1108,8 @@ export function useVoiceInterviewAgent({
     });
   }
 
+  handleSessionEndedRemotelyRef.current = handleSessionEndedRemotely;
+
   function handleHeartbeatStateMismatch(
     heartbeat: VoiceInterviewSessionHeartbeatResponse,
   ) {
@@ -1096,6 +1125,8 @@ export function useVoiceInterviewAgent({
       "This interview was ended from another tab or by server policy. Start a new round to continue.",
     );
   }
+
+  handleHeartbeatStateMismatchRef.current = handleHeartbeatStateMismatch;
 
   useEffect(() => {
     if (typeof BroadcastChannel === "undefined") {
@@ -1115,7 +1146,7 @@ export function useVoiceInterviewAgent({
         return;
       }
 
-      handleSessionEndedRemotely(
+      handleSessionEndedRemotelyRef.current(
         "This interview was ended from another tab. Start a new round to continue.",
       );
     };
@@ -1140,15 +1171,17 @@ export function useVoiceInterviewAgent({
         const reason: CancelInterviewSessionRequest["reason"] =
           stageAtUnmount === "live" ? "page_unload" : "setup_abort";
 
-        void cancelInterviewSession(sessionId, reason, {
-          keepalive: true,
-          preferBeacon: true,
-        }).catch((error) => {
-          console.error(
-            "Unable to persist cancel interview session on page unload",
-            error,
-          );
-        });
+        void cancelInterviewSessionRef
+          .current(sessionId, reason, {
+            keepalive: true,
+            preferBeacon: true,
+          })
+          .catch((error) => {
+            console.error(
+              "Unable to persist cancel interview session on page unload",
+              error,
+            );
+          });
       }
 
       attemptIdRef.current += 1;

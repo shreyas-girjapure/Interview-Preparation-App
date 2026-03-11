@@ -43,7 +43,7 @@ export function VoiceInterviewShell({
         >
           <Link href={backHref}>
             <ArrowLeft className="size-4" />
-            Back to topic
+            Back
           </Link>
         </Button>
 
@@ -54,6 +54,19 @@ export function VoiceInterviewShell({
           <p className="mx-auto mt-4 max-w-2xl text-lg text-muted-foreground">
             {description}
           </p>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            <span className="rounded-full border border-border/70 bg-background/70 px-3 py-1.5">
+              {scopeLabel}
+            </span>
+            <span className="rounded-full border border-border/70 bg-background/70 px-3 py-1.5">
+              {runtimeLabel}
+            </span>
+            {previewLabel ? (
+              <span className="rounded-full border border-amber-300/80 bg-amber-50 px-3 py-1.5 text-amber-800">
+                {previewLabel}
+              </span>
+            ) : null}
+          </div>
         </header>
 
         <div className="mx-auto max-w-4xl space-y-4">

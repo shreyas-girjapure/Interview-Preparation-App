@@ -165,7 +165,6 @@ export function ActiveVADStates() {
       return () => clearInterval(interval);
     } else {
       // Smoothly drop back to 0 when quiet
-      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAudioLevel(0);
     }
   }, [vadState, simulatedAgentSpeaking]);
