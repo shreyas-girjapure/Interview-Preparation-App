@@ -14,6 +14,10 @@ vi.mock("@/lib/interview/voice-interview-sessions", () => ({
   },
   markInterviewSessionFailed: vi.fn(),
   markInterviewSessionReady: vi.fn(),
+  VOICE_INTERVIEW_PERSISTENCE_VERSION: "transcript-persistence-v1",
+  VOICE_INTERVIEW_PROMPT_VERSION: "voice-prompt-v2-2026-03-10",
+  VOICE_INTERVIEW_SEARCH_POLICY_VERSION: "docs-search-v1",
+  VOICE_INTERVIEW_TRANSPORT_VERSION: "agents-webrtc-v1",
 }));
 
 vi.mock("@/lib/interview/voice-scope", () => ({
@@ -67,6 +71,7 @@ const mockedMarkInterviewSessionFailed = vi.mocked(markInterviewSessionFailed);
 const mockedMarkInterviewSessionReady = vi.mocked(markInterviewSessionReady);
 const mockedResolveVoiceInterviewScope = vi.mocked(resolveVoiceInterviewScope);
 const mockedCreateSupabaseServerClient = vi.mocked(createSupabaseServerClient);
+const sessionId = "11111111-1111-4111-8111-111111111111";
 
 const scope = {
   evaluationDimensions: ["Concept precision"],
@@ -120,7 +125,7 @@ describe("POST /api/interview/sessions", () => {
     mockedEnsureInterviewSessionUserProfile.mockResolvedValue(undefined);
     mockedGetBlockingInterviewSessionForUser.mockResolvedValue(null);
     mockedCreateInterviewSessionRecord.mockResolvedValue({
-      id: "session-1",
+      id: sessionId,
     } as Awaited<ReturnType<typeof createInterviewSessionRecord>>);
     mockedMarkInterviewSessionReady.mockResolvedValue(undefined);
     mockedMarkInterviewSessionFailed.mockResolvedValue(undefined);
@@ -160,7 +165,7 @@ describe("POST /api/interview/sessions", () => {
           value: "client-secret",
         },
         localSession: {
-          id: "session-1",
+          id: sessionId,
           scopeSlug: "javascript",
           scopeTitle: "JavaScript",
           scopeType: "topic",
@@ -183,7 +188,7 @@ describe("POST /api/interview/sessions", () => {
     expect(mockedMarkInterviewSessionReady).toHaveBeenCalledWith(
       expect.objectContaining({
         model: "gpt-realtime",
-        sessionId: "session-1",
+        sessionId,
         transcriptionModel: "gpt-4o-mini-transcribe",
         voice: "marin",
       }),
@@ -212,7 +217,7 @@ describe("POST /api/interview/sessions", () => {
     expect(mockedMarkInterviewSessionFailed).toHaveBeenCalledWith(
       expect.objectContaining({
         errorCode: "openai_bootstrap_timeout",
-        sessionId: "session-1",
+        sessionId,
       }),
     );
   });
@@ -283,5 +288,16 @@ describe("POST /api/interview/sessions", () => {
         errorCode: "live_session_exists",
       }),
     );
+  });
+
+  it("returns 400 for an invalid scope slug", async () => {
+    const response = await POST(
+      createRequest({
+        scopeSlug: "not a slug",
+        scopeType: scope.scopeType,
+      }),
+    );
+
+    expect(response.status).toBe(400);
   });
 });

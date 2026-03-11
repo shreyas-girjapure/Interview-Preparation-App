@@ -55,22 +55,19 @@ Local auth flow in this app:
 
 ## Supabase DB schema setup
 
-Apply the initial schema + RLS migration from:
-
-- `supabase/migrations/20260214014000_phase1_schema.sql`
-
-You can run it in Supabase SQL Editor, or with Supabase CLI if you use local/dev databases.
-
-For ongoing table/column/index changes, use:
+For local Supabase schema and seed workflows, use:
 
 - `docs/MIGRATION_AND_SCRIPTS.md`
-- `scripts/supabase-migrate.ps1`
+- `node scripts/run-local-supabase-cli.mjs ...`
 
 Common DB workflow commands:
 
 ```bash
-npm run db:migrate:dev:dry
-npm run db:migrate:dev
+npm run db:start:local
+npm run db:status:local
+npm run db:migrate:local
+npm run db:migrate:local:seed
+npm run db:reset:local
 npm run db:smoke:guardrail:dev
 ```
 
@@ -88,6 +85,8 @@ Cutover runbook:
 
 Notes:
 
+- `db:migrate:local:seed` is the standard non-destructive local path when a feature depends on rows in `supabase/seed.sql`.
+- `db:seed:local` applies `supabase/seed.sql` when the seed file hash changed, which is why `supabase/seed.sql` must stay idempotent.
 - `db:smoke:guardrail*` validates the published-question topic-link guardrail end to end and cleans up test data.
 - It uses `SUPABASE_SERVICE_ROLE_KEY` when present; if that value is a placeholder, it falls back to fetching the key using `SUPABASE_ACCESS_TOKEN`.
 

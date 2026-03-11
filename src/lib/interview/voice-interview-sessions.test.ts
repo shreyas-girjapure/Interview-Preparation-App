@@ -339,6 +339,84 @@ describe("voice interview session policy", () => {
     );
   });
 
+  it("reclaims stale active sessions after missed heartbeats", async () => {
+    const staleActiveRow = createSessionRow("active", {
+      created_at: "2026-03-10T08:00:00.000Z",
+      last_client_flush_at: "2026-03-10T08:02:00.000Z",
+      last_client_heartbeat_at: "2026-03-10T08:03:00.000Z",
+      started_at: "2026-03-10T08:01:00.000Z",
+      updated_at: "2026-03-10T08:03:00.000Z",
+    });
+    const maybeSingle = vi.fn().mockResolvedValue({
+      data: staleActiveRow,
+      error: null,
+    });
+    const limit = vi.fn().mockResolvedValue({
+      data: [staleActiveRow],
+      error: null,
+    });
+    const order = vi.fn().mockReturnValue({
+      limit,
+    });
+    const inFn = vi.fn().mockReturnValue({
+      order,
+    });
+    const eqFn = vi.fn((column: string) => {
+      if (column === "user_id") {
+        return {
+          in: inFn,
+        };
+      }
+
+      return {
+        maybeSingle,
+      };
+    });
+    const updateMaybeSingle = vi.fn().mockResolvedValue({
+      data: {
+        forced_end_at: "2026-03-10T12:00:00.000Z",
+        forced_end_reason: "stale_session",
+        state: "cancelled",
+      },
+      error: null,
+    });
+    const updateSelect = vi.fn().mockReturnValue({
+      maybeSingle: updateMaybeSingle,
+    });
+    const updateIn = vi.fn().mockReturnValue({
+      select: updateSelect,
+    });
+    const updateEq = vi.fn().mockReturnValue({
+      in: updateIn,
+      select: updateSelect,
+    });
+    const update = vi.fn().mockReturnValue({
+      eq: updateEq,
+    });
+    const supabase = {
+      from: vi.fn(() => ({
+        select: vi.fn().mockReturnValue({
+          eq: eqFn,
+        }),
+        update,
+      })),
+    };
+
+    const blocking = await getBlockingInterviewSessionForUser({
+      supabase: supabase as never,
+      userId: "user-1",
+    });
+
+    expect(blocking).toBeNull();
+    expect(update).toHaveBeenCalledTimes(1);
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        forced_end_reason: "stale_session",
+        state: "cancelled",
+      }),
+    );
+  });
+
   it("force-ends active sessions with an auditable reason", async () => {
     const activeRow = createSessionRow("active");
     const maybeSingle = vi.fn().mockResolvedValue({

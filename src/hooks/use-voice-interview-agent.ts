@@ -14,12 +14,20 @@ import type {
   CompleteInterviewSessionRequest,
   CompleteInterviewSessionResponse,
   CreateVoiceInterviewSessionResponse,
+  ForceEndInterviewSessionReason,
   PersistInterviewEventsRequest,
   PersistedVoiceInterviewDebrief,
   UpdateVoiceInterviewSessionRequest,
   VoiceInterviewBlockingSession,
   VoiceInterviewPersistedTranscriptItem,
+  VoiceInterviewSessionHeartbeatResponse,
 } from "@/lib/interview/voice-interview-api";
+import {
+  VOICE_INTERVIEW_DEFAULT_SERVICE_TIER,
+  VOICE_INTERVIEW_RUNTIME_KIND,
+  type VoiceInterviewTelemetryEventRequest,
+  type VoiceInterviewUsageEventRequest,
+} from "@/lib/interview/voice-interview-observability";
 import {
   activateVoiceInterviewSession,
   logVoiceInterviewTimings,
@@ -37,6 +45,7 @@ import {
   removeVoiceInterviewTranscriptItem,
   upsertVoiceInterviewTranscriptItem,
 } from "@/lib/interview/voice-interview-runtime";
+import { toAbsoluteVoiceInterviewCitationUrl } from "@/lib/interview/voice-interview-citations";
 import type {
   VoiceInterviewCompletionSummary,
   VoiceInterviewSessionSnapshot,
@@ -51,9 +60,12 @@ type UseVoiceInterviewAgentOptions = {
 
 type VoiceInterviewAgentSession = {
   audioElementRef: React.RefObject<HTMLAudioElement | null>;
+  canRecoverBlockingSession: boolean;
+  isRecoveringBlockingSession: boolean;
   isMuted: boolean;
   isUserSpeaking: boolean;
   isAgentSpeaking: boolean;
+  recoverBlockingSession: () => void;
   session: VoiceInterviewSessionSnapshot;
   stage: VoiceInterviewStage;
   start: () => void;
@@ -71,10 +83,16 @@ type ApiErrorResponse = {
 };
 
 class VoiceInterviewClientError extends Error {
+  readonly blockingSession?: VoiceInterviewBlockingSession;
   readonly code: string;
 
-  constructor(code: string, message: string) {
+  constructor(
+    code: string,
+    message: string,
+    blockingSession?: VoiceInterviewBlockingSession,
+  ) {
     super(message);
+    this.blockingSession = blockingSession;
     this.code = code;
     this.name = "VoiceInterviewClientError";
   }
@@ -98,6 +116,13 @@ const REALTIME_DISCONNECT_GRACE_MS = 3_500;
 const CONNECTION_INTERRUPTED_STATUS_ID = "connection-interrupted";
 const PERSIST_FLUSH_DEBOUNCE_MS = 900;
 const SESSION_HEARTBEAT_INTERVAL_MS = 45_000;
+const VOICE_INTERVIEW_CONTROL_CHANNEL = "voice-interview-control";
+
+type VoiceInterviewControlMessage = {
+  reason: ForceEndInterviewSessionReason;
+  sessionId: string;
+  type: "session-force-ended";
+};
 
 type ExperimentalAudioTrackConstraints = MediaTrackConstraints & {
   voiceIsolation?: ConstrainBoolean;
@@ -152,7 +177,7 @@ function buildPersistableFinalizedItems(
         label: citation.label,
         source: citation.source,
         title: citation.label,
-        url: citation.href,
+        url: toAbsoluteVoiceInterviewCitationUrl(citation.href),
       })),
       clientSequence: persisted.length,
       finalizedAt: finalizedAtById[item.id],
@@ -364,6 +389,38 @@ function getTransportErrorMessage(error: TransportError) {
   return normalizeClientError(error.error);
 }
 
+function logVoiceInterviewFailure({
+  attemptId,
+  error,
+  label,
+  normalizedError,
+  scopeSlug,
+  sessionId,
+  stage,
+}: {
+  attemptId: number;
+  error: unknown;
+  label: string;
+  normalizedError?: VoiceInterviewClientError;
+  scopeSlug: string;
+  sessionId?: string | null;
+  stage: VoiceInterviewStage;
+}) {
+  console.error(`[voice-interview] ${label}`, {
+    attemptId,
+    normalizedError: normalizedError
+      ? {
+          code: normalizedError.code,
+          message: normalizedError.message,
+        }
+      : null,
+    rawError: error,
+    scopeSlug,
+    sessionId: sessionId ?? null,
+    stage,
+  });
+}
+
 async function createInterviewSessionBootstrap(
   scope: VoiceInterviewScope,
   signal: AbortSignal,
@@ -396,6 +453,7 @@ async function createInterviewSessionBootstrap(
       throw new VoiceInterviewClientError(
         "live_session_exists",
         buildLiveSessionConflictMessage(errorResponse?.blockingSession),
+        errorResponse?.blockingSession,
       );
     }
 
@@ -414,6 +472,7 @@ export function useVoiceInterviewAgent({
   const audioElementRef = useRef<HTMLAudioElement | null>(null);
   const assistantTranscriptRef = useRef<Record<string, string>>({});
   const bootstrapAbortRef = useRef<AbortController | null>(null);
+  const controlChannelRef = useRef<BroadcastChannel | null>(null);
   const conversationItemsRef = useRef<VoiceInterviewTranscriptItem[]>([]);
   const clientTimingsRef = useRef<VoiceInterviewClientTimingsMs>({});
   const elapsedSecondsRef = useRef(0);
@@ -424,7 +483,14 @@ export function useVoiceInterviewAgent({
   >(null);
   const lastPersistedSignatureRef = useRef("");
   const localSessionIdRef = useRef<string | null>(null);
+  const realtimeModelRef = useRef<string | null>(null);
+  const transcriptionModelRef = useRef<string | null>(null);
+  const serviceTierRef = useRef<string>(VOICE_INTERVIEW_DEFAULT_SERVICE_TIER);
   const mediaStreamRef = useRef<MediaStream | null>(null);
+  const pendingTelemetryEventsRef = useRef<
+    VoiceInterviewTelemetryEventRequest[]
+  >([]);
+  const pendingUsageEventsRef = useRef<VoiceInterviewUsageEventRequest[]>([]);
   const pendingTranscriptPreviousItemRef = useRef<
     Record<string, string | null | undefined>
   >({});
@@ -450,8 +516,13 @@ export function useVoiceInterviewAgent({
   const [completionSummary, setCompletionSummary] = useState<
     VoiceInterviewCompletionSummary | undefined
   >();
+  const [blockingSession, setBlockingSession] = useState<
+    VoiceInterviewBlockingSession | undefined
+  >();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
+  const [isRecoveringBlockingSession, setIsRecoveringBlockingSession] =
+    useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isUserSpeaking, setIsUserSpeaking] = useState(false);
   const [isAgentSpeaking, setIsAgentSpeaking] = useState(false);
@@ -520,21 +591,14 @@ export function useVoiceInterviewAgent({
     );
     const signature = buildPersistedTranscriptSignature(finalizedItems);
 
-    if (signature === lastPersistedSignatureRef.current) {
+    if (
+      signature === lastPersistedSignatureRef.current &&
+      !hasPendingObservabilityPayload()
+    ) {
       return;
     }
 
-    clearTimeoutRef(persistFlushTimeoutRef);
-    persistFlushTimeoutRef.current = window.setTimeout(() => {
-      void persistInterviewEvents({
-        finalizedItems,
-      }).catch((error) => {
-        console.error(
-          "Unable to persist finalized interview transcript snapshot",
-          error,
-        );
-      });
-    }, PERSIST_FLUSH_DEBOUNCE_MS);
+    schedulePersistFlush();
 
     return () => {
       clearTimeoutRef(persistFlushTimeoutRef);
@@ -554,13 +618,21 @@ export function useVoiceInterviewAgent({
 
     let didDispose = false;
     const sendHeartbeat = () => {
-      void postInterviewSessionHeartbeat(sessionId).catch((error) => {
-        if (didDispose) {
-          return;
-        }
+      void postInterviewSessionHeartbeat(sessionId)
+        .then((heartbeat) => {
+          if (didDispose) {
+            return;
+          }
 
-        console.error("Unable to send interview session heartbeat", error);
-      });
+          handleHeartbeatStateMismatch(heartbeat);
+        })
+        .catch((error) => {
+          if (didDispose) {
+            return;
+          }
+
+          console.error("Unable to send interview session heartbeat", error);
+        });
     };
 
     sendHeartbeat();
@@ -609,6 +681,56 @@ export function useVoiceInterviewAgent({
     );
   }
 
+  function hasPendingObservabilityPayload() {
+    return (
+      pendingTelemetryEventsRef.current.length > 0 ||
+      pendingUsageEventsRef.current.length > 0
+    );
+  }
+
+  function schedulePersistFlush(options?: {
+    force?: boolean;
+    keepalive?: boolean;
+    immediate?: boolean;
+  }) {
+    if (!localSessionIdRef.current) {
+      return;
+    }
+
+    clearTimeoutRef(persistFlushTimeoutRef);
+    persistFlushTimeoutRef.current = window.setTimeout(
+      () => {
+        void persistInterviewEvents({
+          force: options?.force,
+          keepalive: options?.keepalive,
+        }).catch((error) => {
+          console.error("Unable to flush interview telemetry payload", error);
+        });
+      },
+      options?.immediate ? 0 : PERSIST_FLUSH_DEBOUNCE_MS,
+    );
+  }
+
+  function enqueueTelemetryEvent(event: VoiceInterviewTelemetryEventRequest) {
+    pendingTelemetryEventsRef.current = [
+      ...pendingTelemetryEventsRef.current.filter(
+        (candidate) => candidate.eventKey !== event.eventKey,
+      ),
+      event,
+    ];
+    schedulePersistFlush();
+  }
+
+  function enqueueUsageEvent(event: VoiceInterviewUsageEventRequest) {
+    pendingUsageEventsRef.current = [
+      ...pendingUsageEventsRef.current.filter(
+        (candidate) => candidate.usageKey !== event.usageKey,
+      ),
+      event,
+    ];
+    schedulePersistFlush();
+  }
+
   async function persistInterviewEvents(options?: {
     finalizedItems?: VoiceInterviewPersistedTranscriptItem[];
     force?: boolean;
@@ -623,13 +745,22 @@ export function useVoiceInterviewAgent({
     const finalizedItems =
       options?.finalizedItems ?? getPersistableFinalizedItems();
     const signature = buildPersistedTranscriptSignature(finalizedItems);
+    const telemetryEvents = [...pendingTelemetryEventsRef.current];
+    const usageEvents = [...pendingUsageEventsRef.current];
 
-    if (!options?.force && signature === lastPersistedSignatureRef.current) {
+    if (
+      !options?.force &&
+      signature === lastPersistedSignatureRef.current &&
+      telemetryEvents.length === 0 &&
+      usageEvents.length === 0
+    ) {
       return;
     }
 
     const payload: PersistInterviewEventsRequest = {
+      ...(telemetryEvents.length > 0 ? { events: telemetryEvents } : {}),
       finalizedItems,
+      ...(usageEvents.length > 0 ? { usageEvents } : {}),
     };
     const response = await fetch(
       `/api/interview/sessions/${sessionId}/events`,
@@ -655,6 +786,17 @@ export function useVoiceInterviewAgent({
     }
 
     lastPersistedSignatureRef.current = signature;
+    pendingTelemetryEventsRef.current =
+      pendingTelemetryEventsRef.current.filter(
+        (event) =>
+          !telemetryEvents.some(
+            (candidate) => candidate.eventKey === event.eventKey,
+          ),
+      );
+    pendingUsageEventsRef.current = pendingUsageEventsRef.current.filter(
+      (event) =>
+        !usageEvents.some((candidate) => candidate.usageKey === event.usageKey),
+    );
   }
 
   async function cancelInterviewSession(
@@ -717,7 +859,52 @@ export function useVoiceInterviewAgent({
     lastPersistedSignatureRef.current = signature;
   }
 
+  async function forceEndBlockingSession(sessionId: string) {
+    const response = await fetch(
+      `/api/interview/sessions/${sessionId}/force-end`,
+      {
+        body: JSON.stringify({
+          reason: "duplicate_session",
+        }),
+        headers: {
+          "Content-Type": "application/json",
+        },
+        method: "POST",
+      },
+    );
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => null);
+      const errorResponse = toApiErrorResponse(body);
+
+      throw new VoiceInterviewClientError(
+        errorResponse?.errorCode ?? "session_force_end_failed",
+        errorResponse?.error ??
+          "Unable to end the blocking interview session on the server.",
+      );
+    }
+
+    broadcastSessionControl({
+      reason: "duplicate_session",
+      sessionId,
+      type: "session-force-ended",
+    });
+  }
+
   async function completeInterviewSession(sessionId: string) {
+    enqueueTelemetryEvent({
+      eventKey: `session-complete:${sessionId}:${Date.now()}`,
+      eventName: "session_complete_requested",
+      eventSource: "client",
+      payload: {
+        elapsedSeconds: elapsedSecondsRef.current,
+      },
+      recordedAt: new Date().toISOString(),
+    });
+    await persistInterviewEvents({
+      force: true,
+    });
+
     const finalizedItems = getPersistableFinalizedItems();
     const assistantTurnCount = finalizedItems.filter(
       (item) => item.speaker === "assistant",
@@ -801,11 +988,18 @@ export function useVoiceInterviewAgent({
     serverTimingsRef.current = undefined;
     statusItemsRef.current = [];
     pendingTranscriptPreviousItemRef.current = {};
+    pendingTelemetryEventsRef.current = [];
+    pendingUsageEventsRef.current = [];
+    realtimeModelRef.current = null;
+    transcriptionModelRef.current = null;
+    serviceTierRef.current = VOICE_INTERVIEW_DEFAULT_SERVICE_TIER;
     setConnectionLabel(undefined);
     setCompletionSummary(undefined);
     setConversationItems([]);
     setElapsedSeconds(0);
+    setBlockingSession(undefined);
     setErrorMessage(undefined);
+    setIsRecoveringBlockingSession(false);
     setIsMuted(false);
     setIsUserSpeaking(false);
     setIsAgentSpeaking(false);
@@ -832,6 +1026,108 @@ export function useVoiceInterviewAgent({
     bootstrapAbortRef.current = null;
     releaseMediaAndTransportResources();
   }
+
+  function broadcastSessionControl(message: VoiceInterviewControlMessage) {
+    controlChannelRef.current?.postMessage(message);
+  }
+
+  function handleSessionEndedRemotely(message: string) {
+    const sessionId = localSessionIdRef.current;
+    attemptIdRef.current += 1;
+    releaseActiveResources();
+    setBlockingSession(undefined);
+    setConnectionLabel("Session ended elsewhere");
+    setErrorMessage(message);
+    setIsRecoveringBlockingSession(false);
+    setIsAgentSpeaking(false);
+    setIsMuted(false);
+    setIsUserSpeaking(false);
+    setMicLabel("Released");
+    setStage("failed");
+    setStatusItems((current) =>
+      upsertStatusTranscriptItem(
+        current,
+        buildVoiceInterviewSystemTranscriptItem({
+          id: "session-force-ended",
+          label: "Session ended",
+          meta: getMetaLabel(),
+          text: message,
+          tone: "error",
+        }),
+      ),
+    );
+    logTimings();
+
+    if (sessionId) {
+      enqueueTelemetryEvent({
+        eventKey: `session-force-ended:${sessionId}:${Date.now()}`,
+        eventName: "session_force_ended_remote",
+        eventSource: "policy",
+        payload: {
+          message,
+        },
+        recordedAt: new Date().toISOString(),
+      });
+    }
+
+    void persistInterviewEvents({
+      force: true,
+      keepalive: true,
+    }).catch((persistError) => {
+      console.error(
+        "Unable to persist finalized transcript snapshot after remote session end",
+        persistError,
+      );
+    });
+  }
+
+  function handleHeartbeatStateMismatch(
+    heartbeat: VoiceInterviewSessionHeartbeatResponse,
+  ) {
+    if (
+      heartbeat.state === "bootstrapping" ||
+      heartbeat.state === "ready" ||
+      heartbeat.state === "active"
+    ) {
+      return;
+    }
+
+    handleSessionEndedRemotely(
+      "This interview was ended from another tab or by server policy. Start a new round to continue.",
+    );
+  }
+
+  useEffect(() => {
+    if (typeof BroadcastChannel === "undefined") {
+      return;
+    }
+
+    const channel = new BroadcastChannel(VOICE_INTERVIEW_CONTROL_CHANNEL);
+    controlChannelRef.current = channel;
+    channel.onmessage = (event: MessageEvent<VoiceInterviewControlMessage>) => {
+      const message = event.data;
+
+      if (
+        !message ||
+        message.type !== "session-force-ended" ||
+        message.sessionId !== localSessionIdRef.current
+      ) {
+        return;
+      }
+
+      handleSessionEndedRemotely(
+        "This interview was ended from another tab. Start a new round to continue.",
+      );
+    };
+
+    return () => {
+      if (controlChannelRef.current === channel) {
+        controlChannelRef.current = null;
+      }
+
+      channel.close();
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -862,16 +1158,21 @@ export function useVoiceInterviewAgent({
     };
   }, []);
 
-  async function postInterviewSessionHeartbeat(sessionId: string) {
+  async function postInterviewSessionHeartbeat(
+    sessionId: string,
+  ): Promise<VoiceInterviewSessionHeartbeatResponse> {
     const response = await fetch(
       `/api/interview/sessions/${sessionId}/heartbeat`,
       {
         method: "POST",
       },
     );
+    const body = (await response.json().catch(() => null)) as
+      | VoiceInterviewSessionHeartbeatResponse
+      | ApiErrorResponse
+      | null;
 
     if (!response.ok) {
-      const body = await response.json().catch(() => null);
       const errorResponse = toApiErrorResponse(body);
 
       throw new VoiceInterviewClientError(
@@ -879,6 +1180,15 @@ export function useVoiceInterviewAgent({
         errorResponse?.error ?? "Unable to update interview heartbeat.",
       );
     }
+
+    if (!body || typeof body !== "object" || !("state" in body)) {
+      throw new VoiceInterviewClientError(
+        "session_heartbeat_failed",
+        "The interview heartbeat response was invalid.",
+      );
+    }
+
+    return body;
   }
 
   async function patchSessionState(
@@ -924,8 +1234,14 @@ export function useVoiceInterviewAgent({
       releaseActiveResources();
     }
 
-    setConnectionLabel("Interview session failed");
+    setBlockingSession(error.blockingSession);
+    setConnectionLabel(
+      error.code === "live_session_exists"
+        ? "Another live session is blocking a new start"
+        : "Interview session failed",
+    );
     setErrorMessage(error.message);
+    setIsRecoveringBlockingSession(false);
     setIsAgentSpeaking(false);
     setIsMuted(false);
     setIsUserSpeaking(false);
@@ -950,6 +1266,17 @@ export function useVoiceInterviewAgent({
     if (!sessionId) {
       return;
     }
+
+    enqueueTelemetryEvent({
+      eventKey: `session-failed:${sessionId}:${attemptId}:${Date.now()}`,
+      eventName: "session_failed",
+      eventSource: "client",
+      payload: {
+        code: error.code,
+        message: error.message,
+      },
+      recordedAt: new Date().toISOString(),
+    });
 
     try {
       await persistInterviewEvents({
@@ -1093,6 +1420,24 @@ export function useVoiceInterviewAgent({
         return;
       }
 
+      if (localSessionIdRef.current) {
+        console.warn("[voice-interview] transport disconnected", {
+          attemptId,
+          scopeSlug: scope.slug,
+          sessionId: localSessionIdRef.current,
+          stage: stageRef.current,
+        });
+        enqueueTelemetryEvent({
+          eventKey: `transport-disconnected:${localSessionIdRef.current}:${Date.now()}`,
+          eventName: "transport_disconnected",
+          eventSource: "client",
+          payload: {
+            stage: stageRef.current,
+          },
+          recordedAt: new Date().toISOString(),
+        });
+      }
+
       setConnectionLabel("Connection unstable. Waiting briefly to recover");
       setStatusItems((current) =>
         upsertStatusTranscriptItem(
@@ -1123,13 +1468,20 @@ export function useVoiceInterviewAgent({
           return;
         }
 
-        void failSession(
-          new VoiceInterviewClientError(
-            "realtime_disconnected",
-            "The realtime session disconnected unexpectedly and did not recover. Retry the interview.",
-          ),
-          attemptId,
+        const disconnectError = new VoiceInterviewClientError(
+          "realtime_disconnected",
+          "The realtime session disconnected unexpectedly and did not recover. Retry the interview.",
         );
+        logVoiceInterviewFailure({
+          attemptId,
+          error: disconnectError,
+          label: "transport disconnect timeout",
+          normalizedError: disconnectError,
+          scopeSlug: scope.slug,
+          sessionId: localSessionIdRef.current,
+          stage: stageRef.current,
+        });
+        void failSession(disconnectError, attemptId);
       }, REALTIME_DISCONNECT_GRACE_MS);
     };
 
@@ -1146,6 +1498,18 @@ export function useVoiceInterviewAgent({
         nowMs() - startupStartedAtRef.current,
       );
       logTimings();
+
+      if (localSessionIdRef.current) {
+        enqueueTelemetryEvent({
+          eventKey: `first-assistant-response:${localSessionIdRef.current}:${attemptId}`,
+          eventName: "first_assistant_response",
+          eventSource: "client",
+          payload: {
+            durationMs: clientTimingsRef.current.firstAssistantResponse ?? 0,
+          },
+          recordedAt: new Date().toISOString(),
+        });
+      }
     };
 
     const onTransportEvent = (event: TransportEvent) => {
@@ -1163,6 +1527,115 @@ export function useVoiceInterviewAgent({
           nowMs() - startupStartedAtRef.current,
         );
         logTimings();
+
+        if (localSessionIdRef.current) {
+          enqueueTelemetryEvent({
+            eventKey: `first-assistant-audio:${localSessionIdRef.current}:${attemptId}`,
+            eventName: "first_assistant_audio",
+            eventSource: "client",
+            payload: {
+              durationMs: clientTimingsRef.current.firstAssistantAudio ?? 0,
+            },
+            recordedAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      if (event.type === "response.done") {
+        const response =
+          "response" in event &&
+          event.response &&
+          typeof event.response === "object"
+            ? (event.response as Record<string, unknown>)
+            : null;
+        const usage =
+          response && response.usage && typeof response.usage === "object"
+            ? (response.usage as Record<string, unknown>)
+            : null;
+        const inputTokenDetails =
+          usage &&
+          usage.input_token_details &&
+          typeof usage.input_token_details === "object"
+            ? (usage.input_token_details as Record<string, unknown>)
+            : {};
+        const cachedTokenDetails =
+          inputTokenDetails.cached_tokens_details &&
+          typeof inputTokenDetails.cached_tokens_details === "object"
+            ? (inputTokenDetails.cached_tokens_details as Record<
+                string,
+                unknown
+              >)
+            : {};
+        const outputTokenDetails =
+          usage &&
+          usage.output_token_details &&
+          typeof usage.output_token_details === "object"
+            ? (usage.output_token_details as Record<string, unknown>)
+            : {};
+        const responseId =
+          typeof response?.id === "string"
+            ? response.id
+            : typeof event.event_id === "string"
+              ? event.event_id
+              : `response-done-${Date.now()}`;
+
+        if (localSessionIdRef.current) {
+          enqueueTelemetryEvent({
+            eventKey: `response-done:${localSessionIdRef.current}:${responseId}`,
+            eventName: "realtime_response_done",
+            eventSource: "client",
+            payload: {
+              responseId,
+            },
+            recordedAt: new Date().toISOString(),
+          });
+        }
+
+        if (usage) {
+          enqueueUsageEvent({
+            model: realtimeModelRef.current,
+            rawUsage: usage,
+            recordedAt: new Date().toISOString(),
+            runtimeKind: VOICE_INTERVIEW_RUNTIME_KIND,
+            serviceTier: serviceTierRef.current,
+            usage: {
+              input_audio_tokens:
+                typeof inputTokenDetails.audio_tokens === "number"
+                  ? inputTokenDetails.audio_tokens
+                  : 0,
+              input_cached_audio_tokens:
+                typeof cachedTokenDetails.audio_tokens === "number"
+                  ? cachedTokenDetails.audio_tokens
+                  : 0,
+              input_cached_text_tokens:
+                typeof cachedTokenDetails.text_tokens === "number"
+                  ? cachedTokenDetails.text_tokens
+                  : 0,
+              input_text_tokens:
+                typeof inputTokenDetails.text_tokens === "number"
+                  ? inputTokenDetails.text_tokens
+                  : 0,
+              input_tokens:
+                typeof usage.input_tokens === "number" ? usage.input_tokens : 0,
+              output_audio_tokens:
+                typeof outputTokenDetails.audio_tokens === "number"
+                  ? outputTokenDetails.audio_tokens
+                  : 0,
+              output_text_tokens:
+                typeof outputTokenDetails.text_tokens === "number"
+                  ? outputTokenDetails.text_tokens
+                  : 0,
+              output_tokens:
+                typeof usage.output_tokens === "number"
+                  ? usage.output_tokens
+                  : 0,
+              total_tokens:
+                typeof usage.total_tokens === "number" ? usage.total_tokens : 0,
+            },
+            usageKey: `response-done:${responseId}`,
+            usageSource: "realtime_response",
+          });
+        }
       }
 
       if (event.type === "input_audio_buffer.speech_started") {
@@ -1213,6 +1686,39 @@ export function useVoiceInterviewAgent({
           ),
         );
         setMicLabel(isMutedRef.current ? "Live and muted" : "Live and unmuted");
+
+        if (event.usage) {
+          enqueueUsageEvent({
+            model: transcriptionModelRef.current,
+            rawUsage: event.usage as Record<string, unknown>,
+            recordedAt: new Date().toISOString(),
+            runtimeKind: VOICE_INTERVIEW_RUNTIME_KIND,
+            serviceTier: serviceTierRef.current,
+            usage: {
+              input_audio_tokens:
+                typeof event.usage.input_token_details?.audio_tokens ===
+                "number"
+                  ? event.usage.input_token_details.audio_tokens
+                  : 0,
+              input_text_tokens:
+                typeof event.usage.input_token_details?.text_tokens === "number"
+                  ? event.usage.input_token_details.text_tokens
+                  : 0,
+              output_text_tokens:
+                typeof event.usage.output_tokens === "number"
+                  ? event.usage.output_tokens
+                  : 0,
+              total_tokens:
+                typeof event.usage.total_tokens === "number"
+                  ? event.usage.total_tokens
+                  : 0,
+              type: event.usage.type,
+            },
+            usageKey: `input-audio-transcription:${event.item_id}`,
+            usageSource: "realtime_input_transcription",
+          });
+        }
+
         return;
       }
 
@@ -1232,6 +1738,22 @@ export function useVoiceInterviewAgent({
             }),
           ),
         );
+
+        if (localSessionIdRef.current) {
+          enqueueTelemetryEvent({
+            eventKey: `transcription-failed:${localSessionIdRef.current}:${event.item_id}`,
+            eventName: "input_audio_transcription_failed",
+            eventSource: "client",
+            payload: {
+              itemId: event.item_id,
+              message:
+                typeof event.error?.message === "string"
+                  ? event.error.message
+                  : "unknown",
+            },
+            recordedAt: new Date().toISOString(),
+          });
+        }
       }
     };
 
@@ -1240,7 +1762,17 @@ export function useVoiceInterviewAgent({
         return;
       }
 
-      void failSession(getTransportErrorMessage(error), attemptId);
+      const normalizedError = getTransportErrorMessage(error);
+      logVoiceInterviewFailure({
+        attemptId,
+        error,
+        label: "transport error event",
+        normalizedError,
+        scopeSlug: scope.slug,
+        sessionId: localSessionIdRef.current,
+        stage: stageRef.current,
+      });
+      void failSession(normalizedError, attemptId);
     };
 
     transport.on("*", onTransportEvent);
@@ -1358,6 +1890,24 @@ export function useVoiceInterviewAgent({
       }
 
       localSessionIdRef.current = bootstrap.localSession.id;
+      realtimeModelRef.current = bootstrap.realtime.model;
+      transcriptionModelRef.current = bootstrap.realtime.transcriptionModel;
+      serviceTierRef.current = VOICE_INTERVIEW_DEFAULT_SERVICE_TIER;
+      enqueueTelemetryEvent({
+        eventKey: `client-bootstrap-ready:${bootstrap.localSession.id}:${attemptId}`,
+        eventName: "client_bootstrap_ready",
+        eventSource: "client",
+        payload: {
+          bootstrapApiMs: clientTimingsRef.current.bootstrapApi ?? 0,
+          localSessionId: bootstrap.localSession.id,
+          micPermissionMs: clientTimingsRef.current.micPermission ?? 0,
+          openAiBootstrapMs: bootstrap.timingsMs?.openAiBootstrap ?? 0,
+          openAiSessionId: bootstrap.realtime.openAiSessionId,
+          profileSyncMs: bootstrap.timingsMs?.profileSync ?? 0,
+          webrtcModel: bootstrap.realtime.model,
+        },
+        recordedAt: new Date().toISOString(),
+      });
       setConnectionLabel("Establishing realtime session");
       setStatusItems((current) =>
         upsertStatusTranscriptItem(
@@ -1382,6 +1932,12 @@ export function useVoiceInterviewAgent({
       const connectStartedAt = nowMs();
       await transport.connect({
         apiKey: bootstrap.clientSecret.value,
+        // The server bootstrap already sets tracing on the realtime session.
+        // Passing an explicit tracing field prevents the WebRTC SDK from
+        // sending a follow-up tracing update that the API rejects.
+        initialSessionConfig: {
+          tracing: null,
+        },
         model: bootstrap.realtime.model,
       });
       clientTimingsRef.current.webrtcConnect = roundDurationMs(
@@ -1433,6 +1989,16 @@ export function useVoiceInterviewAgent({
         );
       });
       logTimings();
+      enqueueTelemetryEvent({
+        eventKey: `transport-connected:${bootstrap.localSession.id}:${attemptId}`,
+        eventName: "transport_connected",
+        eventSource: "client",
+        payload: {
+          timeToLiveMs: clientTimingsRef.current.timeToLive ?? 0,
+          webrtcConnectMs: clientTimingsRef.current.webrtcConnect ?? 0,
+        },
+        recordedAt: new Date().toISOString(),
+      });
 
       activateVoiceInterviewSession({
         markSessionActive: () =>
@@ -1457,6 +2023,15 @@ export function useVoiceInterviewAgent({
       }
 
       const normalizedError = normalizeClientError(error);
+      logVoiceInterviewFailure({
+        attemptId,
+        error,
+        label: "startup/connect failure",
+        normalizedError,
+        scopeSlug: scope.slug,
+        sessionId: localSessionIdRef.current,
+        stage: stageRef.current,
+      });
 
       if (!localSessionIdRef.current) {
         void bootstrapPromise
@@ -1566,7 +2141,32 @@ export function useVoiceInterviewAgent({
     });
   }
 
+  async function recoverBlockingSession() {
+    if (!blockingSession || isRecoveringBlockingSession) {
+      return;
+    }
+
+    setConnectionLabel("Ending the previous live session");
+    setIsRecoveringBlockingSession(true);
+
+    try {
+      await forceEndBlockingSession(blockingSession.id);
+      setBlockingSession(undefined);
+      await startInterview(true);
+    } catch (error) {
+      const normalizedError = normalizeClientError(error);
+      setConnectionLabel("Unable to end the previous live session");
+      setErrorMessage(normalizedError.message);
+      setIsRecoveringBlockingSession(false);
+    }
+  }
+
   function retry() {
+    if (blockingSession) {
+      void recoverBlockingSession();
+      return;
+    }
+
     reset();
     void startInterview(true);
   }
@@ -1603,11 +2203,16 @@ export function useVoiceInterviewAgent({
 
   return {
     audioElementRef,
+    canRecoverBlockingSession: Boolean(blockingSession),
     cancelSetup,
     end,
+    isRecoveringBlockingSession,
     isMuted,
     isUserSpeaking,
     isAgentSpeaking,
+    recoverBlockingSession: () => {
+      void recoverBlockingSession();
+    },
     reset,
     retry,
     session,

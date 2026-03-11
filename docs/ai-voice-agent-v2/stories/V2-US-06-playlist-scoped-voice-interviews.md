@@ -9,15 +9,48 @@ proven on topic scope.
 
 ## Status
 
-- `Status`: Ready for implementation
+- `Status`: Ready for implementation; implementation still pending (as of 2026-03-12)
 - `Why this exists`: the backend contract already exposes
   `scopeType: "playlist"`, but the resolver, immersive route, and UI still
   behave as topic-only.
-- `Current baseline`: published playlists can already be fetched by slug via
-  `getPlaylistBySlug`, but `resolveVoiceInterviewScope` returns `undefined` for
-  playlist scope and no immersive playlist route exists.
+- `Current baseline`: request validation, persistence, and playlist detail data
+  are already shared enough to support playlist scope, but
+  `resolveVoiceInterviewScope` still returns `undefined` for playlist scope and
+  no immersive playlist route exists.
 - `Implementation note`: this story should reuse the topic voice pipeline, not
   create a second playlist-only stack.
+- `Handoff note`: most of the reusable backend session machinery is already in
+  place. The missing work is scope resolution, route wiring, topic-literal
+  cleanup, and playlist-specific UI entry points.
+
+### Implemented now (2026-03-12)
+
+- `createInterviewSessionSchema` and the shared API types already accept
+  `scopeType: "playlist"`.
+- The shared session ledger and persistence model already treat `playlist` as a
+  valid scope enum, so this story does not need a separate playlist session
+  table or transcript model.
+- `getPlaylistBySlug` already returns published playlist details, ordered
+  playlist questions, and richer `questionSummaries` that can seed a resolved
+  voice scope snapshot.
+- The playlist detail page already exists and can host a launch CTA once scope
+  resolution is wired.
+
+### Still pending
+
+- `resolveVoiceInterviewScope` still exits early for any non-topic scope, and
+  `getPlaylistVoiceInterviewScopeBySlug` does not exist yet.
+- No immersive route exists at
+  `src/app/(immersive)/playlists/[slug]/mock-interview/page.tsx`.
+- The current experience component, citation helpers, placeholder transcript
+  copy, and back navigation still hardcode topic labels and `/topics/[slug]`
+  links.
+- The playlist detail page still has no `Start mock interview` CTA or
+  scope-validity guard.
+- Scoped recent-changes search remains unavailable for all live sessions, so
+  the playlist-bounded behavior from `V2-US-01` is still future work.
+- Route, resolver, and UI tests for playlist happy paths and invalid playlists
+  are still missing.
 
 ## Acceptance Criteria
 

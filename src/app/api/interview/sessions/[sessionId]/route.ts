@@ -1,45 +1,30 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
-import type { UpdateVoiceInterviewSessionRequest } from "@/lib/interview/voice-interview-api";
 import {
   getInterviewSessionDetail,
-  InterviewSessionNotFoundError,
   updateInterviewSessionState,
 } from "@/lib/interview/voice-interview-sessions";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-const updateInterviewSessionSchema = z
-  .object({
-    errorCode: z.string().trim().min(1).nullable().optional(),
-    errorMessage: z.string().trim().min(1).nullable().optional(),
-    state: z.enum(["active", "completed", "failed", "cancelled"]),
-  })
-  .strict() satisfies z.ZodType<UpdateVoiceInterviewSessionRequest>;
-
-type Params = Promise<{
-  sessionId: string;
-}>;
+import {
+  parseInterviewRequestBody,
+  requireAuthenticatedInterviewSessionRequest,
+  type InterviewSessionRouteContext,
+  toInterviewSessionRouteErrorResponse,
+} from "@/app/api/interview/sessions/_lib/route-helpers";
+import { updateInterviewSessionSchema } from "@/app/api/interview/sessions/_lib/schemas";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: Request,
-  context: {
-    params: Params;
-  },
+  context: InterviewSessionRouteContext,
 ) {
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const routeAccess =
+    await requireAuthenticatedInterviewSessionRequest(context);
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in routeAccess) {
+    return routeAccess.response;
   }
-
-  const { sessionId } = await context.params;
+  const { sessionId, supabase } = routeAccess;
 
   try {
     const detail = await getInterviewSessionDetail({
@@ -48,50 +33,35 @@ export async function GET(
     });
     return NextResponse.json(detail, { status: 200 });
   } catch (error) {
-    if (error instanceof InterviewSessionNotFoundError) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
-    }
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to read interview session detail.",
-      },
-      { status: 500 },
+    return toInterviewSessionRouteErrorResponse(
+      error,
+      "Unable to read interview session detail.",
     );
   }
 }
 
 export async function PATCH(
   request: Request,
-  context: {
-    params: Params;
-  },
+  context: InterviewSessionRouteContext,
 ) {
-  let payload: z.infer<typeof updateInterviewSessionSchema>;
+  const parsedPayload = await parseInterviewRequestBody(
+    request,
+    updateInterviewSessionSchema,
+    "Invalid interview session update payload.",
+  );
 
-  try {
-    payload = updateInterviewSessionSchema.parse(await request.json());
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid interview session update payload." },
-      { status: 400 },
-    );
+  if ("response" in parsedPayload) {
+    return parsedPayload.response;
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const routeAccess =
+    await requireAuthenticatedInterviewSessionRequest(context);
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in routeAccess) {
+    return routeAccess.response;
   }
-
-  const { sessionId } = await context.params;
+  const { sessionId, supabase } = routeAccess;
+  const payload = parsedPayload.data;
 
   try {
     await updateInterviewSessionState({
@@ -102,14 +72,9 @@ export async function PATCH(
       supabase,
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to update interview session state.",
-      },
-      { status: 500 },
+    return toInterviewSessionRouteErrorResponse(
+      error,
+      "Unable to update interview session state.",
     );
   }
 

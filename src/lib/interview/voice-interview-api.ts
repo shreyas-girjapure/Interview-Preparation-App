@@ -1,4 +1,8 @@
 import type { VoiceInterviewScopeType } from "@/lib/interview/voice-scope";
+import type {
+  VoiceInterviewTelemetryEventRequest,
+  VoiceInterviewUsageEventRequest,
+} from "@/lib/interview/voice-interview-observability";
 
 export type CreateVoiceInterviewSessionRequest = {
   scopeSlug: string;
@@ -85,14 +89,20 @@ export type VoiceInterviewPersistedTranscriptItem = {
 };
 
 export type PersistInterviewEventsRequest = {
-  finalizedItems: VoiceInterviewPersistedTranscriptItem[];
+  events?: VoiceInterviewTelemetryEventRequest[];
+  finalizedItems?: VoiceInterviewPersistedTranscriptItem[];
+  usageEvents?: VoiceInterviewUsageEventRequest[];
 };
 
 export type PersistInterviewEventsResponse = {
+  costStatus: "pending" | "estimated" | "estimate_failed";
+  estimatedCostUsd: number | null;
   lastClientFlushAt: string;
   ok: true;
   persistedMessageCount: number;
   persistedTurnCount: number;
+  recordedEventCount: number;
+  recordedUsageEventCount: number;
 };
 
 export type VoiceInterviewSessionCompletionReason =
@@ -180,20 +190,45 @@ export type VoiceInterviewSessionHeartbeatResponse = {
 };
 
 export type VoiceInterviewSessionDetailResponse = {
+  events: Array<{
+    createdAt: string;
+    eventKey: string;
+    eventName: string;
+    eventSource: "client" | "server" | "policy";
+    payload: Record<string, unknown> | null;
+    recordedAt: string;
+  }>;
   session: {
     completionReason: string | null;
+    costBreakdown: Record<string, unknown> | null;
+    costEstimatedAt: string | null;
+    costNotes: unknown[] | null;
+    costRateSnapshot: Record<string, unknown> | null;
+    costStatus: "pending" | "estimated" | "estimate_failed";
     createdAt: string;
     debrief: PersistedVoiceInterviewDebrief | null;
     debriefErrorCode: string | null;
     debriefGeneratedAt: string | null;
     debriefStatus: string;
+    diagnostics: Record<string, unknown> | null;
+    estimatedCostCurrency: string | null;
+    estimatedCostUsd: number | null;
     id: string;
     lastClientFlushAt: string | null;
     lastClientHeartbeatAt: string | null;
+    lastDisconnectReason: string | null;
+    lastUsageRecordedAt: string | null;
     metrics: Record<string, unknown> | null;
+    openAiTraceEnabled: boolean;
+    openAiTraceGroupId: string | null;
+    openAiTraceMetadata: Record<string, unknown> | null;
+    openAiTraceMode: string | null;
+    openAiTraceWorkflowName: string | null;
     persistedTurnCount: number;
     forcedEndAt: string | null;
     forcedEndReason: string | null;
+    retryCount: number;
+    runtimeEnvironment: string | null;
     runtimePersistenceVersion: string | null;
     runtimePromptVersion: string | null;
     runtimeSearchPolicyVersion: string | null;
@@ -209,7 +244,23 @@ export type VoiceInterviewSessionDetailResponse = {
       | "completed"
       | "failed"
       | "cancelled";
+    telemetryUpdatedAt: string | null;
     updatedAt: string;
+    usageSummary: Record<string, unknown> | null;
   };
   transcript: VoiceInterviewPersistedTranscriptItem[];
+  usageEvents: Array<{
+    createdAt: string;
+    currency: string;
+    estimatedCostUsd: number | null;
+    model: string | null;
+    normalizedUsage: Record<string, unknown> | null;
+    provider: string;
+    rateSnapshot: Record<string, unknown> | null;
+    recordedAt: string;
+    runtimeKind: string;
+    serviceTier: string | null;
+    usageKey: string;
+    usageSource: string;
+  }>;
 };

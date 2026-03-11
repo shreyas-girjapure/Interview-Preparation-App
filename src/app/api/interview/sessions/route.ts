@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import {
   createVoiceInterviewBrowserBootstrap,
@@ -10,6 +9,7 @@ import type {
   CreateVoiceInterviewSessionRequest,
   CreateVoiceInterviewSessionResponse,
 } from "@/lib/interview/voice-interview-api";
+import { buildVoiceInterviewTraceConfig } from "@/lib/interview/voice-interview-observability";
 import {
   createInterviewSessionRecord,
   ensureInterviewSessionUserProfile,
@@ -17,16 +17,17 @@ import {
   LiveInterviewSessionConflictError,
   markInterviewSessionFailed,
   markInterviewSessionReady,
+  VOICE_INTERVIEW_PERSISTENCE_VERSION,
+  VOICE_INTERVIEW_PROMPT_VERSION,
+  VOICE_INTERVIEW_SEARCH_POLICY_VERSION,
+  VOICE_INTERVIEW_TRANSPORT_VERSION,
 } from "@/lib/interview/voice-interview-sessions";
 import { resolveVoiceInterviewScope } from "@/lib/interview/voice-scope";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-const createInterviewSessionSchema = z
-  .object({
-    scopeSlug: z.string().trim().min(1),
-    scopeType: z.enum(["topic", "playlist", "question"]),
-  })
-  .strict() satisfies z.ZodType<CreateVoiceInterviewSessionRequest>;
+import {
+  parseInterviewRequestBody,
+  requireAuthenticatedInterviewRequest,
+} from "@/app/api/interview/sessions/_lib/route-helpers";
+import { createInterviewSessionSchema } from "@/app/api/interview/sessions/_lib/schemas";
 
 export const dynamic = "force-dynamic";
 
@@ -62,11 +63,13 @@ function createLiveSessionConflictResponse(
 
 export async function POST(request: Request) {
   const requestStartedAt = nowMs();
-  let payload: z.infer<typeof createInterviewSessionSchema>;
+  const parsedPayload = await parseInterviewRequestBody(
+    request,
+    createInterviewSessionSchema,
+    "Invalid interview session payload.",
+  );
 
-  try {
-    payload = createInterviewSessionSchema.parse(await request.json());
-  } catch {
+  if ("response" in parsedPayload) {
     return NextResponse.json(
       {
         error: "Invalid interview session payload.",
@@ -76,21 +79,21 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return NextResponse.json(
+  const authResult = await requireAuthenticatedInterviewRequest(() =>
+    NextResponse.json(
       {
         error: "You must be signed in to start a mock interview.",
         errorCode: "unauthorized",
       },
       { status: 401 },
-    );
+    ),
+  );
+
+  if ("response" in authResult) {
+    return authResult.response;
   }
+  const payload: CreateVoiceInterviewSessionRequest = parsedPayload.data;
+  const { supabase, user } = authResult;
 
   const scope = await resolveVoiceInterviewScope({
     scopeSlug: payload.scopeSlug,
@@ -156,8 +159,24 @@ export async function POST(request: Request) {
     localSessionCreateMs = roundDurationMs(
       nowMs() - localSessionCreateStartedAt,
     );
+    const trace = buildVoiceInterviewTraceConfig({
+      persistenceVersion: VOICE_INTERVIEW_PERSISTENCE_VERSION,
+      promptVersion: VOICE_INTERVIEW_PROMPT_VERSION,
+      scopeSlug: scope.slug,
+      scopeType: scope.scopeType,
+      searchPolicyVersion: VOICE_INTERVIEW_SEARCH_POLICY_VERSION,
+      sessionId: localSession.id,
+      transportVersion: VOICE_INTERVIEW_TRANSPORT_VERSION,
+    });
 
-    const bootstrap = await createVoiceInterviewBrowserBootstrap(scope);
+    const bootstrap = await createVoiceInterviewBrowserBootstrap({
+      scope,
+      traceConfig: {
+        group_id: trace.groupId ?? undefined,
+        metadata: trace.metadata,
+        workflow_name: trace.workflowName ?? undefined,
+      },
+    });
 
     const markReadyStartedAt = nowMs();
     await markInterviewSessionReady({
@@ -168,6 +187,7 @@ export async function POST(request: Request) {
       openAiSessionId: bootstrap.realtime.openAiSessionId,
       sessionId: localSession.id,
       supabase,
+      trace,
       transcriptionModel: bootstrap.realtime.transcriptionModel,
       voice: bootstrap.realtime.voice,
     });

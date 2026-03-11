@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/interview/voice-interview-sessions", () => ({
   forceEndInterviewSession: vi.fn(),
   InterviewSessionNotFoundError: class InterviewSessionNotFoundError extends Error {},
+  InterviewSessionTerminalStateConflictError: class InterviewSessionTerminalStateConflictError extends Error {},
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -18,10 +19,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const mockedForceEndInterviewSession = vi.mocked(forceEndInterviewSession);
 const mockedCreateSupabaseServerClient = vi.mocked(createSupabaseServerClient);
+const sessionId = "11111111-1111-4111-8111-111111111111";
 
 function createRequest(body: object) {
   return new Request(
-    "http://localhost:3000/api/interview/sessions/session-1/force-end",
+    `http://localhost:3000/api/interview/sessions/${sessionId}/force-end`,
     {
       body: JSON.stringify(body),
       headers: {
@@ -49,20 +51,20 @@ describe("POST /api/interview/sessions/[sessionId]/force-end", () => {
     } as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>);
     mockedForceEndInterviewSession.mockResolvedValue({
       forcedEndAt: "2026-03-10T12:00:00.000Z",
-      forcedEndReason: "policy_update",
+      forcedEndReason: "duplicate_session",
       ok: true,
       state: "cancelled",
     });
   });
 
-  it("force ends a session with a server-owned reason", async () => {
+  it("force ends a session with a client-owned reason", async () => {
     const response = await POST(
       createRequest({
-        reason: "policy_update",
+        reason: "duplicate_session",
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -71,7 +73,7 @@ describe("POST /api/interview/sessions/[sessionId]/force-end", () => {
     expect(response.status).toBe(200);
     expect(body).toEqual({
       forcedEndAt: "2026-03-10T12:00:00.000Z",
-      forcedEndReason: "policy_update",
+      forcedEndReason: "duplicate_session",
       ok: true,
       state: "cancelled",
     });
@@ -80,7 +82,7 @@ describe("POST /api/interview/sessions/[sessionId]/force-end", () => {
   it("returns 400 for an invalid payload", async () => {
     const response = await POST(createRequest({}), {
       params: Promise.resolve({
-        sessionId: "session-1",
+        sessionId,
       }),
     });
 
@@ -101,11 +103,11 @@ describe("POST /api/interview/sessions/[sessionId]/force-end", () => {
 
     const response = await POST(
       createRequest({
-        reason: "policy_update",
+        reason: "duplicate_session",
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -115,20 +117,35 @@ describe("POST /api/interview/sessions/[sessionId]/force-end", () => {
 
   it("returns 404 when session does not exist", async () => {
     mockedForceEndInterviewSession.mockRejectedValue(
-      new InterviewSessionNotFoundError("session-1"),
+      new InterviewSessionNotFoundError(sessionId),
     );
 
     const response = await POST(
       createRequest({
-        reason: "admin_shutdown",
+        reason: "duplicate_session",
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
 
     expect(response.status).toBe(404);
+  });
+
+  it("rejects server-owned force-end reasons from the client", async () => {
+    const response = await POST(
+      createRequest({
+        reason: "policy_update",
+      }),
+      {
+        params: Promise.resolve({
+          sessionId,
+        }),
+      },
+    );
+
+    expect(response.status).toBe(400);
   });
 });

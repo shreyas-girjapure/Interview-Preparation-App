@@ -8,7 +8,7 @@ browser session ends.
 
 ## Status
 
-- `Status`: Implementation done; QA pending (as of 2026-03-10)
+- `Status`: Closed (as of 2026-03-11)
 - `Why this exists`: V1 has reliable session lifecycle rows but not durable
   finalized-turn persistence or server-generated debrief content.
 - `Current baseline`: the browser already owns transcript assembly and the
@@ -16,6 +16,10 @@ browser session ends.
   existing flow rather than replace it.
 - `Scope note`: this story adds durable storage, finalization APIs, and a read
   path. A full session-history product surface can stay out of scope for now.
+- `Closure note`: local QA validated the happy path, transcript persistence,
+  debrief generation, readback contract, and terminal flows. Any future hard
+  edge cases around cross-browser revocation or runtime control belong to
+  `V2-US-04` and `V2-US-09`, not this persistence story.
 
 ### Implemented now (2026-03-10)
 
@@ -40,10 +44,12 @@ browser session ends.
   completed sessions, duplicate cancel handling on terminal sessions, and
   session detail route read/update behavior.
 
-### Remaining before full close
+### Closed With Remarks
 
-- Confirm end-to-end manual QA for unload/cancel behavior on target mobile
-  browsers.
+- Best-effort unload persistence remains inherently browser-dependent, but the
+  persistence contract itself is now closed.
+- Any follow-up tied to session takeover, stale blocking rows, or remote client
+  shutdown is tracked outside this story.
 
 ## Acceptance Criteria
 

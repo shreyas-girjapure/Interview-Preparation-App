@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/interview/voice-interview-sessions", () => ({
   getInterviewSessionDetail: vi.fn(),
   InterviewSessionNotFoundError: class InterviewSessionNotFoundError extends Error {},
+  InterviewSessionTerminalStateConflictError: class InterviewSessionTerminalStateConflictError extends Error {},
   updateInterviewSessionState: vi.fn(),
 }));
 
@@ -23,15 +24,19 @@ const mockedGetInterviewSessionDetail = vi.mocked(getInterviewSessionDetail);
 const mockedUpdateInterviewSessionState = vi.mocked(
   updateInterviewSessionState,
 );
+const sessionId = "11111111-1111-4111-8111-111111111111";
 
 function createPatchRequest(body: object) {
-  return new Request("http://localhost:3000/api/interview/sessions/session-1", {
-    body: JSON.stringify(body),
-    headers: {
-      "Content-Type": "application/json",
+  return new Request(
+    `http://localhost:3000/api/interview/sessions/${sessionId}`,
+    {
+      body: JSON.stringify(body),
+      headers: {
+        "Content-Type": "application/json",
+      },
+      method: "PATCH",
     },
-    method: "PATCH",
-  });
+  );
 }
 
 describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
@@ -53,20 +58,40 @@ describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
 
   it("returns persisted session detail for an authenticated user", async () => {
     mockedGetInterviewSessionDetail.mockResolvedValue({
+      events: [],
       session: {
         completionReason: null,
+        costBreakdown: null,
+        costEstimatedAt: null,
+        costNotes: null,
+        costRateSnapshot: null,
+        costStatus: "pending",
         createdAt: "2026-03-10T10:00:00.000Z",
         debrief: null,
         debriefErrorCode: null,
         debriefGeneratedAt: null,
         debriefStatus: "pending",
+        diagnostics: null,
+        estimatedCostCurrency: "USD",
+        estimatedCostUsd: null,
         forcedEndAt: null,
         forcedEndReason: null,
-        id: "session-1",
+        id: sessionId,
         lastClientHeartbeatAt: null,
         lastClientFlushAt: null,
+        lastDisconnectReason: null,
+        lastUsageRecordedAt: null,
         metrics: null,
+        openAiTraceEnabled: true,
+        openAiTraceGroupId: sessionId,
+        openAiTraceMetadata: {
+          localSessionId: sessionId,
+        },
+        openAiTraceMode: "structured",
+        openAiTraceWorkflowName: "voice-interview-realtime-sts",
         persistedTurnCount: 0,
+        retryCount: 0,
+        runtimeEnvironment: "test",
         runtimePersistenceVersion: "transcript-persistence-v1",
         runtimePromptVersion: "voice-prompt-v2-2026-03-10",
         runtimeSearchPolicyVersion: "docs-search-v1",
@@ -76,16 +101,19 @@ describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
         scopeType: "topic",
         staleAt: null,
         state: "ready",
+        telemetryUpdatedAt: "2026-03-10T10:01:00.000Z",
         updatedAt: "2026-03-10T10:02:00.000Z",
+        usageSummary: null,
       },
       transcript: [],
+      usageEvents: [],
     });
 
     const response = await GET(
-      new Request("http://localhost:3000/api/interview/sessions/session-1"),
+      new Request(`http://localhost:3000/api/interview/sessions/${sessionId}`),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -95,7 +123,7 @@ describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
     expect(body).toEqual(
       expect.objectContaining({
         session: expect.objectContaining({
-          id: "session-1",
+          id: sessionId,
           scopeSlug: "javascript",
         }),
       }),
@@ -104,14 +132,14 @@ describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
 
   it("returns 404 when the session detail is not found", async () => {
     mockedGetInterviewSessionDetail.mockRejectedValue(
-      new InterviewSessionNotFoundError("session-1"),
+      new InterviewSessionNotFoundError(sessionId),
     );
 
     const response = await GET(
-      new Request("http://localhost:3000/api/interview/sessions/session-1"),
+      new Request(`http://localhost:3000/api/interview/sessions/${sessionId}`),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -122,7 +150,7 @@ describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
   it("returns 400 when PATCH payload is invalid", async () => {
     const response = await PATCH(createPatchRequest({}), {
       params: Promise.resolve({
-        sessionId: "session-1",
+        sessionId,
       }),
     });
 
@@ -138,7 +166,7 @@ describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -150,7 +178,7 @@ describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
     });
     expect(mockedUpdateInterviewSessionState).toHaveBeenCalledWith(
       expect.objectContaining({
-        sessionId: "session-1",
+        sessionId,
         state: "active",
       }),
     );
@@ -169,10 +197,10 @@ describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
     } as unknown as Awaited<ReturnType<typeof createSupabaseServerClient>>);
 
     const getResponse = await GET(
-      new Request("http://localhost:3000/api/interview/sessions/session-1"),
+      new Request(`http://localhost:3000/api/interview/sessions/${sessionId}`),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -182,12 +210,25 @@ describe("GET/PATCH /api/interview/sessions/[sessionId]", () => {
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
 
     expect(getResponse.status).toBe(401);
     expect(patchResponse.status).toBe(401);
+  });
+
+  it("returns 400 when the session id is invalid", async () => {
+    const response = await GET(
+      new Request("http://localhost:3000/api/interview/sessions/not-a-uuid"),
+      {
+        params: Promise.resolve({
+          sessionId: "not-a-uuid",
+        }),
+      },
+    );
+
+    expect(response.status).toBe(400);
   });
 });

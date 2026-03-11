@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/interview/voice-interview-sessions", () => ({
   InterviewSessionNotFoundError: class InterviewSessionNotFoundError extends Error {},
+  InterviewSessionTerminalStateConflictError: class InterviewSessionTerminalStateConflictError extends Error {},
   recordInterviewSessionHeartbeat: vi.fn(),
 }));
 
@@ -20,6 +21,7 @@ const mockedRecordInterviewSessionHeartbeat = vi.mocked(
   recordInterviewSessionHeartbeat,
 );
 const mockedCreateSupabaseServerClient = vi.mocked(createSupabaseServerClient);
+const sessionId = "11111111-1111-4111-8111-111111111111";
 
 describe("POST /api/interview/sessions/[sessionId]/heartbeat", () => {
   beforeEach(() => {
@@ -46,14 +48,14 @@ describe("POST /api/interview/sessions/[sessionId]/heartbeat", () => {
   it("records session heartbeat", async () => {
     const response = await POST(
       new Request(
-        "http://localhost:3000/api/interview/sessions/session-1/heartbeat",
+        `http://localhost:3000/api/interview/sessions/${sessionId}/heartbeat`,
         {
           method: "POST",
         },
       ),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -81,14 +83,14 @@ describe("POST /api/interview/sessions/[sessionId]/heartbeat", () => {
 
     const response = await POST(
       new Request(
-        "http://localhost:3000/api/interview/sessions/session-1/heartbeat",
+        `http://localhost:3000/api/interview/sessions/${sessionId}/heartbeat`,
         {
           method: "POST",
         },
       ),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -98,19 +100,19 @@ describe("POST /api/interview/sessions/[sessionId]/heartbeat", () => {
 
   it("returns 404 when the session is missing", async () => {
     mockedRecordInterviewSessionHeartbeat.mockRejectedValue(
-      new InterviewSessionNotFoundError("session-1"),
+      new InterviewSessionNotFoundError(sessionId),
     );
 
     const response = await POST(
       new Request(
-        "http://localhost:3000/api/interview/sessions/session-1/heartbeat",
+        `http://localhost:3000/api/interview/sessions/${sessionId}/heartbeat`,
         {
           method: "POST",
         },
       ),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );

@@ -23,6 +23,15 @@ type RealtimeClientSecretSessionConfig = NonNullable<
   Parameters<OpenAI["realtime"]["clientSecrets"]["create"]>[0]["session"]
 >;
 
+type VoiceInterviewRealtimeTracingConfig =
+  | {
+      group_id?: string;
+      metadata?: Record<string, string>;
+      workflow_name?: string;
+    }
+  | "auto"
+  | null;
+
 let openAiClientSingleton: OpenAI | null = null;
 
 export class VoiceInterviewBootstrapTimeoutError extends Error {
@@ -82,9 +91,11 @@ function getOpenAiClient() {
 export function buildVoiceInterviewRealtimeSessionConfig({
   env,
   scope,
+  traceConfig,
 }: {
   env: VoiceInterviewEnv;
   scope: VoiceInterviewScope;
+  traceConfig?: VoiceInterviewRealtimeTracingConfig;
 }): RealtimeClientSecretSessionConfig {
   const sessionPrompt = buildVoiceInterviewPrompt(scope);
 
@@ -130,13 +141,17 @@ export function buildVoiceInterviewRealtimeSessionConfig({
     },
     tools: [],
     tool_choice: "auto",
-    tracing: null,
+    tracing: traceConfig ?? null,
   };
 }
 
-export async function createVoiceInterviewBrowserBootstrap(
-  scope: VoiceInterviewScope,
-): Promise<VoiceInterviewBrowserBootstrap> {
+export async function createVoiceInterviewBrowserBootstrap({
+  scope,
+  traceConfig,
+}: {
+  scope: VoiceInterviewScope;
+  traceConfig?: VoiceInterviewRealtimeTracingConfig;
+}): Promise<VoiceInterviewBrowserBootstrap> {
   const env = getVoiceInterviewEnv();
   const client = getOpenAiClient();
   const totalStartedAt = nowMs();
@@ -144,6 +159,7 @@ export async function createVoiceInterviewBrowserBootstrap(
   const sessionConfig = buildVoiceInterviewRealtimeSessionConfig({
     env,
     scope,
+    traceConfig,
   });
 
   const session = await withTimeout(

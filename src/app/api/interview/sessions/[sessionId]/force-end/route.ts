@@ -1,58 +1,39 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
-import type { ForceEndInterviewSessionRequest } from "@/lib/interview/voice-interview-api";
+import { forceEndInterviewSession } from "@/lib/interview/voice-interview-sessions";
 import {
-  forceEndInterviewSession,
-  InterviewSessionNotFoundError,
-} from "@/lib/interview/voice-interview-sessions";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-const forceEndInterviewSessionSchema = z
-  .object({
-    reason: z.enum([
-      "duplicate_session",
-      "stale_session",
-      "policy_update",
-      "admin_shutdown",
-    ]),
-  })
-  .strict() satisfies z.ZodType<ForceEndInterviewSessionRequest>;
-
-type Params = Promise<{
-  sessionId: string;
-}>;
+  parseInterviewRequestBody,
+  requireAuthenticatedInterviewSessionRequest,
+  type InterviewSessionRouteContext,
+  toInterviewSessionRouteErrorResponse,
+} from "@/app/api/interview/sessions/_lib/route-helpers";
+import { clientForceEndInterviewSessionSchema } from "@/app/api/interview/sessions/_lib/schemas";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(
   request: Request,
-  context: {
-    params: Params;
-  },
+  context: InterviewSessionRouteContext,
 ) {
-  let payload: z.infer<typeof forceEndInterviewSessionSchema>;
+  const parsedPayload = await parseInterviewRequestBody(
+    request,
+    clientForceEndInterviewSessionSchema,
+    "Invalid force end interview session payload.",
+  );
 
-  try {
-    payload = forceEndInterviewSessionSchema.parse(await request.json());
-  } catch {
-    return NextResponse.json(
-      { error: "Invalid force end interview session payload." },
-      { status: 400 },
-    );
+  if ("response" in parsedPayload) {
+    return parsedPayload.response;
   }
 
-  const supabase = await createSupabaseServerClient();
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
+  const routeAccess =
+    await requireAuthenticatedInterviewSessionRequest(context);
 
-  if (userError || !user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if ("response" in routeAccess) {
+    return routeAccess.response;
   }
 
-  const { sessionId } = await context.params;
+  const { sessionId, supabase } = routeAccess;
+  const payload = parsedPayload.data;
 
   try {
     const result = await forceEndInterviewSession({
@@ -62,18 +43,9 @@ export async function POST(
     });
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
-    if (error instanceof InterviewSessionNotFoundError) {
-      return NextResponse.json({ error: error.message }, { status: 404 });
-    }
-
-    return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to force end interview session.",
-      },
-      { status: 500 },
+    return toInterviewSessionRouteErrorResponse(
+      error,
+      "Unable to force end interview session.",
     );
   }
 }

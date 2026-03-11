@@ -3,6 +3,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/interview/voice-interview-sessions", () => ({
   completeInterviewSession: vi.fn(),
   InterviewSessionNotFoundError: class InterviewSessionNotFoundError extends Error {},
+  InterviewSessionTerminalStateConflictError: class InterviewSessionTerminalStateConflictError extends Error {
+    constructor(state: string) {
+      super(`Interview session is already terminal with state ${state}.`);
+    }
+  },
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -13,15 +18,17 @@ import { POST } from "@/app/api/interview/sessions/[sessionId]/complete/route";
 import {
   completeInterviewSession,
   InterviewSessionNotFoundError,
+  InterviewSessionTerminalStateConflictError,
 } from "@/lib/interview/voice-interview-sessions";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const mockedCompleteInterviewSession = vi.mocked(completeInterviewSession);
 const mockedCreateSupabaseServerClient = vi.mocked(createSupabaseServerClient);
+const sessionId = "11111111-1111-4111-8111-111111111111";
 
 function createRequest(body: object) {
   return new Request(
-    "http://localhost:3000/api/interview/sessions/session-1/complete",
+    `http://localhost:3000/api/interview/sessions/${sessionId}/complete`,
     {
       body: JSON.stringify(body),
       headers: {
@@ -88,7 +95,7 @@ describe("POST /api/interview/sessions/[sessionId]/complete", () => {
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -103,7 +110,7 @@ describe("POST /api/interview/sessions/[sessionId]/complete", () => {
     );
     expect(mockedCompleteInterviewSession).toHaveBeenCalledWith(
       expect.objectContaining({
-        sessionId: "session-1",
+        sessionId,
       }),
     );
   });
@@ -111,7 +118,7 @@ describe("POST /api/interview/sessions/[sessionId]/complete", () => {
   it("returns 400 for an invalid payload", async () => {
     const response = await POST(createRequest({}), {
       params: Promise.resolve({
-        sessionId: "session-1",
+        sessionId,
       }),
     });
 
@@ -145,7 +152,7 @@ describe("POST /api/interview/sessions/[sessionId]/complete", () => {
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -155,7 +162,7 @@ describe("POST /api/interview/sessions/[sessionId]/complete", () => {
 
   it("returns 404 when the session record is missing", async () => {
     mockedCompleteInterviewSession.mockRejectedValue(
-      new InterviewSessionNotFoundError("session-1"),
+      new InterviewSessionNotFoundError(sessionId),
     );
 
     const response = await POST(
@@ -173,7 +180,7 @@ describe("POST /api/interview/sessions/[sessionId]/complete", () => {
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -183,7 +190,7 @@ describe("POST /api/interview/sessions/[sessionId]/complete", () => {
 
   it("returns 409 for an already terminal session", async () => {
     mockedCompleteInterviewSession.mockRejectedValue(
-      new Error("Interview session is already terminal with state failed."),
+      new InterviewSessionTerminalStateConflictError("failed"),
     );
 
     const response = await POST(
@@ -201,7 +208,7 @@ describe("POST /api/interview/sessions/[sessionId]/complete", () => {
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );

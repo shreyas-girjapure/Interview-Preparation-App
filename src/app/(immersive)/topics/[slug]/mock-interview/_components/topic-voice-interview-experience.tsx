@@ -28,9 +28,12 @@ export function TopicVoiceInterviewExperience({
   });
   const {
     audioElementRef,
+    canRecoverBlockingSession,
     isMuted,
+    isRecoveringBlockingSession,
     isUserSpeaking,
     isAgentSpeaking,
+    recoverBlockingSession,
     session,
     stage,
     cancelSetup,
@@ -38,7 +41,15 @@ export function TopicVoiceInterviewExperience({
     retry,
     start,
     toggleMute,
-  } = previewMode ? { ...previewSession, audioElementRef: null } : liveSession;
+  } = previewMode
+    ? {
+        ...previewSession,
+        audioElementRef: null,
+        canRecoverBlockingSession: false,
+        isRecoveringBlockingSession: false,
+        recoverBlockingSession: () => {},
+      }
+    : liveSession;
 
   const backHref = `/topics/${scope.slug}`;
   const previewLocked = previewMode ? previewSession.previewLocked : false;
@@ -60,11 +71,14 @@ export function TopicVoiceInterviewExperience({
         previewLabel={previewLabel}
         stage={
           <VoiceStage
+            canRecoverBlockingSession={canRecoverBlockingSession}
+            isRecoveringBlockingSession={isRecoveringBlockingSession}
             isMuted={isMuted}
             isUserSpeaking={isUserSpeaking}
             isAgentSpeaking={isAgentSpeaking}
             onCancelSetup={cancelSetup}
             onEnd={end}
+            onRecoverBlockingSession={recoverBlockingSession}
             onRetry={retry}
             onStart={start}
             onToggleMute={toggleMute}

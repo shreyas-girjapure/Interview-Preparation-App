@@ -19,11 +19,14 @@ import type {
 } from "@/lib/interview/voice-interview-session";
 
 type VoiceStageProps = {
+  canRecoverBlockingSession?: boolean;
+  isRecoveringBlockingSession?: boolean;
   isMuted?: boolean;
   isUserSpeaking?: boolean;
   isAgentSpeaking?: boolean;
   onCancelSetup: () => void;
   onEnd: () => void;
+  onRecoverBlockingSession?: () => void;
   onRetry: () => void;
   onStart: () => void;
   onToggleMute: () => void;
@@ -211,11 +214,14 @@ function StatusRow({
 }
 
 export function VoiceStage({
+  canRecoverBlockingSession,
+  isRecoveringBlockingSession,
   isMuted,
   isUserSpeaking,
   isAgentSpeaking,
   onCancelSetup,
   onEnd,
+  onRecoverBlockingSession,
   onRetry,
   onStart,
   onToggleMute,
@@ -249,6 +255,8 @@ export function VoiceStage({
 
   const tone = visualToneMap[activeState];
   const showQuickEnd = stage === "connecting" || stage === "live";
+  const showBlockingRecoveryAction =
+    stage === "failed" && Boolean(canRecoverBlockingSession);
 
   let CenterIcon = Mic;
   if (activeState === "ready") CenterIcon = Mic;
@@ -271,6 +279,11 @@ export function VoiceStage({
       return;
     }
     if (stage === "failed") {
+      if (canRecoverBlockingSession && onRecoverBlockingSession) {
+        onRecoverBlockingSession();
+        return;
+      }
+
       onRetry();
     }
   };
@@ -317,6 +330,26 @@ export function VoiceStage({
                 onClick={stage === "live" ? onEnd : onCancelSetup}
               >
                 <PhoneOff className="size-4" />
+              </Button>
+            )}
+            {showBlockingRecoveryAction && onRecoverBlockingSession && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className={cn(
+                  "rounded-2xl bg-white/60 transition-colors",
+                  tone.endButtonHover,
+                  tone.endButtonIcon,
+                )}
+                disabled={isRecoveringBlockingSession}
+                onClick={onRecoverBlockingSession}
+              >
+                {isRecoveringBlockingSession ? (
+                  <LoaderCircle className="mr-2 size-4 animate-spin" />
+                ) : (
+                  <PhoneOff className="mr-2 size-4" />
+                )}
+                End previous
               </Button>
             )}
           </div>

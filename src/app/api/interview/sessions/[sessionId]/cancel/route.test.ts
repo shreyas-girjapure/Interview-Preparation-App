@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 vi.mock("@/lib/interview/voice-interview-sessions", () => ({
   cancelInterviewSession: vi.fn(),
   InterviewSessionNotFoundError: class InterviewSessionNotFoundError extends Error {},
+  InterviewSessionTerminalStateConflictError: class InterviewSessionTerminalStateConflictError extends Error {},
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -18,10 +19,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const mockedCancelInterviewSession = vi.mocked(cancelInterviewSession);
 const mockedCreateSupabaseServerClient = vi.mocked(createSupabaseServerClient);
+const sessionId = "11111111-1111-4111-8111-111111111111";
 
 function createRequest(body: object) {
   return new Request(
-    "http://localhost:3000/api/interview/sessions/session-1/cancel",
+    `http://localhost:3000/api/interview/sessions/${sessionId}/cancel`,
     {
       body: JSON.stringify(body),
       headers: {
@@ -74,7 +76,7 @@ describe("POST /api/interview/sessions/[sessionId]/cancel", () => {
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -90,7 +92,7 @@ describe("POST /api/interview/sessions/[sessionId]/cancel", () => {
     expect(mockedCancelInterviewSession).toHaveBeenCalledWith(
       expect.objectContaining({
         reason: "user_exit",
-        sessionId: "session-1",
+        sessionId,
       }),
     );
   });
@@ -98,7 +100,7 @@ describe("POST /api/interview/sessions/[sessionId]/cancel", () => {
   it("returns 400 for an invalid payload", async () => {
     const response = await POST(createRequest({}), {
       params: Promise.resolve({
-        sessionId: "session-1",
+        sessionId,
       }),
     });
 
@@ -123,7 +125,7 @@ describe("POST /api/interview/sessions/[sessionId]/cancel", () => {
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );
@@ -133,7 +135,7 @@ describe("POST /api/interview/sessions/[sessionId]/cancel", () => {
 
   it("returns 404 when the session record is missing", async () => {
     mockedCancelInterviewSession.mockRejectedValue(
-      new InterviewSessionNotFoundError("session-1"),
+      new InterviewSessionNotFoundError(sessionId),
     );
 
     const response = await POST(
@@ -142,7 +144,7 @@ describe("POST /api/interview/sessions/[sessionId]/cancel", () => {
       }),
       {
         params: Promise.resolve({
-          sessionId: "session-1",
+          sessionId,
         }),
       },
     );

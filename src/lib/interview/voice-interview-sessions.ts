@@ -15,6 +15,15 @@ import type {
   VoiceInterviewSessionDetailResponse,
 } from "@/lib/interview/voice-interview-api";
 import {
+  listInterviewSessionObservability,
+  persistInterviewSessionObservability,
+} from "@/lib/interview/voice-interview-observability.server";
+import type {
+  VoiceInterviewTelemetryEventRequest,
+  VoiceInterviewTraceConfig,
+  VoiceInterviewUsageEventRequest,
+} from "@/lib/interview/voice-interview-observability";
+import {
   getInterviewMessageCounts,
   listInterviewMessages,
   upsertInterviewMessages,
@@ -37,6 +46,23 @@ type InterviewSessionState =
 
 type InterviewSessionBlockingState = "bootstrapping" | "ready" | "active";
 
+type InterviewBlockingSessionRow = Pick<
+  InterviewSessionRow,
+  | "id"
+  | "scope_slug"
+  | "scope_title"
+  | "scope_type"
+  | "started_at"
+  | "state"
+  | "created_at"
+  | "openai_client_secret_expires_at"
+  | "last_client_heartbeat_at"
+  | "last_client_flush_at"
+  | "updated_at"
+> & {
+  state: InterviewSessionBlockingState;
+};
+
 type InterviewSessionRow = {
   completion_reason: string | null;
   created_at: string;
@@ -50,15 +76,26 @@ type InterviewSessionRow = {
   forced_end_reason: ForceEndInterviewSessionReason | null;
   last_client_flush_at: string | null;
   last_client_heartbeat_at: string | null;
+  last_disconnect_reason: string | null;
   last_error_code: string | null;
   last_error_message: string | null;
+  last_usage_recorded_at: string | null;
   metrics_json: Record<string, unknown> | null;
+  openai_trace_enabled: boolean;
+  openai_trace_group_id: string | null;
+  openai_trace_metadata_json: Record<string, unknown> | null;
+  openai_trace_mode: string | null;
+  openai_trace_workflow_name: string | null;
   openai_client_secret_expires_at: string | null;
   openai_model: string | null;
   openai_session_id: string | null;
   openai_transcription_model: string | null;
   openai_voice: string | null;
+  estimated_cost_currency: string | null;
+  estimated_cost_usd: number | string | null;
   persisted_turn_count: number;
+  retry_count: number;
+  runtime_environment: string | null;
   runtime_persistence_version: string | null;
   runtime_prompt_version: string | null;
   runtime_search_policy_version: string | null;
@@ -70,6 +107,14 @@ type InterviewSessionRow = {
   stale_at: string | null;
   started_at: string | null;
   state: InterviewSessionState;
+  telemetry_updated_at: string | null;
+  cost_estimated_at: string | null;
+  cost_status: "pending" | "estimated" | "estimate_failed";
+  usage_summary_json: Record<string, unknown> | null;
+  cost_breakdown_json: Record<string, unknown> | null;
+  cost_rate_snapshot_json: Record<string, unknown> | null;
+  cost_notes_json: unknown[] | null;
+  diagnostics_json: Record<string, unknown> | null;
   updated_at: string;
   user_id: string;
 };
@@ -91,6 +136,16 @@ export class LiveInterviewSessionConflictError extends Error {
   }
 }
 
+export class InterviewSessionTerminalStateConflictError extends Error {
+  readonly state: "cancelled" | "completed" | "failed";
+
+  constructor(state: "cancelled" | "completed" | "failed") {
+    super(`Interview session is already terminal with state ${state}.`);
+    this.name = "InterviewSessionTerminalStateConflictError";
+    this.state = state;
+  }
+}
+
 const BLOCKING_INTERVIEW_SESSION_STATES: InterviewSessionBlockingState[] = [
   "bootstrapping",
   "ready",
@@ -101,7 +156,7 @@ const INTERVIEW_SESSION_POLICY_STALE_WINDOWS_MS: Record<
   InterviewSessionBlockingState,
   number
 > = {
-  active: 25 * 60 * 1000,
+  active: 3 * 60 * 1000,
   bootstrapping: 2 * 60 * 1000,
   ready: 10 * 60 * 1000,
 };
@@ -227,23 +282,6 @@ function computeInterviewSessionStaleAtMs(
   return activityAtMs + INTERVIEW_SESSION_POLICY_STALE_WINDOWS_MS.active;
 }
 
-function computeInterviewSessionStaleAt(
-  session: Pick<
-    InterviewSessionRow,
-    | "created_at"
-    | "state"
-    | "openai_client_secret_expires_at"
-    | "started_at"
-    | "last_client_heartbeat_at"
-    | "last_client_flush_at"
-    | "updated_at"
-  >,
-) {
-  const staleAtMs = computeInterviewSessionStaleAtMs(session);
-
-  return staleAtMs === null ? null : toIsoFromMs(staleAtMs);
-}
-
 function toBlockingInterviewSession(
   session: Pick<
     InterviewSessionRow,
@@ -320,6 +358,34 @@ function parseMetrics(value: unknown) {
   return value as Record<string, unknown>;
 }
 
+function parseJsonObject(value: unknown) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  return value as Record<string, unknown>;
+}
+
+function parseJsonArray(value: unknown) {
+  return Array.isArray(value) ? value : null;
+}
+
+function parseNumericValue(value: number | string | null | undefined) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+
 function toCompleteDebriefStatus(value: string): "ready" | "failed" {
   return value === "ready" ? "ready" : "failed";
 }
@@ -377,7 +443,9 @@ async function listBlockingInterviewSessionsForUser({
 }) {
   const { data, error } = await supabase
     .from("interview_sessions")
-    .select("*")
+    .select(
+      "id, scope_slug, scope_title, scope_type, started_at, state, created_at, openai_client_secret_expires_at, last_client_heartbeat_at, last_client_flush_at, updated_at",
+    )
     .eq("user_id", userId)
     .in("state", BLOCKING_INTERVIEW_SESSION_STATES)
     .order("created_at", { ascending: false })
@@ -389,7 +457,7 @@ async function listBlockingInterviewSessionsForUser({
     );
   }
 
-  return (data ?? []) as InterviewSessionRow[];
+  return (data ?? []) as InterviewBlockingSessionRow[];
 }
 
 function toTerminalSessionState(
@@ -497,10 +565,7 @@ export async function getBlockingInterviewSessionForUser({
 
   for (const row of rows) {
     const staleAtMs = computeInterviewSessionStaleAtMs(row);
-    const staleAt =
-      staleAtMs === null
-        ? computeInterviewSessionStaleAt(row)
-        : toIsoFromMs(staleAtMs);
+    const staleAt = staleAtMs === null ? null : toIsoFromMs(staleAtMs);
 
     if (staleAtMs !== null && staleAtMs <= nowMs) {
       await forceEndInterviewSessionInternal({
@@ -519,7 +584,7 @@ export async function getBlockingInterviewSessionForUser({
       scope_type: row.scope_type,
       staleAt,
       started_at: row.started_at,
-      state: row.state as InterviewSessionBlockingState,
+      state: row.state,
     });
   }
 
@@ -564,19 +629,38 @@ export async function createInterviewSessionRecord({
   const { data, error } = await supabase
     .from("interview_sessions")
     .insert({
+      cost_breakdown_json: null,
+      cost_estimated_at: null,
+      cost_notes_json: null,
+      cost_rate_snapshot_json: null,
+      cost_status: "pending",
       forced_end_at: null,
       forced_end_reason: null,
       debrief_error_code: null,
       debrief_generated_at: null,
       debrief_json: null,
       debrief_status: "pending",
+      diagnostics_json: null,
+      estimated_cost_currency: "USD",
+      estimated_cost_usd: null,
       last_client_heartbeat_at: null,
+      last_disconnect_reason: null,
+      last_usage_recorded_at: null,
       metrics_json: null,
+      openai_trace_enabled: false,
+      openai_trace_group_id: null,
+      openai_trace_metadata_json: null,
+      openai_trace_mode: null,
+      openai_trace_workflow_name: null,
+      retry_count: 0,
+      runtime_environment: null,
       runtime_persistence_version: VOICE_INTERVIEW_PERSISTENCE_VERSION,
       runtime_prompt_version: VOICE_INTERVIEW_PROMPT_VERSION,
       runtime_search_policy_version: VOICE_INTERVIEW_SEARCH_POLICY_VERSION,
       runtime_transport_version: VOICE_INTERVIEW_TRANSPORT_VERSION,
       stale_at: bootstrappingStaleAt,
+      telemetry_updated_at: null,
+      usage_summary_json: null,
       user_id: userId,
       scope_type: scope.scopeType,
       scope_slug: scope.slug,
@@ -606,6 +690,7 @@ export async function markInterviewSessionReady({
   openAiSessionId,
   sessionId,
   supabase,
+  trace,
   transcriptionModel,
   voice,
 }: {
@@ -614,6 +699,7 @@ export async function markInterviewSessionReady({
   openAiSessionId: string | null;
   sessionId: string;
   supabase: SupabaseServerClient;
+  trace: VoiceInterviewTraceConfig;
   transcriptionModel: string;
   voice: string;
 }) {
@@ -623,6 +709,7 @@ export async function markInterviewSessionReady({
     readyPolicyStaleAtMs,
     toEpochMs(clientSecretExpiresAt),
   );
+  const readyAt = toIsoNow();
 
   const { error } = await supabase
     .from("interview_sessions")
@@ -636,23 +723,41 @@ export async function markInterviewSessionReady({
       forced_end_reason: null,
       state: "ready",
       last_client_heartbeat_at: null,
+      last_disconnect_reason: null,
+      last_usage_recorded_at: null,
       metrics_json: null,
+      openai_trace_enabled: trace.enabled,
+      openai_trace_group_id: trace.groupId,
+      openai_trace_metadata_json: trace.metadata,
+      openai_trace_mode: trace.mode,
+      openai_trace_workflow_name: trace.workflowName,
       openai_session_id: openAiSessionId,
       openai_model: model,
       openai_voice: voice,
       openai_transcription_model: transcriptionModel,
       openai_client_secret_expires_at: clientSecretExpiresAt,
+      runtime_environment: trace.runtimeEnvironment,
       runtime_prompt_version: VOICE_INTERVIEW_PROMPT_VERSION,
       runtime_search_policy_version: VOICE_INTERVIEW_SEARCH_POLICY_VERSION,
       runtime_persistence_version: VOICE_INTERVIEW_PERSISTENCE_VERSION,
       runtime_transport_version: VOICE_INTERVIEW_TRANSPORT_VERSION,
-      started_at: toIsoNow(),
+      started_at: readyAt,
       ended_at: null,
+      diagnostics_json: {
+        bootstrap: {
+          clientSecretExpiresAt,
+          model,
+          openAiSessionId,
+          transcriptionModel,
+          voice,
+        },
+      },
       last_error_code: null,
       last_error_message: null,
       last_client_flush_at: null,
       persisted_turn_count: 0,
       stale_at: readyStaleAtMs === null ? null : toIsoFromMs(readyStaleAtMs),
+      telemetry_updated_at: readyAt,
     })
     .eq("id", sessionId);
 
@@ -674,14 +779,22 @@ export async function markInterviewSessionFailed({
   sessionId: string;
   supabase: SupabaseServerClient;
 }) {
+  const failedAt = toIsoNow();
   const { error } = await supabase
     .from("interview_sessions")
     .update({
+      diagnostics_json: {
+        bootstrapError: {
+          code: errorCode,
+          message: errorMessage,
+        },
+      },
       state: "failed",
       last_error_code: errorCode,
       last_error_message: errorMessage,
-      ended_at: toIsoNow(),
+      ended_at: failedAt,
       stale_at: null,
+      telemetry_updated_at: failedAt,
     })
     .eq("id", sessionId);
 
@@ -729,21 +842,28 @@ export async function updateInterviewSessionState({
 }
 
 export async function persistInterviewSessionEvents({
+  events,
   finalizedItems,
   sessionId,
   supabase,
+  usageEvents,
 }: {
-  finalizedItems: VoiceInterviewPersistedTranscriptItem[];
+  events?: VoiceInterviewTelemetryEventRequest[];
+  finalizedItems?: VoiceInterviewPersistedTranscriptItem[];
   sessionId: string;
   supabase: SupabaseServerClient;
+  usageEvents?: VoiceInterviewUsageEventRequest[];
 }): Promise<PersistInterviewEventsResponse> {
-  await getInterviewSessionRow({
+  const session = await getInterviewSessionRow({
     sessionId,
     supabase,
   });
+  const finalizedTranscriptItems = finalizedItems ?? [];
+  const telemetryEvents = events ?? [];
+  const usageEventItems = usageEvents ?? [];
 
   await upsertInterviewMessages({
-    finalizedItems,
+    finalizedItems: finalizedTranscriptItems,
     sessionId,
     supabase,
   });
@@ -752,10 +872,24 @@ export async function persistInterviewSessionEvents({
     sessionId,
     supabase,
   });
+  const observability = await persistInterviewSessionObservability({
+    events: telemetryEvents,
+    session: {
+      cost_estimated_at: session.cost_estimated_at,
+      cost_status: session.cost_status,
+      estimated_cost_currency: session.estimated_cost_currency,
+      openai_model: session.openai_model,
+      openai_transcription_model: session.openai_transcription_model,
+    },
+    sessionId,
+    supabase,
+    usageEvents: usageEventItems,
+  });
   const lastClientFlushAt = toIsoNow();
   const { error } = await supabase
     .from("interview_sessions")
     .update({
+      ...observability.sessionUpdate,
       last_client_flush_at: lastClientFlushAt,
       persisted_turn_count: counts.persistedTurnCount,
     })
@@ -768,10 +902,14 @@ export async function persistInterviewSessionEvents({
   }
 
   return {
+    costStatus: observability.costStatus,
+    estimatedCostUsd: observability.estimatedCostUsd,
     lastClientFlushAt,
     ok: true,
     persistedMessageCount: counts.persistedMessageCount,
     persistedTurnCount: counts.persistedTurnCount,
+    recordedEventCount: observability.recordedEventCount,
+    recordedUsageEventCount: observability.recordedUsageEventCount,
   };
 }
 
@@ -811,9 +949,7 @@ export async function completeInterviewSession({
   }
 
   if (session.state === "cancelled" || session.state === "failed") {
-    throw new Error(
-      `Interview session is already terminal with state ${session.state}.`,
-    );
+    throw new InterviewSessionTerminalStateConflictError(session.state);
   }
 
   const persisted = await persistInterviewSessionEvents({
@@ -906,11 +1042,12 @@ export async function cancelInterviewSession({
     };
   }
 
+  const cancelledAt = toIsoNow();
   const { error } = await supabase
     .from("interview_sessions")
     .update({
       completion_reason: reason,
-      ended_at: toIsoNow(),
+      ended_at: cancelledAt,
       persisted_turn_count: persisted.persistedTurnCount,
       stale_at: null,
       state: "cancelled",
@@ -1021,22 +1158,44 @@ export async function getInterviewSessionDetail({
     sessionId,
     supabase,
   });
+  const observability = await listInterviewSessionObservability({
+    sessionId,
+    supabase,
+  });
 
   return {
+    events: observability.events,
     session: {
       completionReason: session.completion_reason,
+      costBreakdown: parseJsonObject(session.cost_breakdown_json),
+      costEstimatedAt: session.cost_estimated_at,
+      costNotes: parseJsonArray(session.cost_notes_json),
+      costRateSnapshot: parseJsonObject(session.cost_rate_snapshot_json),
+      costStatus: session.cost_status,
       createdAt: session.created_at,
       debrief: parseDebrief(session.debrief_json),
       debriefErrorCode: session.debrief_error_code,
       debriefGeneratedAt: session.debrief_generated_at,
       debriefStatus: session.debrief_status,
+      diagnostics: parseJsonObject(session.diagnostics_json),
+      estimatedCostCurrency: session.estimated_cost_currency,
+      estimatedCostUsd: parseNumericValue(session.estimated_cost_usd),
       forcedEndAt: session.forced_end_at,
       forcedEndReason: session.forced_end_reason,
       id: session.id,
       lastClientFlushAt: session.last_client_flush_at,
       lastClientHeartbeatAt: session.last_client_heartbeat_at,
+      lastDisconnectReason: session.last_disconnect_reason,
+      lastUsageRecordedAt: session.last_usage_recorded_at,
       metrics: parseMetrics(session.metrics_json),
+      openAiTraceEnabled: session.openai_trace_enabled,
+      openAiTraceGroupId: session.openai_trace_group_id,
+      openAiTraceMetadata: parseJsonObject(session.openai_trace_metadata_json),
+      openAiTraceMode: session.openai_trace_mode,
+      openAiTraceWorkflowName: session.openai_trace_workflow_name,
       persistedTurnCount: session.persisted_turn_count,
+      retryCount: session.retry_count,
+      runtimeEnvironment: session.runtime_environment,
       runtimePersistenceVersion: session.runtime_persistence_version,
       runtimePromptVersion: session.runtime_prompt_version,
       runtimeSearchPolicyVersion: session.runtime_search_policy_version,
@@ -1046,8 +1205,11 @@ export async function getInterviewSessionDetail({
       scopeType: session.scope_type,
       staleAt: session.stale_at,
       state: session.state,
+      telemetryUpdatedAt: session.telemetry_updated_at,
       updatedAt: session.updated_at,
+      usageSummary: parseJsonObject(session.usage_summary_json),
     },
     transcript: transcriptRows.map(mapMessageRow),
+    usageEvents: observability.usageEvents,
   };
 }

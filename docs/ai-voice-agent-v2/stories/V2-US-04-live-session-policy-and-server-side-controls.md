@@ -8,7 +8,7 @@ app policy.
 
 ## Status
 
-- `Status`: Implementation done; rollout validation pending (as of 2026-03-10)
+- `Status`: Closed with follow-up in V2-US-09 (as of 2026-03-11)
 - `Why this exists`: V1 tracks lifecycle state, but it does not yet enforce a
   single active session policy or provide a stronger server-owned control path
   for runtime changes and shutdown.
@@ -18,6 +18,11 @@ app policy.
 - `Implementation note`: this story should stay compatible with the current
   browser-bootstrap model. It does not require moving media transport into a
   server proxy.
+- `Closure note`: one-live-session enforcement, stale reclaim, server-owned
+  `force-end`, heartbeat, duplicate-session recovery, and same-browser takeover
+  coordination are in place. The remaining cross-browser and cross-device
+  revocation gap is now intentionally tracked as `V2-US-09`, not as unfinished
+  core scope inside this story.
 
 ### Implemented now (2026-03-10)
 
@@ -40,12 +45,12 @@ app policy.
 - Added route/service tests for conflict detection, stale reclaim, force-end,
   and heartbeat behavior.
 
-### Remaining before full close
+### Closed With Remarks
 
-- Confirm operational policy for who can call `force-end` in production
-  (currently any authenticated owner-scoped caller under existing RLS).
-- Run final staged rollout checks with real concurrent clients against a linked
-  Supabase environment.
+- Production caller policy for `force-end` still needs confirmation during
+  rollout, but the implementation scope of this story is complete.
+- Cross-browser and cross-device revocation latency is not considered a blocker
+  for closing this story because that work now belongs to `V2-US-09`.
 
 ## Acceptance Criteria
 
