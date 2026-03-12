@@ -58,13 +58,10 @@ export function startVoiceInterviewConnectFlow({
 export function activateVoiceInterviewSession({
   markSessionActive,
   onStateSyncError,
-  sendInitialResponse,
 }: {
   markSessionActive: () => Promise<void>;
   onStateSyncError: (error: unknown) => void;
-  sendInitialResponse: () => void;
 }) {
-  sendInitialResponse();
   void markSessionActive().catch(onStateSyncError);
 }
 

@@ -2,145 +2,111 @@
 
 ## Story
 
-As a learner, I want the interview coach to consult the official documentation
-for the active category and topic so that the answer stays current, grounded,
-and tightly scoped instead of drifting into general browsing.
+As a learner, I want the interview coach to use a tightly scoped official-doc
+grounding path for the active interview topic so answers stay current and
+bounded instead of drifting into broad browsing.
 
 ## Status
 
-- `Status`: Ready for implementation
-- `Why this exists`: V1 intentionally shipped with search disabled in the live
-  route even though the prompt and UI were already designed around a scoped
+- `Status`: Done
+- `Shipped`: The narrowed first pass shipped on 2026-03-12 as a server-owned
+  startup grounding path for Salesforce interview scopes.
+- `Why this exists`: V1 intentionally shipped with live search disabled even
+  though the prompt and UI shape already anticipated a scoped
   documentation-backed answer path.
-- `Current implementation approach`: use a server-owned prompt and query planner
-  to discover likely official documentation sources at runtime. We are not
-  storing trusted domains or search policy metadata in the database yet.
-- `Deferred follow-on`: replace or reinforce prompt-driven source discovery with
-  explicit allowlists or persisted policy once the prototype flow has proven
-  itself.
+- `Current implementation approach`: this story is now closed as the
+  pre-session orchestration layer behind `V2-US-10`, not as a per-turn live
+  search workflow. The server resolves scope, builds one deterministic
+  official-doc query, fetches a compact grounding brief behind a narrow
+  boundary, and reuses that brief for the session.
+- `Deferred follow-on`: if the product later needs explicit turn-time
+  documentation lookups, cross-ecosystem source resolution, or learner-visible
+  search citations, treat that as a new follow-on rather than unfinished scope
+  inside this story.
+- `Closure note`: no per-turn search trigger, no broad browsing mode, and no
+  search-specific transcript citations are part of the closed scope.
+
+### Implemented now (2026-03-12)
+
+- Added `src/lib/interview/scoped-documentation-search.ts` as the server-owned
+  orchestration layer for official-doc startup grounding.
+- Search remains outside the main interviewer runtime. The core coach never
+  receives unrestricted browsing access.
+- Query construction is server-owned and deterministic from the scoped topic
+  snapshot rather than browser-authored free-form search input.
+- The first shipped source policy is intentionally narrow:
+  official Salesforce domains only, with one lightweight search-backed warmup
+  per applicable session start.
+- Search results are normalized into a compact internal grounding brief instead
+  of being injected as raw provider output.
+- The startup brief is reused by both the chained runtime and the Realtime
+  bootstrap path.
+- Timeout-bounded behavior, cache-first reads, stale fallback, and speculative
+  prewarm on `Mock Interview` intent are all part of the shipped orchestration.
+- If the fetch fails, times out, or yields weak evidence, the session falls
+  back to the normal scoped interview prompt without inventing recency claims.
+
+### Done Notes
+
+- This story now closes the orchestration layer for startup-scoped grounding
+  only.
+- Off-topic redirects remain prompt-driven in the main interviewer policy.
+- Broader official-source mapping outside Salesforce is not part of the shipped
+  closure.
 
 ## Acceptance Criteria
 
-1. Search triggers only for explicit documentation or recency intent inside the
-   active scope, such as latest, recent, updated, deprecated, breaking changes,
-   what the docs say, or show me the official docs.
-2. Search remains locked to the active session scope and does not answer
-   unrelated documentation asks directly.
-3. The main coach does not receive unrestricted browsing access.
-4. Search queries are built server-side from the scope snapshot, category,
-   subtopics, and prompt-assisted term expansion, not from arbitrary free-form
-   user text alone.
-5. Search prefers official documentation sources that can be inferred
-   confidently from the active topic and category. If no strong official source
-   can be identified, the app returns a bounded fallback instead of broadening
-   into generic browsing.
-6. A successful documentation-backed answer returns both:
-   a short spoken summary for the voice flow and a structured citation list for
-   the transcript or side panel.
-7. After the documentation answer is delivered, control returns to the scoped
-   coach.
-8. If search fails, times out, or yields weak evidence, the user gets a bounded
-   fallback response instead of an invented answer.
+1. Documentation grounding happens only through a server-owned scoped path for
+   the active interview session.
+2. The main interviewer does not receive unrestricted browsing access.
+3. Search query construction stays server-owned and derived from the active
+   scope snapshot rather than browser-authored arbitrary text alone.
+4. The initial shipped source policy prefers confidently known official
+   documentation domains and does not broaden into generic browsing when
+   evidence is weak.
+5. A successful grounding fetch returns a compact internal brief for the voice
+   flow rather than raw search payloads.
+6. The same scoped brief can be reused across both runtime lanes.
+7. If search fails, times out, or yields weak evidence, the user gets the
+   normal bounded scoped interview behavior instead of an invented answer.
 
 ## Low-Level Solution Design
 
-- Add a server-owned orchestrator such as
+- Add a server-owned orchestrator in
   `src/lib/interview/scoped-documentation-search.ts`.
 - Keep the main interviewer specialized for coaching and scope discipline.
-  Route documentation or recency asks to a dedicated scoped search path instead
-  of giving the main interviewer a broad live search tool.
-- Add a documentation-intent detector over finalized user transcript turns so
-  search is explicit and auditable.
-- Build a normalized search request shape such as:
-  `scopeType`, `scopeSlug`, `scopeTitle`, `category`, `subcategory`,
-  `subtopics`, `topicAliases`, `recencyWindowDays`, and `userIntent`.
-- Use OpenAI's web-backed capability only through a server-owned boundary.
-- Add a server-owned query planner that expands the topic into likely official
-  docs phrasing such as official docs, documentation, lifecycle hook names, or
-  framework-specific aliases.
-- Do not require DB-backed docs-domain metadata in this phase. The source
-  preference lives in server code and prompt logic for now.
-- Construct the effective search query from the scope snapshot plus the
-  expanded category vocabulary. Example:
-  `Salesforce LWC Lifecycle Hooks site:developer.salesforce.com/docs connectedCallback renderedCallback disconnectedCallback`.
-- If the search results do not strongly indicate an official documentation
-  source, return a bounded fallback instead of synthesizing an answer from weak
-  evidence.
-- Normalize search outputs into a structured citation type with:
-  `title`, `url`, `source`, `publishedAt`, `snippet`, and `confidence`.
-- Add a transcript event shape that can render spoken recency summaries plus
-  citation rows without leaking raw provider payloads into the UI.
-- Persist search invocation metadata on the session so later QA can separate
-  search-backed answers from normal coaching turns.
-- Add bounded upstream timeouts and a clear fallback message when the search
-  path fails or returns low-confidence results.
-- Reject or redirect documentation requests that drift outside the active topic
-  and category even if the user names another platform explicitly.
+  Route official-doc grounding through a dedicated server path instead of
+  giving the live interviewer a broad web tool.
+- Build the effective search query from scope metadata and a deterministic set
+  of domain-specific expansion terms.
+- Prefer confidently known official documentation sources in server policy.
+- Normalize search outputs into a compact grounding brief shaped for prompt
+  injection instead of transcript rendering.
+- Add bounded upstream timeouts plus cache and stale fallback behavior so the
+  orchestration improves accuracy without materially harming startup latency.
+- Persist grounding diagnostics so QA can distinguish grounded sessions from
+  normal scoped sessions later.
 
 ## Best Practices
 
-- Treat documentation lookup as a special-case capability, not a general search
-  mode.
-- Use prompt-assisted source discovery only as a server-owned heuristic, not as
-  a browser-controlled policy surface.
-- Prefer official vendor or platform documentation over blogs, forums, or
-  generic search results.
-- Keep the search answer short enough to sound natural in voice.
-- Prefer a small number of strong citations over a long noisy list.
-- Keep query construction deterministic enough that QA can replay and compare
-  behavior across prompt or model versions.
-- Do not allow the browser to compose or mutate the actual search query policy.
-- Use category, parent topic, and subtopic terms together so the query stays
-  narrow.
-- If the source confidence is weak, fall back safely instead of stretching to a
+- Treat documentation lookup as a narrow capability, not a general search mode.
+- Keep query construction deterministic enough that QA can compare behavior
+  across versions.
+- Prefer a small number of strong official signals over broader noisy search.
+- Keep the browser thin. Query policy and source policy stay server-owned.
+- If source confidence is weak, fall back safely instead of stretching to a
   maybe-correct source.
-
-## Example Scope Policy
-
-- Active category: Salesforce
-- Active topic: LWC Lifecycle Hooks
-- Search intent:
-  prefer official Salesforce documentation discovered from the topic phrasing.
-- Query expansion terms:
-  `LWC`, `Lightning Web Components`, `Lifecycle Hooks`,
-  `connectedCallback`, `renderedCallback`, `disconnectedCallback`,
-  `errorCallback`
-- Expected behavior:
-  if the learner asks about lifecycle hooks or the latest guidance for LWC
-  lifecycle behavior, the server builds a Salesforce-focused official-docs
-  query and returns a short answer plus Salesforce citations.
-- Rejected drift example:
-  if the learner asks to compare that topic against React hooks or Angular
-  lifecycle APIs, the coach redirects back to the active Salesforce scope
-  instead of broadening the search.
-
-- Active category: JavaScript
-- Active topic: Closures
-- Search intent:
-  prefer official JavaScript documentation discovered from the topic phrasing.
-- Query expansion terms:
-  `closures`, `closure`, `lexical environment`, `scope chain`
-- Expected behavior:
-  if the learner asks what the official docs say about closures, the search
-  should favor MDN-style official documentation results and return a short
-  answer with citations.
 
 ## Required Testing
 
-- Search fires for in-scope documentation asks and does not fire for normal
-  coaching turns.
-- `LWC Lifecycle Hooks` resolves to Salesforce official documentation citations
-  in the example flow.
-- `JavaScript Closures` resolves to official JavaScript documentation citations
-  such as MDN in the example flow.
-- Topics without a confidently identifiable official source return a bounded
-  fallback instead of a weak generic answer.
-- Off-topic documentation asks are redirected back to the active scope.
-- Citation rows render deterministically and remain attached to the correct
-  assistant turn.
-- Timeout, no-result, and malformed-result paths return bounded fallbacks.
+- Applicable Salesforce scopes trigger the startup grounding path.
+- Non-applicable scopes skip the grounding fetch.
+- Fresh cache hits avoid repeated grounding requests.
+- Weak-evidence, timeout, and failure paths return bounded fallbacks.
+- The resulting brief is threaded into both runtime lanes consistently.
 
 ## Dependencies
 
-- Depends on the shipped V1 bootstrap and live transcript baseline.
-- Must ship together with the security controls in `V2-US-02`.
+- Builds on the dual-runtime bootstrap and prompt plumbing shipped across
+  `V2-US-08` and `V2-US-10`.
+- Uses the first-pass safety controls documented in `V2-US-02`.

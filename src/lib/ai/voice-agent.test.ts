@@ -30,7 +30,7 @@ function asProcessEnv(values: Record<string, string | undefined>) {
 }
 
 describe("voice agent runtime tuning", () => {
-  it("uses conservative default output and VAD settings", () => {
+  it("uses premium default output headroom and conservative VAD settings", () => {
     const env = parseVoiceInterviewEnv(
       asProcessEnv({
         OPENAI_API_KEY: "openai-key",
@@ -42,9 +42,10 @@ describe("voice agent runtime tuning", () => {
       scope,
     });
 
-    expect(config.max_output_tokens).toBe(640);
+    expect(config.max_output_tokens).toBe(1024);
     expect(config.audio.input.turn_detection).toEqual(
       expect.objectContaining({
+        create_response: true,
         prefix_padding_ms: 450,
         silence_duration_ms: 1_200,
         threshold: 0.72,
@@ -71,10 +72,39 @@ describe("voice agent runtime tuning", () => {
     expect(config.max_output_tokens).toBe(480);
     expect(config.audio.input.turn_detection).toEqual(
       expect.objectContaining({
+        create_response: true,
         prefix_padding_ms: 650,
         silence_duration_ms: 1_600,
         threshold: 0.8,
       }),
+    );
+  });
+
+  it("adds the scoped grounding brief to realtime instructions when present", () => {
+    const env = parseVoiceInterviewEnv(
+      asProcessEnv({
+        OPENAI_API_KEY: "openai-key",
+      }),
+    );
+
+    const config = buildVoiceInterviewRealtimeSessionConfig({
+      env,
+      groundingBrief: {
+        recentChanges: ["Spring '26 updated one scoped platform behavior."],
+        releaseNotes: ["Spring '26 release notes mention the change."],
+        retrievedAt: "2026-03-12T10:00:00.000Z",
+        scopeSlug: scope.slug,
+        scopeTitle: scope.title,
+        topicFacts: ["Use current terminology in the reply."],
+      },
+      scope,
+    });
+
+    expect(config.instructions).toContain(
+      "Internal grounding brief (use silently)",
+    );
+    expect(config.instructions).toContain(
+      "Spring '26 updated one scoped platform behavior.",
     );
   });
 });

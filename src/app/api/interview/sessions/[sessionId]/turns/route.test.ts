@@ -89,10 +89,12 @@ const profile = {
   acceptedMimeTypes: ["audio/webm", "audio/webm;codecs=opus"],
   autoCommitSilenceMs: 1200,
   maxTurnSeconds: 45,
+  openingMaxOutputTokens: 220,
   playbackFormat: "mp3" as const,
   profileId: "chained_voice_premium" as const,
   profileVersion: "2026-03-12",
-  reasoningEffort: "none" as const,
+  reasoningEffort: "low" as const,
+  replyMaxOutputTokens: 420,
   textModel: "gpt-5.4",
   transcribeModel: "gpt-4o-mini-transcribe",
   ttsModel: "gpt-4o-mini-tts",
@@ -187,12 +189,23 @@ describe("POST /api/interview/sessions/[sessionId]/turns", () => {
       chained_voice_balanced: {
         ...profile,
         profileId: "chained_voice_balanced",
-        textModel: "gpt-5-mini",
+        reasoningEffort: undefined,
+        textModel: "gpt-5.2",
       },
       chained_voice_premium: profile,
     } as never);
     mockedSupportsChainedVoiceMimeType.mockReturnValue(true);
     mockedGetInterviewSessionRuntimeContext.mockResolvedValue({
+      grounding: {
+        recentChanges: ["Spring '26 adjusted Flow error handling guidance."],
+        releaseNotes: [
+          "Spring '26 release notes mention Flow runtime updates.",
+        ],
+        retrievedAt: "2026-03-10T08:59:00.000Z",
+        scopeSlug: "javascript",
+        scopeTitle: "JavaScript",
+        topicFacts: ["Keep the active scope narrow during follow-up turns."],
+      },
       runtimeKind: "chained_voice",
       runtimeProfileId: "chained_voice_premium",
       runtimeProfileVersion: "2026-03-12",
@@ -305,6 +318,9 @@ describe("POST /api/interview/sessions/[sessionId]/turns", () => {
     );
     expect(mockedExecuteChainedVoiceTurn).toHaveBeenCalledWith(
       expect.objectContaining({
+        groundingBrief: expect.objectContaining({
+          retrievedAt: "2026-03-10T08:59:00.000Z",
+        }),
         profile,
         scope,
       }),
@@ -327,6 +343,7 @@ describe("POST /api/interview/sessions/[sessionId]/turns", () => {
 
   it("returns 409 when the session is not running the chained lane", async () => {
     mockedGetInterviewSessionRuntimeContext.mockResolvedValue({
+      grounding: null,
       runtimeKind: "realtime_sts",
       runtimeProfileId: "realtime_voice_v1",
       runtimeProfileVersion: "2026-03-12",

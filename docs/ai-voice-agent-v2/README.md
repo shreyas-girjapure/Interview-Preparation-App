@@ -1,6 +1,6 @@
 # AI Voice Agent V2 Epic
 
-Status: Draft
+Status: In progress
 
 This folder is the active planning set for AI voice interview V2.
 
@@ -10,23 +10,32 @@ V1 on 2026-03-10.
 
 ## Story Status Board
 
-1. `V2-US-01` Scoped documentation search orchestration: `Ready for implementation`
-2. `V2-US-02` Search safety, prompt injection, and exfiltration defenses: `Draft`
-3. `V2-US-03` Transcript persistence and server debriefs: `Closed`
-4. `V2-US-04` Live-session policy and server-side controls: `Closed with follow-up in V2-US-09`
-5. `V2-US-05` Observability, tracing, debug correlation, and session cost accounting: `Ready for implementation`
-6. `V2-US-06` Playlist-scoped voice interviews: `Deferred for current implementation window`
-7. `V2-US-07` Realtime speech-to-speech quality hardening: `Deferred for current implementation window; partially implemented`
-8. `V2-US-08` Chained `STT -> LLM -> TTS` voice runtime: `Prioritized for implementation; draft with contract groundwork`
-9. `V2-US-09` Cross-device session revocation and takeover recovery: `Draft`
-10. `V2-US-10` Salesforce documentation grounding for voice agent: `Prioritized for implementation; ready for implementation`
-11. `V2-US-11` Structured conversation prompt tuning and grounded turn steering: `Prioritized for implementation; ready for implementation`
+- `Done`: [V2-US-01 Scoped documentation search orchestration](./stories/V2-US-01-scoped-recent-changes-search-orchestration.md)
+- `Done`: [V2-US-02 Search safety, prompt injection, and exfiltration defenses](./stories/V2-US-02-search-safety-prompt-injection-and-exfiltration-defenses.md)
+- `Done`: [V2-US-03 Transcript persistence and server debriefs](./stories/V2-US-03-transcript-persistence-and-server-debriefs.md)
+- `Done`: [V2-US-04 Live-session policy and server-side controls](./stories/V2-US-04-live-session-policy-and-server-side-controls.md) (follow-up tracked in `V2-US-09`)
+- `Ready`: [V2-US-05 Observability, tracing, debug correlation, and session cost accounting](./stories/V2-US-05-observability-tracing-and-debug-correlation.md)
+- `Deferred`: [V2-US-06 Playlist-scoped voice interviews](./stories/V2-US-06-playlist-scoped-voice-interviews.md)
+- `Partial`: [V2-US-07 Realtime speech-to-speech quality hardening](./stories/V2-US-07-realtime-sts-quality-hardening.md)
+- `Done`: [V2-US-08 Chained STT -> LLM -> TTS voice runtime](./stories/V2-US-08-chained-stt-llm-tts-runtime.md)
+- `Draft`: [V2-US-09 Cross-device session revocation and takeover recovery](./stories/V2-US-09-cross-device-session-revocation-and-takeover-recovery.md)
+- `Done`: [V2-US-10 Salesforce pre-session documentation grounding for voice agent](./stories/V2-US-10-salesforce-documentation-grounding.md)
+- `Ready`: [V2-US-11 Structured conversation prompt tuning and grounded turn steering](./stories/V2-US-11-structured-conversation-prompt-tuning-and-grounded-turn-steering.md)
 
 ## Current Implementation Priority
 
-1. `V2-US-08` Chained `STT -> LLM -> TTS` voice runtime
-2. `V2-US-10` Salesforce documentation grounding for voice agent
-3. `V2-US-11` Structured conversation prompt tuning and grounded turn steering
+1. `V2-US-11` Structured conversation prompt tuning and grounded turn steering
+2. `V2-US-05` Observability, tracing, debug correlation, and session cost accounting
+3. `V2-US-09` Cross-device session revocation and takeover recovery
+
+Completed:
+
+- `V2-US-01` Scoped documentation search orchestration
+- `V2-US-02` Search safety, prompt injection, and exfiltration defenses
+- `V2-US-03` Transcript persistence and server debriefs
+- `V2-US-04` Live-session policy and server-side controls
+- `V2-US-08` Chained `STT -> LLM -> TTS` voice runtime
+- `V2-US-10` Salesforce pre-session documentation grounding for voice agent
 
 Deferred for this planning window:
 
@@ -35,7 +44,8 @@ Deferred for this planning window:
 
 ## V2 Goals
 
-- Add grounded scoped official-documentation answers with visible citations.
+- Add server-owned official-documentation grounding so interview answers are
+  fresher and more accurate inside the active scope.
 - Add explicit prompt-injection and exfiltration defenses for search-backed
   answers.
 - Make interviewer turns more structured and adaptive by grounding each turn in
@@ -79,32 +89,22 @@ Deferred for this planning window:
 - No question-scoped interview route unless V2 scope is explicitly expanded
   later.
 
-## Story Catalog
-
-1. [V2-US-01: Scoped documentation search orchestration](./stories/V2-US-01-scoped-recent-changes-search-orchestration.md)
-2. [V2-US-02: Search safety, prompt injection, and exfiltration defenses](./stories/V2-US-02-search-safety-prompt-injection-and-exfiltration-defenses.md)
-3. [V2-US-03: Transcript persistence and server debriefs](./stories/V2-US-03-transcript-persistence-and-server-debriefs.md)
-4. [V2-US-04: Live-session policy and server-side controls](./stories/V2-US-04-live-session-policy-and-server-side-controls.md)
-5. [V2-US-05: Observability, tracing, debug correlation, and session cost accounting](./stories/V2-US-05-observability-tracing-and-debug-correlation.md)
-6. [V2-US-06: Playlist-scoped voice interviews](./stories/V2-US-06-playlist-scoped-voice-interviews.md)
-7. [V2-US-07: Realtime speech-to-speech quality hardening](./stories/V2-US-07-realtime-sts-quality-hardening.md)
-8. [V2-US-08: Chained STT -> LLM -> TTS voice runtime](./stories/V2-US-08-chained-stt-llm-tts-runtime.md)
-9. [V2-US-09: Cross-device session revocation and takeover recovery](./stories/V2-US-09-cross-device-session-revocation-and-takeover-recovery.md)
-10. [V2-US-10: Salesforce documentation grounding for voice agent](./stories/V2-US-10-salesforce-documentation-grounding.md)
-11. [V2-US-11: Structured conversation prompt tuning and grounded turn steering](./stories/V2-US-11-structured-conversation-prompt-tuning-and-grounded-turn-steering.md)
-
 ## Current Planning Snapshot
 
-- `V2-US-01`: Ready for implementation. This is the first implementation story
-  and the main user-visible capability gap left after V1. The current approach
-  uses server-owned prompt and query planning to discover official docs at
-  runtime; DB-backed source policy is deferred.
-- `V2-US-02`: Draft. This is a release gate for V2-US-01; do not ship scoped
-  search without the hardening controls.
-- `V2-US-03`: Closed. Transcript persistence, terminal write routes, server
+- `V2-US-01`: Done. This story is now interpreted as the shipped startup-scoped
+  documentation orchestration behind `V2-US-10`: server-owned query planning,
+  official-domain restriction, cache-first warmup, bounded timeout, fallback,
+  and shared grounding injection across both runtime lanes. Live per-turn
+  search is intentionally not part of the closed scope.
+- `V2-US-02`: Done as the narrowed first-pass hardening slice for startup
+  grounding. Search remains isolated behind a server-owned boundary, official
+  domains are restricted, retrieved pages are treated as untrusted, output is
+  schema-validated before use, and no raw search results or citation URLs are
+  surfaced to learners in the shipped slice.
+- `V2-US-03`: Done. Transcript persistence, terminal write routes, server
   debrief generation, and single-session readback are complete and validated
   enough to close the story.
-- `V2-US-04`: Closed with follow-up in `V2-US-09`. One-live-session
+- `V2-US-04`: Done. One-live-session
   enforcement, stale reclaim, runtime version persistence, bootstrap conflict
   responses, and server-owned `force-end`/`heartbeat` are complete. The
   remaining cross-browser and cross-device revocation gap is now treated as a
@@ -117,28 +117,35 @@ Deferred for this planning window:
   contract and playlist detail data are already in place, but playlist scope
   expansion is not the current product bottleneck.
 - `V2-US-07`: Deferred for the current planning window. Server-owned Realtime
-  tuning, prompt shaping, trace metadata, and session observability are now in
-  code, but the normalized runtime-profile contract and fuller quality
-  diagnostics remain follow-up work rather than the next active lane.
-- `V2-US-08`: Prioritized for implementation and not from zero. Shared
-  observability types, usage-event schemas, and cost rollups already reserve a
-  `chained_voice` runtime lane; the actual chained runtime, turn endpoint, and
-  routing policy are still unbuilt. This is now the first runtime story to pull
-  forward.
+  tuning, prompt shaping, trace metadata, session observability, and a larger
+  premium output-token budget are now in code, but the normalized
+  runtime-profile contract and fuller quality diagnostics remain follow-up work
+  rather than the next active lane.
+- `V2-US-08`: Done. The chained runtime, turn endpoint, runtime routing, and
+  supporting persistence path are now shipped. The current tuned defaults use
+  `gpt-5.4` for premium turns, `gpt-5.2` for the balanced fallback lane, and
+  server-owned opening/reply token budgets so spoken turns stop clipping.
 - `V2-US-09`: Draft. This closes the remaining recovery gap after `V2-US-04`
   for refreshes, takeovers, and cross-browser or cross-device revocation. The
   recommended first pass is row-level revocation delivery plus heartbeat and
   visibility fallback. The long-term story must remain compatible with a
   two-runtime product where hard remote kill is strongest on the chained lane.
-- `V2-US-10`: Prioritized for implementation and not started. Citation plumbing
-  is already in place, but there is no scoped documentation-search
-  orchestrator, no Salesforce domain policy, and no grounding step in the live
-  voice runtime yet.
-- `V2-US-11`: Prioritized for implementation and not started. The current voice
-  prompt is intentionally strict and compact, but it does not yet have a
-  server-owned turn brief or answer-interpretation layer that makes the
-  interviewer flexible when learner responses are partial, indirect, or
-  clarifying.
+- `V2-US-10`: Done. The narrowed first pass shipped on 2026-03-12:
+  Salesforce-topic detection, one official-doc startup warmup, cache-first and
+  timeout-bounded grounding retrieval, speculative prewarm on mock interview
+  intent, persisted grounding diagnostics, and shared prompt injection for both
+  chained and Realtime bootstraps. The tuned default grounding lane now uses
+  `gpt-5.4` with a larger structured-output budget, a simpler topic-derived
+  query, a longer cold-start timeout, and a compact low-verbosity brief so the
+  startup search is more likely to complete and parse cleanly. The earlier
+  grounded Realtime duplicate-opener bug is also fixed by keeping VAD enabled
+  while moving response creation to explicit client triggers. Per-turn search
+  plus learner-facing citation behavior remain deferred follow-ons.
+- `V2-US-11`: Ready for implementation, but queued behind the first grounding
+  and search pass. The current voice prompt is intentionally strict and
+  compact, but it does not yet have a server-owned turn brief or
+  answer-interpretation layer that makes the interviewer flexible when learner
+  responses are partial, indirect, or clarifying.
 - The runtime stories can be pulled forward if runtime stability and runtime
   routing become the immediate blocker for broader V2 rollout.
 
@@ -176,17 +183,24 @@ Previously completed:
 - V2-US-04 core implementation: one-live-session enforcement, stale reclaim,
   runtime version persistence, `409 live_session_exists`, and server-owned
   `force-end`/`heartbeat` endpoints.
+- V2-US-08 chained runtime implementation: `POST /turns`, runtime routing,
+  normalized runtime metadata, and happy-path chained voice coverage.
+- V2-US-10 narrowed grounding implementation: official Salesforce startup
+  warmup, cache + stale fallback, speculative prewarm, persisted diagnostics,
+  prompt injection for both runtime lanes, structured grounding failure
+  diagnostics for easier support debugging, and quality-tuned model/token
+  defaults for fresher startup briefs and less clipped interviewer responses.
 - Client wiring for conflict messaging and live-session heartbeat pings.
 - Test and build verification passing on current branch.
 
 Pending next:
 
-- Start `V2-US-08` (chained `STT -> LLM -> TTS` runtime) as the active runtime
-  implementation lane.
-- Pull `V2-US-10` immediately after or alongside the runtime turn pipeline so
-  grounded Salesforce answers can plug into the first chained path.
-- Follow with `V2-US-11` to make the interviewer more adaptive and structured
-  once chained runtime control and grounding inputs are in place.
+- Start `V2-US-11` as the next active lane so the interviewer can make better
+  use of the shipped grounding inputs and turn-brief plumbing.
+- Pull `V2-US-05` once product and support observability become the next
+  bottleneck across the dual-runtime stack.
+- Keep `V2-US-09` available if recovery and takeover behavior becomes the
+  immediate product gap.
 - Keep `V2-US-06` and `V2-US-07` deferred unless playlist expansion or
   additional Realtime hardening becomes the immediate blocker again.
 
@@ -219,10 +233,9 @@ Pending next:
 
 - Implement one active story at a time following the `Current Implementation
 Priority` section above unless priorities are changed again explicitly.
-- Do not ship `V2-US-01` without the security controls in `V2-US-02`.
-- `V2-US-08` has now been explicitly re-prioritized ahead of the remaining
-  `V2-US-07` hardening work. Keep the shared runtime descriptor and support
-  model aligned, but do not treat full `V2-US-07` completion as a blocker.
+- Keep the shared runtime descriptor and support model aligned after
+  `V2-US-08`, but do not treat full `V2-US-07` completion as a blocker for the
+  current grounding/search lane.
 - Keep the browser thin. Prompt policy, tool policy, search policy, runtime
   versioning, and tracing config stay server-owned.
 - Treat search results as untrusted input all the way through the pipeline.

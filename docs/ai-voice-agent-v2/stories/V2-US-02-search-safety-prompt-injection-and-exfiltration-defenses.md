@@ -2,83 +2,103 @@
 
 ## Story
 
-As the app owner, I need scoped search to resist prompt injection and data
-exfiltration so that web-backed recency answers do not turn into a security
-hole.
+As the app owner, I need the scoped grounding path to resist prompt injection
+and accidental data exposure so official-doc freshness does not become a new
+security hole.
 
 ## Status
 
-- `Status`: Draft
+- `Status`: Done
+- `Shipped`: The narrowed first-pass hardening slice shipped on 2026-03-12 for
+  the startup grounding flow.
 - `Why this exists`: OpenAI's current docs explicitly warn that web search and
   search-like tool outputs can carry prompt-injection payloads, and that
   built-in model defenses are not sufficient on their own.
+- `Current implementation approach`: this story now closes the minimum safety
+  envelope around the shipped startup grounding path, not a broader live
+  search stack. The active implementation keeps search on the server, restricts
+  allowed domains, treats retrieved pages as untrusted, validates structured
+  output before use, and never exposes raw web payloads to the learner-facing
+  prompt or transcript in this slice.
+- `Deferred follow-on`: if the product later adds turn-time search, broader
+  source coverage, raw citation rendering, or more exposed web content, treat
+  deeper sanitization, monitoring, and red-team coverage as a fresh follow-on
+  rather than unfinished scope inside this closed slice.
+
+### Implemented now (2026-03-12)
+
+- Search stays isolated in `scoped-documentation-search.ts` instead of being
+  handed directly to the main interviewer runtime.
+- The startup search query is server-owned and deterministic from scoped topic
+  metadata, not composed from raw browser-controlled browsing instructions.
+- The search tool is restricted to allowed official Salesforce domains.
+- The grounding model is instructed to treat retrieved pages as untrusted
+  content and to ignore instructions embedded in them.
+- The grounding response is schema-validated with Zod before the app will use
+  it as a prompt input.
+- The app only injects a compact extracted grounding brief into the voice
+  prompt. It does not pass raw result pages, raw search snippets, or citation
+  URLs into the live interviewer prompt.
+- The shipped slice does not surface search citations or returned URLs to the
+  learner, which keeps the first exposure surface narrow.
+- If the search path fails, times out, or yields weak evidence, the system
+  falls back to the normal scoped prompt instead of forcing low-confidence web
+  content into the session.
+
+### Done Notes
+
+- This story closes the first-pass safety bar for startup grounding only.
+- No separate suspicious-phrase monitor, URL redaction layer, or red-team test
+  harness was added because the shipped slice does not expose a general live
+  search pipeline.
+- If broader live search ever returns, those stronger controls should be
+  planned as a new hardening follow-on.
 
 ## Acceptance Criteria
 
-1. All search results are treated as untrusted input.
-2. Raw web content is never elevated into a high-trust system instruction for
-   the main interviewer.
-3. Tool arguments and intermediate payloads are schema-validated before use.
-4. Search-backed answers cannot exfiltrate private app data, hidden prompt
-   content, or user-specific secrets into downstream queries or visible URLs.
-5. Citation links are screened before being displayed or persisted.
-6. Search safety failures are logged with enough detail for review without
-   dumping secrets or full prompt bodies.
-7. Red-team tests cover malicious snippets, malicious URLs, and malicious
-   instructions embedded in result text.
+1. Search-backed grounding stays behind a server-owned boundary instead of
+   exposing unrestricted browsing to the live interviewer.
+2. Retrieved web content is treated as untrusted input.
+3. Raw retrieved text is never elevated directly into the main interviewer's
+   high-trust instructions.
+4. Structured grounding output is schema-validated before use.
+5. Search policy is restricted to known official domains for the shipped slice.
+6. If grounding fails or evidence is weak, the session falls back safely
+   without using risky low-confidence web content.
+7. The first shipped slice does not surface raw search payloads, citation URLs,
+   or provider-specific result blobs to the learner.
 
 ## Low-Level Solution Design
 
-- Keep the main coach and the search path separated.
-- Design the search pipeline as four low-trust stages:
-  query planning, search execution, result sanitization, and answer
-  summarization.
-- Allow only a narrow structured query contract to leave the app-owned search
+- Keep the main coach and the search-backed grounding path separated.
+- Allow only a narrow server-owned query contract to leave the app-owned
   planner.
-- Strip or ignore result text that tries to override policy, reveal secrets, or
-  redirect the model away from the scoped task.
-- Never pass hidden app instructions, full scope snapshots, answer rubrics, or
-  user-private data into search queries.
-- Validate citation URLs before storing or rendering them.
-- Do not auto-open returned links or recursively follow extra links from search
-  results.
-- Support optional per-scope preferred-domain policies so known official
-  sources can be weighted first when the active scope maps to a vendor,
-  framework, or product ecosystem.
-- Add a compact security monitor that flags suspicious phrases such as:
-  ignore previous instructions, send data, reveal system prompt, or encoded
-  payloads embedded in URLs.
-- Record search requests, normalized tool calls, and sanitized result metadata
-  so periodic review is possible.
-
-## Relevant OpenAI Guidance
-
-- Agent-builder safety:
-  <https://developers.openai.com/api/docs/guides/agent-builder-safety/>
-- Deep research prompt injection and exfiltration:
-  <https://developers.openai.com/api/docs/guides/deep-research/#prompt-injection-and-exfiltration>
-- Deep research risk controls:
-  <https://developers.openai.com/api/docs/guides/deep-research/#ways-to-control-risk>
+- Restrict search execution to a small allowlist of official domains for the
+  shipped slice.
+- Instruct the grounding stage to ignore hostile instructions embedded in
+  retrieved pages and extract factual product information only.
+- Validate the structured grounding payload before injecting any of it into the
+  voice prompt.
+- Normalize the usable output into a compact brief rather than carrying raw web
+  text deeper into the system.
+- Fall back cleanly whenever the grounding path is slow, weak, or malformed.
 
 ## Best Practices
 
 - Treat search results as evidence, not instructions.
-- Prefer structured extraction over passing arbitrary result text between
-  components.
-- Log tool calls and model-visible search payloads in a reviewable form.
-- Stage workflows so public-web work stays isolated from any future private
-  context or higher-trust server logic.
-- Make security review a release gate for any search-capable voice build.
+- Keep public-web work isolated from the higher-trust interviewer prompt.
+- Prefer structured extraction over raw result passthrough.
+- Keep the first safety surface narrow when shipping a new grounding feature.
+- If the search surface expands later, expand the hardening layer with it.
 
 ## Required Testing
 
-- Malicious result text that says to ignore system instructions is ignored.
-- Malicious result text that asks for secrets or hidden prompts is blocked.
-- Malicious citation URLs with encoded data or suspicious parameters are
-  rejected or redacted.
-- Search failures triggered by safety filters return a bounded user-facing
-  fallback.
+- Non-applicable scopes do not invoke the grounding search path.
+- Applicable scopes only use the allowed official-domain policy.
+- Malformed or weak grounding output is rejected in favor of a bounded fallback.
+- Grounding failures do not break session startup.
 
 ## Dependencies
 
-- Hardens `V2-US-01` and should ship with it.
+- Hardens the startup grounding path delivered through `V2-US-01` and
+  `V2-US-10`.

@@ -81,7 +81,7 @@ describe("voice interview client flow", () => {
     });
   });
 
-  it("sends the first response without waiting for the active-state sync", async () => {
+  it("marks the session active without blocking on the state sync", async () => {
     const events: string[] = [];
     let resolveActive: (() => void) | undefined;
 
@@ -95,29 +95,20 @@ describe("voice interview client flow", () => {
           };
         }),
     );
-    const sendInitialResponse = vi.fn(() => {
-      events.push("response.create");
-    });
     const onStateSyncError = vi.fn();
 
     activateVoiceInterviewSession({
       markSessionActive,
       onStateSyncError,
-      sendInitialResponse,
     });
 
-    expect(events).toEqual(["response.create", "mark-active-started"]);
+    expect(events).toEqual(["mark-active-started"]);
     expect(markSessionActive).toHaveBeenCalledTimes(1);
-    expect(sendInitialResponse).toHaveBeenCalledTimes(1);
     expect(onStateSyncError).not.toHaveBeenCalled();
 
     resolveActive?.();
     await Promise.resolve();
 
-    expect(events).toEqual([
-      "response.create",
-      "mark-active-started",
-      "mark-active-finished",
-    ]);
+    expect(events).toEqual(["mark-active-started", "mark-active-finished"]);
   });
 });

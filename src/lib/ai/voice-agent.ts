@@ -8,6 +8,7 @@ import type {
   VoiceInterviewRuntimeDescriptor,
 } from "@/lib/interview/voice-interview-api";
 import { buildVoiceInterviewPrompt } from "@/lib/interview/voice-interview-prompt";
+import type { ScopedDocumentationGroundingBrief } from "@/lib/interview/scoped-documentation-search";
 import type { VoiceInterviewScope } from "@/lib/interview/voice-scope";
 
 export type VoiceInterviewRealtimeBootstrap = {
@@ -92,14 +93,18 @@ export function buildRealtimeVoiceInterviewRuntimeDescriptor(
 
 export function buildVoiceInterviewRealtimeSessionConfig({
   env,
+  groundingBrief,
   scope,
   traceConfig,
 }: {
   env: VoiceInterviewEnv;
+  groundingBrief?: ScopedDocumentationGroundingBrief | null;
   scope: VoiceInterviewScope;
   traceConfig?: VoiceInterviewRealtimeTracingConfig;
 }): RealtimeClientSecretSessionConfig {
-  const sessionPrompt = buildVoiceInterviewPrompt(scope);
+  const sessionPrompt = buildVoiceInterviewPrompt(scope, {
+    groundingBrief,
+  });
 
   return {
     type: "realtime",
@@ -148,9 +153,11 @@ export function buildVoiceInterviewRealtimeSessionConfig({
 }
 
 export async function createVoiceInterviewBrowserBootstrap({
+  groundingBrief,
   scope,
   traceConfig,
 }: {
+  groundingBrief?: ScopedDocumentationGroundingBrief | null;
   scope: VoiceInterviewScope;
   traceConfig?: VoiceInterviewRealtimeTracingConfig;
 }): Promise<VoiceInterviewRealtimeBootstrap> {
@@ -160,6 +167,7 @@ export async function createVoiceInterviewBrowserBootstrap({
   const openAiBootstrapStartedAt = nowMs();
   const sessionConfig = buildVoiceInterviewRealtimeSessionConfig({
     env,
+    groundingBrief,
     scope,
     traceConfig,
   });

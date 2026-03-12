@@ -151,6 +151,7 @@ export async function POST(
 
     const execution = await executeChainedVoiceTurn({
       audioFile: audio,
+      groundingBrief: runtimeContext.grounding,
       profile,
       scope: runtimeContext.scope,
       transcriptRows: runtimeContext.transcriptRows,

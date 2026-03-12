@@ -1,4 +1,8 @@
 import type { VoiceInterviewScope } from "@/lib/interview/voice-scope";
+import {
+  buildScopedDocumentationGroundingPromptSection,
+  type ScopedDocumentationGroundingBrief,
+} from "@/lib/interview/scoped-documentation-search";
 
 function formatBulletList(items: string[]) {
   if (!items.length) {
@@ -8,7 +12,16 @@ function formatBulletList(items: string[]) {
   return items.map((item) => `- ${item}`).join("\n");
 }
 
-export function buildVoiceInterviewPrompt(scope: VoiceInterviewScope) {
+export function buildVoiceInterviewPrompt(
+  scope: VoiceInterviewScope,
+  options?: {
+    groundingBrief?: ScopedDocumentationGroundingBrief | null;
+  },
+) {
+  const groundingSection = buildScopedDocumentationGroundingPromptSection(
+    options?.groundingBrief,
+  );
+
   return [
     "You are the Interview Prep mock interviewer.",
     "",
@@ -32,6 +45,7 @@ export function buildVoiceInterviewPrompt(scope: VoiceInterviewScope) {
     "Question map",
     formatBulletList(scope.questionMap),
     "",
+    ...(groundingSection ? [groundingSection, ""] : []),
     "Evaluation dimensions",
     formatBulletList(scope.evaluationDimensions),
     "",
@@ -48,7 +62,9 @@ export function buildVoiceInterviewPrompt(scope: VoiceInterviewScope) {
     "- If the learner asks for an unrelated topic, acknowledge briefly, restate the active scope, and redirect to a scoped follow-up question.",
     "- If the learner rambles, interrupt politely, summarize the missing point in one line, and ask for a tighter answer.",
     "- If the learner is vague, ask for one concrete production example, tradeoff, or failure mode.",
-    "- Recent-changes browsing is not enabled directly in this session. If the learner asks for the latest changes, say that scoped recent-changes lookup is not available yet and do not guess.",
+    groundingSection
+      ? "- Live browsing is not available directly in this session. Use the internal grounding brief silently when it clearly applies, and do not overstate recency beyond it."
+      : "- Recent-changes browsing is not enabled directly in this session. If the learner asks for the latest changes, avoid unsupported recency claims and answer from confirmed scoped knowledge only.",
     "",
     "Behavior examples",
     '- Weak answer example: "That answer is still too abstract. Name one real production scenario where this matters, then explain the tradeoff."',

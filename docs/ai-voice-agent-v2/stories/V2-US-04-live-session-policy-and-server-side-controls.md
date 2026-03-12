@@ -8,7 +8,7 @@ app policy.
 
 ## Status
 
-- `Status`: Closed with follow-up in V2-US-09 (as of 2026-03-11)
+- `Status`: Done
 - `Why this exists`: V1 tracks lifecycle state, but it does not yet enforce a
   single active session policy or provide a stronger server-owned control path
   for runtime changes and shutdown.
@@ -45,7 +45,7 @@ app policy.
 - Added route/service tests for conflict detection, stale reclaim, force-end,
   and heartbeat behavior.
 
-### Closed With Remarks
+### Done Notes
 
 - Production caller policy for `force-end` still needs confirmation during
   rollout, but the implementation scope of this story is complete.

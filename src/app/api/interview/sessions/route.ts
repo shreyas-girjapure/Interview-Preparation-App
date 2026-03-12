@@ -34,6 +34,7 @@ import {
   VOICE_INTERVIEW_SEARCH_POLICY_VERSION,
   VOICE_INTERVIEW_TRANSPORT_VERSION,
 } from "@/lib/interview/voice-interview-sessions";
+import { prepareScopedDocumentationGrounding } from "@/lib/interview/scoped-documentation-search";
 import { resolveVoiceInterviewScope } from "@/lib/interview/voice-scope";
 import {
   parseInterviewRequestBody,
@@ -223,12 +224,14 @@ export async function POST(request: Request) {
       sessionId: localSession.id,
       transportVersion: VOICE_INTERVIEW_TRANSPORT_VERSION,
     });
+    const grounding = await prepareScopedDocumentationGrounding(scope);
 
     const bootstrap =
       selectedRuntime === "chained_voice"
         ? await (async () => {
             const profile = getDefaultChainedVoiceRuntimeProfile();
             const openingTurn = await createChainedVoiceOpeningTurn({
+              groundingBrief: grounding.brief,
               profile,
               scope,
               sessionStartedAt: null,
@@ -255,6 +258,7 @@ export async function POST(request: Request) {
             };
           })()
         : await createVoiceInterviewBrowserBootstrap({
+            groundingBrief: grounding.brief,
             scope,
             traceConfig: {
               group_id: trace.groupId ?? undefined,
@@ -273,6 +277,7 @@ export async function POST(request: Request) {
 
     const markReadyStartedAt = nowMs();
     await markInterviewSessionReady({
+      grounding,
       runtime: bootstrap.runtime,
       sessionId: localSession.id,
       supabase,
@@ -303,6 +308,7 @@ export async function POST(request: Request) {
         runtime: bootstrap.runtime,
         timingsMs: {
           ...bootstrap.timingsMs,
+          groundingWarmup: grounding.durationMs,
           localSessionCreate: localSessionCreateMs,
           markReady: markReadyMs,
           profileSync: profileSyncMs,

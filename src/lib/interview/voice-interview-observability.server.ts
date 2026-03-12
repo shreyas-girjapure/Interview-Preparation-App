@@ -49,6 +49,181 @@ type InterviewSessionUsageEventRow = {
   usage_source: string;
 };
 
+const DEFAULT_VOICE_INTERVIEW_PRICING_RATES: VoiceInterviewPricingRate[] = [
+  {
+    model: "gpt-realtime",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 4,
+    runtimeKind: "realtime_sts",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "realtime_text_input",
+  },
+  {
+    model: "gpt-realtime",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 0.4,
+    runtimeKind: "realtime_sts",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "realtime_text_input_cached",
+  },
+  {
+    model: "gpt-realtime",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 16,
+    runtimeKind: "realtime_sts",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "realtime_text_output",
+  },
+  {
+    model: "gpt-realtime",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 32,
+    runtimeKind: "realtime_sts",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "realtime_audio_input",
+  },
+  {
+    model: "gpt-realtime",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 0.4,
+    runtimeKind: "realtime_sts",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "realtime_audio_input_cached",
+  },
+  {
+    model: "gpt-realtime",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 64,
+    runtimeKind: "realtime_sts",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "realtime_audio_output",
+  },
+  {
+    model: "gpt-4o-mini-transcribe",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 1.25,
+    runtimeKind: "realtime_sts",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "transcription_text_input",
+  },
+  {
+    model: "gpt-4o-mini-transcribe",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 5,
+    runtimeKind: "realtime_sts",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "transcription_text_output",
+  },
+  {
+    model: "gpt-4o-mini-transcribe",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 3,
+    runtimeKind: "realtime_sts",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "transcription_audio_input",
+  },
+  {
+    model: "gpt-5.4",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 2.5,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "text_input",
+  },
+  {
+    model: "gpt-5.4",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 0.25,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "text_input_cached",
+  },
+  {
+    model: "gpt-5.4",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 15,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "text_output",
+  },
+  {
+    model: "gpt-5.2",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 1.75,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "text_input",
+  },
+  {
+    model: "gpt-5.2",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 0.175,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "text_input_cached",
+  },
+  {
+    model: "gpt-5.2",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 14,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "text_output",
+  },
+  {
+    model: "gpt-4o-mini-transcribe",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 1.25,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "transcription_text_input",
+  },
+  {
+    model: "gpt-4o-mini-transcribe",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 5,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "transcription_text_output",
+  },
+  {
+    model: "gpt-4o-mini-transcribe",
+    notes: "Seeded from OpenAI pricing snapshot on 2026-03-12.",
+    priceUsd: 3,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_tokens",
+    usageType: "transcription_audio_input",
+  },
+  {
+    model: "gpt-4o-mini-tts",
+    notes:
+      "Character-based fallback seeded from OpenAI speech generation pricing snapshot on 2026-03-12 because the speech endpoint reports characters, not output audio tokens.",
+    priceUsd: 15,
+    runtimeKind: "chained_voice",
+    serviceTier: "standard",
+    unit: "per_1m_characters",
+    usageType: "tts_characters",
+  },
+];
+
 function toIsoNow() {
   return new Date().toISOString();
 }
@@ -77,26 +252,77 @@ function toObjectOrNull(value: unknown) {
   return value as Record<string, unknown>;
 }
 
+function buildPricingRateKey(
+  rate: Pick<
+    VoiceInterviewPricingRate,
+    "model" | "runtimeKind" | "serviceTier" | "usageType"
+  >,
+) {
+  return [rate.runtimeKind, rate.model, rate.serviceTier, rate.usageType].join(
+    ":",
+  );
+}
+
+function filterDefaultVoiceInterviewPricingRates({
+  modelFilter,
+  serviceTierFilter,
+}: {
+  modelFilter: string[];
+  serviceTierFilter: string[];
+}) {
+  return DEFAULT_VOICE_INTERVIEW_PRICING_RATES.filter((rate) => {
+    const matchesModel =
+      modelFilter.length === 0 || modelFilter.includes(rate.model);
+    const matchesServiceTier =
+      serviceTierFilter.length === 0 ||
+      serviceTierFilter.includes(rate.serviceTier);
+
+    return matchesModel && matchesServiceTier;
+  });
+}
+
+function mergeVoiceInterviewPricingRates(
+  dbRates: VoiceInterviewPricingRate[],
+  defaultRates: VoiceInterviewPricingRate[],
+) {
+  const merged = new Map<string, VoiceInterviewPricingRate>();
+
+  for (const rate of defaultRates) {
+    merged.set(buildPricingRateKey(rate), rate);
+  }
+
+  for (const rate of dbRates) {
+    merged.set(buildPricingRateKey(rate), rate);
+  }
+
+  return Array.from(merged.values());
+}
+
 async function listVoiceInterviewPricingRates(
   usageEvents: VoiceInterviewUsageEventRequest[],
 ) {
+  const modelFilter = Array.from(
+    new Set(
+      usageEvents
+        .map((event) => event.model?.trim())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+  const serviceTierFilter = Array.from(
+    new Set(
+      usageEvents.map(
+        (event) =>
+          event.serviceTier?.trim() || VOICE_INTERVIEW_DEFAULT_SERVICE_TIER,
+      ),
+    ),
+  );
+  const defaultRates = filterDefaultVoiceInterviewPricingRates({
+    modelFilter,
+    serviceTierFilter,
+  });
+
   try {
     const pricingSupabase = createSupabaseServiceRoleClient();
-    const modelFilter = Array.from(
-      new Set(
-        usageEvents
-          .map((event) => event.model?.trim())
-          .filter((value): value is string => Boolean(value)),
-      ),
-    );
-    const serviceTierFilter = Array.from(
-      new Set(
-        usageEvents.map(
-          (event) =>
-            event.serviceTier?.trim() || VOICE_INTERVIEW_DEFAULT_SERVICE_TIER,
-        ),
-      ),
-    );
     let query = pricingSupabase
       .from("voice_interview_pricing_rates")
       .select(
@@ -119,43 +345,48 @@ async function listVoiceInterviewPricingRates(
 
     return {
       errorMessage: null,
-      pricingRates: ((data ?? []) as Array<Record<string, unknown>>)
-        .map((row) => {
-          const priceUsd = toNumber(row.price_usd);
+      pricingRates: mergeVoiceInterviewPricingRates(
+        ((data ?? []) as Array<Record<string, unknown>>)
+          .map((row) => {
+            const priceUsd = toNumber(row.price_usd);
 
-          if (
-            priceUsd === null ||
-            typeof row.runtime_kind !== "string" ||
-            typeof row.model !== "string" ||
-            typeof row.service_tier !== "string" ||
-            typeof row.usage_type !== "string" ||
-            typeof row.unit !== "string"
-          ) {
-            return null;
-          }
+            if (
+              priceUsd === null ||
+              typeof row.runtime_kind !== "string" ||
+              typeof row.model !== "string" ||
+              typeof row.service_tier !== "string" ||
+              typeof row.usage_type !== "string" ||
+              typeof row.unit !== "string"
+            ) {
+              return null;
+            }
 
-          return {
-            model: row.model,
-            notes: typeof row.notes === "string" ? row.notes : null,
-            priceUsd,
-            runtimeKind:
-              row.runtime_kind === "chained_voice"
-                ? "chained_voice"
-                : "realtime_sts",
-            serviceTier: row.service_tier,
-            unit: row.unit,
-            usageType: row.usage_type,
-          } satisfies VoiceInterviewPricingRate;
-        })
-        .filter((row) => row !== null) as VoiceInterviewPricingRate[],
+            return {
+              model: row.model,
+              notes: typeof row.notes === "string" ? row.notes : null,
+              priceUsd,
+              runtimeKind:
+                row.runtime_kind === "chained_voice"
+                  ? "chained_voice"
+                  : "realtime_sts",
+              serviceTier: row.service_tier,
+              unit: row.unit,
+              usageType: row.usage_type,
+            } satisfies VoiceInterviewPricingRate;
+          })
+          .filter((row) => row !== null) as VoiceInterviewPricingRate[],
+        defaultRates,
+      ),
     };
   } catch (error) {
     return {
       errorMessage:
-        error instanceof Error
-          ? error.message
-          : "Unable to load voice interview pricing rates.",
-      pricingRates: [] as VoiceInterviewPricingRate[],
+        defaultRates.length > 0
+          ? null
+          : error instanceof Error
+            ? error.message
+            : "Unable to load voice interview pricing rates.",
+      pricingRates: defaultRates,
     };
   }
 }
@@ -199,7 +430,7 @@ function resolveUsageModel({
   }
 
   if (event.usageSource === "server_text_response") {
-    return session.openai_text_model ?? session.openai_model ?? "gpt-5-mini";
+    return session.openai_text_model ?? session.openai_model ?? "gpt-5.4";
   }
 
   if (event.usageSource === "server_tts") {

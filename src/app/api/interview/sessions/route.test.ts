@@ -25,6 +25,10 @@ vi.mock("@/lib/interview/voice-scope", () => ({
   resolveVoiceInterviewScope: vi.fn(),
 }));
 
+vi.mock("@/lib/interview/scoped-documentation-search", () => ({
+  prepareScopedDocumentationGrounding: vi.fn(),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   createSupabaseServerClient: vi.fn(),
 }));
@@ -62,6 +66,7 @@ import {
 } from "@/lib/ai/voice-agent";
 import { createChainedVoiceOpeningTurn } from "@/lib/ai/voice-runtimes/chained-voice";
 import { getVoiceInterviewEnv } from "@/lib/env";
+import { prepareScopedDocumentationGrounding } from "@/lib/interview/scoped-documentation-search";
 import {
   createInterviewSessionRecord,
   ensureInterviewSessionUserProfile,
@@ -90,6 +95,9 @@ const mockedGetBlockingInterviewSessionForUser = vi.mocked(
   getBlockingInterviewSessionForUser,
 );
 const mockedGetVoiceInterviewEnv = vi.mocked(getVoiceInterviewEnv);
+const mockedPrepareScopedDocumentationGrounding = vi.mocked(
+  prepareScopedDocumentationGrounding,
+);
 const mockedMarkInterviewSessionFailed = vi.mocked(markInterviewSessionFailed);
 const mockedMarkInterviewSessionReady = vi.mocked(markInterviewSessionReady);
 const mockedPersistInterviewSessionEvents = vi.mocked(
@@ -125,14 +133,21 @@ const voiceInterviewEnv = {
   OPENAI_CHAINED_AUTO_COMMIT_SILENCE_MS: 1200,
   OPENAI_CHAINED_DEFAULT_VOICE: "marin",
   OPENAI_CHAINED_MAX_TURN_SECONDS: 45,
-  OPENAI_CHAINED_REASONING_EFFORT_PREMIUM: "none",
-  OPENAI_CHAINED_TEXT_MODEL_BALANCED: "gpt-5-mini",
+  OPENAI_CHAINED_OPENING_MAX_OUTPUT_TOKENS: 220,
+  OPENAI_CHAINED_REASONING_EFFORT_PREMIUM: "low",
+  OPENAI_CHAINED_REPLY_MAX_OUTPUT_TOKENS: 420,
+  OPENAI_CHAINED_TEXT_MODEL_BALANCED: "gpt-5.2",
   OPENAI_CHAINED_TEXT_MODEL_PREMIUM: "gpt-5.4",
   OPENAI_CHAINED_TRANSCRIBE_MODEL: "gpt-4o-mini-transcribe",
   OPENAI_CHAINED_TTS_MODEL: "gpt-4o-mini-tts",
+  OPENAI_VOICE_GROUNDING_CACHE_TTL_MS: 21_600_000,
+  OPENAI_VOICE_GROUNDING_MAX_OUTPUT_TOKENS: 1_200,
+  OPENAI_VOICE_GROUNDING_MODEL: "gpt-5.4",
+  OPENAI_VOICE_GROUNDING_STALE_TTL_MS: 86_400_000,
+  OPENAI_VOICE_GROUNDING_TIMEOUT_MS: 15_000,
   OPENAI_REALTIME_BOOTSTRAP_TIMEOUT_MS: 20000,
   OPENAI_REALTIME_CLIENT_SECRET_TTL_SECONDS: 600,
-  OPENAI_REALTIME_MAX_OUTPUT_TOKENS: 640,
+  OPENAI_REALTIME_MAX_OUTPUT_TOKENS: 1024,
   OPENAI_REALTIME_MODEL: "gpt-realtime",
   OPENAI_REALTIME_NOISE_REDUCTION_TYPE: "near_field",
   OPENAI_REALTIME_SERVER_VAD_PREFIX_PADDING_MS: 450,
@@ -212,6 +227,14 @@ describe("POST /api/interview/sessions", () => {
     mockedResolveVoiceInterviewScope.mockResolvedValue(scope);
     mockedEnsureInterviewSessionUserProfile.mockResolvedValue(undefined);
     mockedGetBlockingInterviewSessionForUser.mockResolvedValue(null);
+    mockedPrepareScopedDocumentationGrounding.mockResolvedValue({
+      brief: null,
+      cacheKey: null,
+      durationMs: 0,
+      error: null,
+      query: null,
+      source: "not_applicable",
+    } as never);
     mockedCreateInterviewSessionRecord.mockResolvedValue({
       id: sessionId,
     } as Awaited<ReturnType<typeof createInterviewSessionRecord>>);
@@ -307,8 +330,17 @@ describe("POST /api/interview/sessions", () => {
       }),
     );
     expect(mockedPersistInterviewSessionEvents).not.toHaveBeenCalled();
+    expect(mockedCreateVoiceInterviewBrowserBootstrap).toHaveBeenCalledWith(
+      expect.objectContaining({
+        groundingBrief: null,
+        scope,
+      }),
+    );
     expect(mockedMarkInterviewSessionReady).toHaveBeenCalledWith(
       expect.objectContaining({
+        grounding: expect.objectContaining({
+          source: "not_applicable",
+        }),
         runtime: expect.objectContaining({
           kind: "realtime_sts",
           selectionSource: "auto_policy",
@@ -372,6 +404,7 @@ describe("POST /api/interview/sessions", () => {
     expect(mockedCreateVoiceInterviewBrowserBootstrap).not.toHaveBeenCalled();
     expect(mockedCreateChainedVoiceOpeningTurn).toHaveBeenCalledWith(
       expect.objectContaining({
+        groundingBrief: null,
         profile: expect.objectContaining({
           profileId: "chained_voice_premium",
         }),
@@ -387,6 +420,9 @@ describe("POST /api/interview/sessions", () => {
     );
     expect(mockedMarkInterviewSessionReady).toHaveBeenCalledWith(
       expect.objectContaining({
+        grounding: expect.objectContaining({
+          source: "not_applicable",
+        }),
         runtime: expect.objectContaining({
           kind: "chained_voice",
           selectionSource: "user_preference",

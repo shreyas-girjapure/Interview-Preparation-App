@@ -204,6 +204,7 @@ async function listRecentSessions(supabaseClient, limit) {
         "last_disconnect_reason",
         "last_error_code",
         "last_error_message",
+        "diagnostics_json",
       ].join(", "),
     )
     .order("created_at", { ascending: false })
@@ -239,6 +240,7 @@ async function getSessionDetails(supabaseClient, sessionId) {
             "last_disconnect_reason",
             "last_error_code",
             "last_error_message",
+            "diagnostics_json",
           ].join(", "),
         )
         .eq("id", sessionId)
@@ -274,7 +276,12 @@ async function getSessionDetails(supabaseClient, sessionId) {
   return {
     events: eventsResult.data ?? [],
     messages: messagesResult.data ?? [],
-    session: sessionResult.data ?? null,
+    session: sessionResult.data
+      ? {
+          ...sessionResult.data,
+          grounding: sessionResult.data.diagnostics_json?.grounding ?? null,
+        }
+      : null,
     usageEvents: usageResult.data ?? [],
   };
 }

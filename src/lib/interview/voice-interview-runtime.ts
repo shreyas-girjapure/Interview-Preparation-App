@@ -254,7 +254,7 @@ function countFinalizedTurns(transcript: VoiceInterviewTranscriptItem[]) {
 }
 
 const LIVE_RECENCY_LABEL =
-  "Topic scope is locked. Recent-changes browsing remains disabled in live mode.";
+  "Topic scope is locked. Live browsing stays off during the interview.";
 
 export function buildVoiceInterviewRuntimeSnapshot({
   completionSummary,
@@ -315,7 +315,7 @@ export function buildVoiceInterviewRuntimeSnapshot({
       (stage === "connecting" ? "Requesting permission" : base.micLabel),
     recencyModeLabel:
       stage === "ready"
-        ? "Topic scope armed, browsing disabled"
+        ? "Topic scope armed, live browsing off"
         : LIVE_RECENCY_LABEL,
     title:
       stage === "connecting"

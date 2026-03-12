@@ -66,4 +66,25 @@ describe("voice interview prompt", () => {
       'Rambling example: "Pause there. Give me the thirty-second version: point, example, tradeoff."',
     );
   });
+
+  it("injects the internal grounding brief when one is available", () => {
+    const prompt = buildVoiceInterviewPrompt(scope, {
+      groundingBrief: {
+        recentChanges: ["Spring '26 tightened one platform behavior."],
+        releaseNotes: ["Spring '26 release notes call out the update."],
+        retrievedAt: "2026-03-12T10:00:00.000Z",
+        scopeSlug: scope.slug,
+        scopeTitle: scope.title,
+        topicFacts: [
+          "Current terminology matters more than memorized phrasing.",
+        ],
+      },
+    });
+
+    expect(prompt).toContain("Internal grounding brief (use silently)");
+    expect(prompt).toContain("Spring '26 tightened one platform behavior.");
+    expect(prompt).toContain(
+      "Do not mention searching, citations, or documentation lookups unless the learner explicitly asks.",
+    );
+  });
 });

@@ -10,6 +10,7 @@ export type VoiceInterviewScopeQuestion = {
 };
 
 export type VoiceInterviewScope = {
+  knowledgeDomain?: "general" | "salesforce";
   scopeType: "topic";
   scopeLabel: string;
   slug: string;
@@ -58,8 +59,16 @@ export async function getTopicVoiceInterviewScopeBySlug(
 
   const firstQuestion = questionSummaries[0]?.title;
   const secondQuestion = questionSummaries[1]?.title;
+  const categorySlugs = Array.from(
+    new Set(
+      topic.relatedQuestions.flatMap((question) => question.categorySlugs),
+    ),
+  );
 
   return {
+    knowledgeDomain: categorySlugs.includes("salesforce")
+      ? "salesforce"
+      : "general",
     scopeType: "topic",
     scopeLabel: "Topic scope",
     slug: topic.slug,

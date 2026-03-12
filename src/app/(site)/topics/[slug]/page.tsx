@@ -14,6 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { getTopicBySlug, listTopicSlugs } from "@/lib/interview/questions";
 import { listViewerQuestionProgressStates } from "@/lib/interview/question-progress";
 
+import { MockInterviewLink } from "./mock-interview-link";
+
 type Params = Promise<{
   slug: string;
 }>;
@@ -176,10 +178,13 @@ export default async function TopicDetailsPage({
                   variant="ghost"
                   className="h-10 rounded-full px-4"
                 >
-                  <Link href={`/topics/${topic.slug}/mock-interview`}>
+                  <MockInterviewLink
+                    href={`/topics/${topic.slug}/mock-interview`}
+                    scopeSlug={topic.slug}
+                  >
                     <Mic className="size-4 stroke-[1.7]" />
                     Mock interview
-                  </Link>
+                  </MockInterviewLink>
                 </Button>
               </div>
             </div>

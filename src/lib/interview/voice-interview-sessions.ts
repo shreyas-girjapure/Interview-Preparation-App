@@ -26,6 +26,11 @@ import type {
   VoiceInterviewUsageEventRequest,
 } from "@/lib/interview/voice-interview-observability";
 import {
+  getScopedDocumentationSearchPolicyVersion,
+  readScopedDocumentationGroundingFromDiagnostics,
+  type ScopedDocumentationGroundingResult,
+} from "@/lib/interview/scoped-documentation-search";
+import {
   getInterviewMessageCounts,
   listInterviewMessages,
   upsertInterviewMessages,
@@ -171,8 +176,9 @@ const INTERVIEW_SESSION_POLICY_STALE_WINDOWS_MS: Record<
 const INTERVIEW_SESSION_ONE_LIVE_INDEX =
   "interview_sessions_one_live_per_user_idx";
 
-export const VOICE_INTERVIEW_PROMPT_VERSION = "voice-prompt-v2-2026-03-10";
-export const VOICE_INTERVIEW_SEARCH_POLICY_VERSION = "docs-search-v1";
+export const VOICE_INTERVIEW_PROMPT_VERSION = "voice-prompt-v2-2026-03-12";
+export const VOICE_INTERVIEW_SEARCH_POLICY_VERSION =
+  getScopedDocumentationSearchPolicyVersion();
 export const VOICE_INTERVIEW_PERSISTENCE_VERSION = "transcript-persistence-v1";
 export const VOICE_INTERVIEW_TRANSPORT_VERSION = "dual-runtime-v1";
 
@@ -692,12 +698,14 @@ export async function createInterviewSessionRecord({
 }
 
 export async function markInterviewSessionReady({
+  grounding,
   runtime,
   sessionId,
   supabase,
   trace,
   transport,
 }: {
+  grounding?: ScopedDocumentationGroundingResult;
   runtime: VoiceInterviewRuntimeDescriptor;
   sessionId: string;
   supabase: SupabaseServerClient;
@@ -759,6 +767,7 @@ export async function markInterviewSessionReady({
           runtime,
           transport,
         },
+        grounding: grounding ?? null,
       },
       last_error_code: null,
       last_error_message: null,
@@ -1171,6 +1180,9 @@ export async function getInterviewSessionRuntimeContext({
   });
 
   return {
+    grounding:
+      readScopedDocumentationGroundingFromDiagnostics(session.diagnostics_json)
+        ?.brief ?? null,
     runtimeKind: session.runtime_kind,
     runtimeProfileId: session.runtime_profile_id,
     runtimeProfileVersion: session.runtime_profile_version,

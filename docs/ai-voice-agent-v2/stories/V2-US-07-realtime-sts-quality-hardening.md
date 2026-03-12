@@ -29,6 +29,9 @@ instead of fragile.
 - `src/lib/ai/voice-agent.ts` moved model, transcription model, voice,
   `max_output_tokens`, noise reduction, and conservative `server_vad`
   thresholds under server env control, with `interrupt_response: false`.
+- The premium Realtime default now ships with
+  `OPENAI_REALTIME_MAX_OUTPUT_TOKENS = 1024` so interviewer replies have more
+  room to finish naturally before truncating.
 - `src/lib/env.ts` now validates bounded env overrides for output-token,
   noise-reduction, and VAD tuning instead of relying on browser-owned magic
   constants.

@@ -9,7 +9,7 @@ selects a higher-control lane than raw speech-to-speech.
 
 ## Status
 
-- `Status`: Complete
+- `Status`: Done
 - `Shipped`: The chained runtime, db migrations, API endpoints (`/turns`), and runtime routing adapter were all implemented as of 2026-03-12.
 - `Why this exists`: OpenAI's current voice-agent guidance recommends a
   predictable chained architecture for teams that want higher control,
@@ -36,8 +36,9 @@ selects a higher-control lane than raw speech-to-speech.
 - OpenAI's January 2026 changelog says to prefer
   `gpt-4o-mini-transcribe` over `gpt-4o-transcribe` for the best STT results.
 - OpenAI's model guide now says to start with `gpt-5.4` when you want the
-  flagship text model, and to use `gpt-5-mini` when you want lower latency and
-  cost.
+  flagship text model. The current shipped balanced lane now steps up to
+  `gpt-5.2` instead of `gpt-5-mini` so fallback turns stay high quality
+  without moving into the `-pro` latency tier.
 - OpenAI's Transcriptions API accepts committed audio files over
   `multipart/form-data` and returns finalized transcript text plus usage data.
   Streaming transcription exists, but it is not required for the first pass.
@@ -51,10 +52,12 @@ selects a higher-control lane than raw speech-to-speech.
 
 - `STT default`: `gpt-4o-mini-transcribe`
 - `TTS default`: `gpt-4o-mini-tts`
-- `Premium text model`: `gpt-5.4` with `reasoning.effort: "none"` so the
-  chained lane keeps a live-feeling turn budget instead of drifting into a
+- `Premium text model`: `gpt-5.4` with `reasoning.effort: "low"` so the
+  chained lane gets a small follow-up-quality bump without drifting into a
   heavy reasoning path.
-- `Balanced text model`: `gpt-5-mini`
+- `Balanced text model`: `gpt-5.2`
+- `Opening turn budget`: `220` max output tokens
+- `Reply turn budget`: `420` max output tokens
 - `Explicit non-choice`: do not use `gpt-5-pro` for normal live interview
   turns. OpenAI's model docs say some requests may take several minutes, which
   is incompatible with this experience.
@@ -74,6 +77,9 @@ selects a higher-control lane than raw speech-to-speech.
 - `src/lib/ai/voice-runtimes/chained-voice.ts` implementation.
 - Browser adapter for committed-turn capture, upload, assistant-audio playback, and half-duplex turn state.
 - Chained-runtime happy-path tests across bootstrap, turn execution, persistence, and session completion.
+- Tuned default model and response-budget policy so spoken turns have more room
+  to finish and the balanced lane no longer falls all the way back to
+  `gpt-5-mini`.
 
 ### Current codebase constraints
 
@@ -137,7 +143,7 @@ This first slice should be:
 5. A premium chained profile exists:
    `gpt-4o-mini-transcribe -> gpt-5.4 -> gpt-4o-mini-tts`.
 6. A balanced chained profile exists:
-   `gpt-4o-mini-transcribe -> gpt-5-mini -> gpt-4o-mini-tts`.
+   `gpt-4o-mini-transcribe -> gpt-5.2 -> gpt-4o-mini-tts`.
 7. The same transcript UI, session-detail route, persistence model, debrief
    path, and telemetry rollups work for `chained_voice`.
 8. User transcript text comes from server STT, and assistant audio comes from
@@ -250,20 +256,25 @@ Recommended chained model profiles:
 - `chained_voice_premium`
   - `transcribe`: `gpt-4o-mini-transcribe`
   - `text`: `gpt-5.4`
-  - `reasoning.effort`: `none`
+  - `reasoning.effort`: `low`
+  - `opening max_output_tokens`: `220`
+  - `reply max_output_tokens`: `420`
   - `tts`: `gpt-4o-mini-tts`
 - `chained_voice_balanced`
   - `transcribe`: `gpt-4o-mini-transcribe`
-  - `text`: `gpt-5-mini`
+  - `text`: `gpt-5.2`
+  - `opening max_output_tokens`: `220`
+  - `reply max_output_tokens`: `420`
   - `tts`: `gpt-4o-mini-tts`
 
 Why this split:
 
-- OpenAI's models guide says to start with `gpt-5.4` when unsure and to use
-  `gpt-5-mini` when optimizing for latency and cost.
-- OpenAI's migration guidance says `gpt-5.4` with `reasoning.effort: "none"`
-  is the right starting replacement for `gpt-4.1`, and `gpt-5-mini` is a
-  strong replacement for `gpt-4.1-mini`.
+- OpenAI's models guide says to start with `gpt-5.4` when unsure. We keep a
+  second profile on `gpt-5.2` so the fallback lane still stays modern and
+  strong without using the slow `-pro` tier.
+- OpenAI's prompt guidance says `gpt-5.4` often works well with `none`, but
+  nuanced interpretation tasks can benefit from `low`; interview follow-ups fit
+  that pattern, so premium turns now use `reasoning.effort: "low"`.
 - That gives us one flagship profile and one live-friendly profile without
   moving back to the older 4.1 family unless evals prove it is better for this
   product.
@@ -467,8 +478,9 @@ Recommended first-pass text input:
 - Treat frontend choice as a named runtime preference, not a raw model picker.
 - Preserve the best transcription model first. Step down the text model before
   stepping down STT or TTS quality.
-- Pin `gpt-5.4` with `reasoning.effort: "none"` for live turns instead of
-  accepting heavier default reasoning behavior by accident.
+- Pin `gpt-5.4` with `reasoning.effort: "low"` for live turns instead of
+  drifting into either overly literal `none` behavior or the unusably slow
+  `gpt-5-pro` tier.
 - Keep chained voice half-duplex internally, but make it feel live with
   automatic silence commit, short replies, and immediate playback.
 - Keep the browser thin. The server should own runtime choice, voice policy,

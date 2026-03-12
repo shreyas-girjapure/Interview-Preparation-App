@@ -45,6 +45,7 @@ export type CreateVoiceInterviewSessionConflictResponse = {
 };
 
 export type VoiceInterviewBootstrapTimingsMs = {
+  groundingWarmup?: number;
   localSessionCreate?: number;
   markReady?: number;
   openAiBootstrap?: number;

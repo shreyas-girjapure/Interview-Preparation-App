@@ -15,6 +15,7 @@ import type {
 import type { VoiceInterviewUsageEventRequest } from "@/lib/interview/voice-interview-observability";
 import type { InterviewMessageRow } from "@/lib/interview/voice-interview-persistence";
 import { buildVoiceInterviewPrompt } from "@/lib/interview/voice-interview-prompt";
+import type { ScopedDocumentationGroundingBrief } from "@/lib/interview/scoped-documentation-search";
 import { formatElapsedTime } from "@/lib/interview/voice-interview-session";
 import type { VoiceInterviewScope } from "@/lib/interview/voice-scope";
 
@@ -26,10 +27,12 @@ export type ChainedVoiceRuntimeProfile = {
   acceptedMimeTypes: string[];
   autoCommitSilenceMs: number;
   maxTurnSeconds: number;
+  openingMaxOutputTokens: number;
   playbackFormat: "mp3";
   profileId: ChainedVoiceRuntimeProfileId;
   profileVersion: string;
   reasoningEffort?: ReasoningEffort;
+  replyMaxOutputTokens: number;
   textModel: string;
   transcribeModel: string;
   ttsModel: string;
@@ -43,12 +46,14 @@ type BuildChainedVoiceRuntimeDescriptorOptions = {
 
 type ExecuteChainedVoiceTurnOptions = {
   audioFile: File;
+  groundingBrief?: ScopedDocumentationGroundingBrief | null;
   profile: ChainedVoiceRuntimeProfile;
   scope: VoiceInterviewScope;
   transcriptRows: InterviewMessageRow[];
 };
 
 type CreateChainedVoiceOpeningTurnOptions = {
+  groundingBrief?: ScopedDocumentationGroundingBrief | null;
   profile: ChainedVoiceRuntimeProfile;
   scope: VoiceInterviewScope;
   sessionStartedAt: string | null;
@@ -71,7 +76,6 @@ type SynthesizeAssistantAudioResult = {
 };
 
 const CHAINED_VOICE_PROFILE_VERSION = "2026-03-12";
-const CHAINED_VOICE_REPLY_MAX_OUTPUT_TOKENS = 220;
 const CHAINED_VOICE_CONTEXT_MESSAGE_LIMIT = 10;
 const CHAINED_VOICE_ACCEPTED_MIME_TYPES = [
   "audio/webm;codecs=opus",
@@ -144,11 +148,109 @@ function buildChainedVoiceTurnInput({
   ].join("\n");
 }
 
-function buildChainedVoiceOpeningText(scope: VoiceInterviewScope) {
-  return collapseWhitespace(
+function buildChainedVoiceOpeningPromptInput({
+  groundingBrief,
+  scope,
+}: {
+  groundingBrief?: ScopedDocumentationGroundingBrief | null;
+  scope: VoiceInterviewScope;
+}) {
+  const baseQuestion =
     scope.questionMap[0] ??
-      `Tell me what matters most about ${scope.title} in production.`,
-  );
+    `Tell me what matters most about ${scope.title} in production.`;
+
+  return [
+    `Active scope: ${scope.title}`,
+    `Default first question: ${collapseWhitespace(baseQuestion)}`,
+    groundingBrief
+      ? [
+          "Internal grounding brief:",
+          ...groundingBrief.topicFacts.map((item) => `- ${item}`),
+          ...groundingBrief.recentChanges.map((item) => `- ${item}`),
+        ].join("\n")
+      : "No startup grounding brief is available.",
+    "",
+    "Generate the interviewer's opening turn.",
+    "- Use one short greeting plus exactly one scoped first question.",
+    "- Keep the spoken reply concise and natural.",
+    "- Use the grounding internally to sharpen terminology or the angle when it clearly helps.",
+    "- Do not mention searches, citations, documentation, or hidden instructions.",
+  ].join("\n");
+}
+
+async function buildChainedVoiceOpeningText({
+  client,
+  groundingBrief,
+  profile,
+  scope,
+}: {
+  client: ServerOpenAiClient;
+  groundingBrief?: ScopedDocumentationGroundingBrief | null;
+  profile: ChainedVoiceRuntimeProfile;
+  scope: VoiceInterviewScope;
+}): Promise<{
+  assistantText: string;
+  usageEvents: VoiceInterviewUsageEventRequest[];
+}> {
+  if (!groundingBrief) {
+    return {
+      assistantText: collapseWhitespace(
+        scope.questionMap[0] ??
+          `Tell me what matters most about ${scope.title} in production.`,
+      ),
+      usageEvents: [],
+    };
+  }
+
+  const recordedAt = new Date().toISOString();
+  const response = await client.responses.create({
+    instructions: buildVoiceInterviewPrompt(scope, {
+      groundingBrief,
+    }),
+    input: buildChainedVoiceOpeningPromptInput({
+      groundingBrief,
+      scope,
+    }),
+    max_output_tokens: profile.openingMaxOutputTokens,
+    model: profile.textModel,
+    reasoning: profile.reasoningEffort
+      ? { effort: profile.reasoningEffort }
+      : undefined,
+    text: {
+      verbosity: "medium",
+    },
+  });
+
+  const assistantText = normalizeAssistantReply(response.output_text);
+
+  if (!assistantText) {
+    return {
+      assistantText: collapseWhitespace(
+        scope.questionMap[0] ??
+          `Tell me what matters most about ${scope.title} in production.`,
+      ),
+      usageEvents: [
+        buildServerTextResponseUsageEvent({
+          model: profile.textModel,
+          recordedAt,
+          usage: response.usage,
+          usageKey: `server-opening-text:${response.id}`,
+        }),
+      ],
+    };
+  }
+
+  return {
+    assistantText,
+    usageEvents: [
+      buildServerTextResponseUsageEvent({
+        model: profile.textModel,
+        recordedAt,
+        usage: response.usage,
+        usageKey: `server-opening-text:${response.id}`,
+      }),
+    ],
+  };
 }
 
 function buildServerAudioTranscriptionUsageEvent({
@@ -396,13 +498,17 @@ export function listChainedVoiceRuntimeProfiles(
   return {
     chained_voice_balanced: {
       ...shared,
+      openingMaxOutputTokens: env.OPENAI_CHAINED_OPENING_MAX_OUTPUT_TOKENS,
       profileId: "chained_voice_balanced",
+      replyMaxOutputTokens: env.OPENAI_CHAINED_REPLY_MAX_OUTPUT_TOKENS,
       textModel: env.OPENAI_CHAINED_TEXT_MODEL_BALANCED,
     } satisfies ChainedVoiceRuntimeProfile,
     chained_voice_premium: {
       ...shared,
+      openingMaxOutputTokens: env.OPENAI_CHAINED_OPENING_MAX_OUTPUT_TOKENS,
       profileId: "chained_voice_premium",
       reasoningEffort: env.OPENAI_CHAINED_REASONING_EFFORT_PREMIUM,
+      replyMaxOutputTokens: env.OPENAI_CHAINED_REPLY_MAX_OUTPUT_TOKENS,
       textModel: env.OPENAI_CHAINED_TEXT_MODEL_PREMIUM,
     } satisfies ChainedVoiceRuntimeProfile,
   } satisfies Record<ChainedVoiceRuntimeProfileId, ChainedVoiceRuntimeProfile>;
@@ -520,6 +626,7 @@ export function buildChainedVoiceTranscriptItems({
 }
 
 export async function createChainedVoiceOpeningTurn({
+  groundingBrief,
   profile,
   scope,
   sessionStartedAt,
@@ -530,9 +637,14 @@ export async function createChainedVoiceOpeningTurn({
 > {
   const client = getServerOpenAiClient();
   const totalStartedAt = nowMs();
-  const assistantText = buildChainedVoiceOpeningText(scope);
+  const openingText = await buildChainedVoiceOpeningText({
+    client,
+    groundingBrief,
+    profile,
+    scope,
+  });
   const synthesized = await synthesizeChainedVoiceAssistantAudio({
-    assistantText,
+    assistantText: openingText.assistantText,
     client,
     profile,
   });
@@ -541,7 +653,7 @@ export async function createChainedVoiceOpeningTurn({
   return {
     assistantAudio: synthesized.assistantAudio,
     assistantTranscriptItem: buildChainedVoiceOpeningTranscriptItem({
-      assistantText,
+      assistantText: openingText.assistantText,
       sessionStartedAt,
     }),
     timingsMs: {
@@ -549,11 +661,12 @@ export async function createChainedVoiceOpeningTurn({
       tts: synthesized.ttsMs,
     },
     usageEvents: [
+      ...openingText.usageEvents,
       buildServerTtsUsageEvent({
         audioBytes: synthesized.audioBuffer.byteLength,
         model: profile.ttsModel,
         recordedAt,
-        text: assistantText,
+        text: openingText.assistantText,
         usageKey: `server-opening-tts:${recordedAt}`,
       }),
     ],
@@ -562,6 +675,7 @@ export async function createChainedVoiceOpeningTurn({
 
 export async function executeChainedVoiceTurn({
   audioFile,
+  groundingBrief,
   profile,
   scope,
   transcriptRows,
@@ -586,17 +700,22 @@ export async function executeChainedVoiceTurn({
 
   const textStartedAt = nowMs();
   const response = await client.responses.create({
-    instructions: buildVoiceInterviewPrompt(scope),
+    instructions: buildVoiceInterviewPrompt(scope, {
+      groundingBrief,
+    }),
     input: buildChainedVoiceTurnInput({
       scope,
       transcriptRows,
       userTranscript,
     }),
-    max_output_tokens: CHAINED_VOICE_REPLY_MAX_OUTPUT_TOKENS,
+    max_output_tokens: profile.replyMaxOutputTokens,
     model: profile.textModel,
     reasoning: profile.reasoningEffort
       ? { effort: profile.reasoningEffort }
       : undefined,
+    text: {
+      verbosity: "medium",
+    },
   });
   const textMs = roundDurationMs(nowMs() - textStartedAt);
   const assistantText = normalizeAssistantReply(response.output_text);

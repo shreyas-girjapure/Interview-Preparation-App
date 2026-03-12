@@ -8,9 +8,7 @@ browser session ends.
 
 ## Status
 
-## Status
-
-- `Status`: Complete
+- `Status`: Done
 - `Shipped`: Finalized transcript turn writes, debrief generation, and `interview_messages` persistence are all fully implemented via `voice-interview-persistence.ts` and `voice-interview-debrief.ts` as of 2026-03-10.
 - `Why this exists`: V1 had reliable session lifecycle rows but not durable finalized-turn persistence or server-generated debrief content. This story extended the baseline.
 
@@ -37,7 +35,7 @@ browser session ends.
   completed sessions, duplicate cancel handling on terminal sessions, and
   session detail route read/update behavior.
 
-### Closed With Remarks
+### Done Notes
 
 - Best-effort unload persistence remains inherently browser-dependent, but the
   persistence contract itself is now closed.

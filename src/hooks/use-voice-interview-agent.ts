@@ -1556,7 +1556,7 @@ export function useVoiceInterviewAgent({
           id: "scope-lock",
           label: "Scope lock",
           meta: getMetaLabel(),
-          text: `This interview stays inside ${scope.title}. Recent-changes browsing remains disabled until server-owned search is wired in.`,
+          text: `This interview stays inside ${scope.title}. Live browsing stays off during the round so the conversation remains scoped and stable.`,
           tone: "search",
         }),
       );
@@ -2439,6 +2439,7 @@ export function useVoiceInterviewAgent({
       }
 
       const normalizedError = getTransportErrorMessage(error);
+
       logVoiceInterviewFailure({
         attemptId,
         error,
@@ -2678,7 +2679,7 @@ export function useVoiceInterviewAgent({
             id: "scope-lock",
             label: "Scope lock",
             meta: getMetaLabel(),
-            text: `This interview stays inside ${scope.title}. Recent-changes browsing remains disabled until server-owned search is wired in.`,
+            text: `This interview stays inside ${scope.title}. Live browsing stays off during the round so the conversation remains scoped and stable.`,
             tone: "search",
           }),
         );
@@ -2706,11 +2707,6 @@ export function useVoiceInterviewAgent({
             "Unable to persist active interview session state",
             stateSyncError,
           );
-        },
-        sendInitialResponse: () => {
-          transport.sendEvent({
-            type: "response.create",
-          });
         },
       });
     } catch (error) {

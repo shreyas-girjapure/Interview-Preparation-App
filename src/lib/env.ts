@@ -30,6 +30,31 @@ const runtimePreferenceSchema = z.enum([
 
 const voiceInterviewEnvSchema = z.object({
   OPENAI_API_KEY: requiredString,
+  OPENAI_VOICE_GROUNDING_MODEL: requiredString.default("gpt-5.4"),
+  OPENAI_VOICE_GROUNDING_MAX_OUTPUT_TOKENS: z.coerce
+    .number()
+    .int()
+    .min(300)
+    .max(4_096)
+    .default(1_200),
+  OPENAI_VOICE_GROUNDING_TIMEOUT_MS: z.coerce
+    .number()
+    .int()
+    .min(1_000)
+    .max(15_000)
+    .default(15_000),
+  OPENAI_VOICE_GROUNDING_CACHE_TTL_MS: z.coerce
+    .number()
+    .int()
+    .min(60_000)
+    .max(86_400_000)
+    .default(21_600_000),
+  OPENAI_VOICE_GROUNDING_STALE_TTL_MS: z.coerce
+    .number()
+    .int()
+    .min(300_000)
+    .max(604_800_000)
+    .default(86_400_000),
   OPENAI_REALTIME_BOOTSTRAP_TIMEOUT_MS: z.coerce
     .number()
     .int()
@@ -42,7 +67,7 @@ const voiceInterviewEnvSchema = z.object({
     .int()
     .min(100)
     .max(4_096)
-    .default(640),
+    .default(1_024),
   OPENAI_REALTIME_TRANSCRIBE_MODEL: requiredString.default(
     "gpt-4o-mini-transcribe",
   ),
@@ -81,10 +106,21 @@ const voiceInterviewEnvSchema = z.object({
     "gpt-4o-mini-transcribe",
   ),
   OPENAI_CHAINED_TEXT_MODEL_PREMIUM: requiredString.default("gpt-5.4"),
-  OPENAI_CHAINED_TEXT_MODEL_BALANCED: requiredString.default("gpt-5-mini"),
+  OPENAI_CHAINED_TEXT_MODEL_BALANCED: requiredString.default("gpt-5.2"),
   OPENAI_CHAINED_TTS_MODEL: requiredString.default("gpt-4o-mini-tts"),
-  OPENAI_CHAINED_REASONING_EFFORT_PREMIUM:
-    reasoningEffortSchema.default("none"),
+  OPENAI_CHAINED_REASONING_EFFORT_PREMIUM: reasoningEffortSchema.default("low"),
+  OPENAI_CHAINED_OPENING_MAX_OUTPUT_TOKENS: z.coerce
+    .number()
+    .int()
+    .min(100)
+    .max(4_096)
+    .default(220),
+  OPENAI_CHAINED_REPLY_MAX_OUTPUT_TOKENS: z.coerce
+    .number()
+    .int()
+    .min(120)
+    .max(4_096)
+    .default(420),
   OPENAI_CHAINED_MAX_TURN_SECONDS: z.coerce
     .number()
     .int()

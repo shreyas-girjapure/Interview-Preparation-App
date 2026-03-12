@@ -207,7 +207,7 @@ function buildLiveTranscript(
       id: "live-assistant-search",
       speaker: "assistant",
       label: "Interviewer",
-      text: "If you ask for recent changes, the answer stays inside the active scope and keeps visible citations attached in this transcript panel.",
+      text: "If you ask about recent changes, the answer stays inside the active scope and uses the session's grounded context without turning the round into live browsing.",
       meta: "Scoped citations",
       tone: "search",
       citations: buildCitations(scope),
@@ -252,7 +252,7 @@ function buildCompletedTranscript(
       id: "completed-assistant-search",
       speaker: "assistant",
       label: "Interviewer",
-      text: "The citation row stayed visible during the session, which is the behavior we want before the real search tool is wired in.",
+      text: "The session preserved scoped grounding without turning the interview into a live browsing workflow.",
       meta: "Completion note",
       tone: "search",
       citations: buildCitations(scope).slice(0, 1),
@@ -392,14 +392,14 @@ export function buildVoiceInterviewSessionSnapshot({
           : `${countFinalizedTurns(transcript)} finalized turns`,
     recencyModeLabel:
       stage === "ready"
-        ? "Scoped citations armed, inactive"
+        ? "Scoped grounding armed, live browsing off"
         : stage === "connecting"
           ? "Scope locked before connect"
           : stage === "live"
-            ? `${buildCitations(scope).length} visible citations`
+            ? "Scoped grounding active, live browsing off"
             : stage === "completed"
-              ? "Citation treatment preserved"
-              : "Search stayed off",
+              ? "Scoped grounding preserved"
+              : "Live browsing stayed off",
     transcript,
     completionSummary:
       stage === "completed"

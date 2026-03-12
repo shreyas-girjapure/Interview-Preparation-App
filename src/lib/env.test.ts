@@ -52,8 +52,13 @@ describe("env validation", () => {
     );
 
     expect(parsed.OPENAI_REALTIME_BOOTSTRAP_TIMEOUT_MS).toBe(20_000);
+    expect(parsed.OPENAI_VOICE_GROUNDING_MODEL).toBe("gpt-5.4");
+    expect(parsed.OPENAI_VOICE_GROUNDING_MAX_OUTPUT_TOKENS).toBe(1_200);
+    expect(parsed.OPENAI_VOICE_GROUNDING_TIMEOUT_MS).toBe(15_000);
+    expect(parsed.OPENAI_VOICE_GROUNDING_CACHE_TTL_MS).toBe(21_600_000);
+    expect(parsed.OPENAI_VOICE_GROUNDING_STALE_TTL_MS).toBe(86_400_000);
     expect(parsed.OPENAI_REALTIME_MODEL).toBe("gpt-realtime");
-    expect(parsed.OPENAI_REALTIME_MAX_OUTPUT_TOKENS).toBe(640);
+    expect(parsed.OPENAI_REALTIME_MAX_OUTPUT_TOKENS).toBe(1_024);
     expect(parsed.OPENAI_REALTIME_TRANSCRIBE_MODEL).toBe(
       "gpt-4o-mini-transcribe",
     );
@@ -64,9 +69,23 @@ describe("env validation", () => {
     expect(parsed.OPENAI_REALTIME_SERVER_VAD_THRESHOLD).toBe(0.72);
     expect(parsed.OPENAI_REALTIME_VOICE).toBe("marin");
     expect(parsed.OPENAI_REALTIME_CLIENT_SECRET_TTL_SECONDS).toBe(600);
+    expect(parsed.OPENAI_CHAINED_TEXT_MODEL_PREMIUM).toBe("gpt-5.4");
+    expect(parsed.OPENAI_CHAINED_TEXT_MODEL_BALANCED).toBe("gpt-5.2");
+    expect(parsed.OPENAI_CHAINED_REASONING_EFFORT_PREMIUM).toBe("low");
+    expect(parsed.OPENAI_CHAINED_OPENING_MAX_OUTPUT_TOKENS).toBe(220);
+    expect(parsed.OPENAI_CHAINED_REPLY_MAX_OUTPUT_TOKENS).toBe(420);
   });
 
   it("rejects out-of-range voice interview timing values", () => {
+    expect(() =>
+      parseVoiceInterviewEnv(
+        asProcessEnv({
+          OPENAI_API_KEY: "openai-key",
+          OPENAI_VOICE_GROUNDING_TIMEOUT_MS: "500",
+        }),
+      ),
+    ).toThrowError(/OPENAI_VOICE_GROUNDING_TIMEOUT_MS/);
+
     expect(() =>
       parseVoiceInterviewEnv(
         asProcessEnv({
